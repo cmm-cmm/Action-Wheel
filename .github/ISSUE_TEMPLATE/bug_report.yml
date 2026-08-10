@@ -1,0 +1,75 @@
+name: Bug report
+description: Something in Action Wheel isn't working the way it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please don't use this for security
+        vulnerabilities — see [SECURITY.md](https://github.com/cmm-cmm/Action-Wheel/blob/main/SECURITY.md) instead.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps so the behavior can be reproduced.
+      placeholder: |
+        1. Middle-click to open the menu
+        2. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs. actual behavior
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Action Wheel version
+      description: Shown in the main window, or the release/tag you downloaded.
+    validations:
+      required: true
+
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows version
+      placeholder: e.g. Windows 11 23H2, build 22631
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: How is it installed?
+      options:
+        - Inno Setup installer
+        - Portable/self-contained exe
+        - Built from source
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant actions.json (if applicable)
+      description: Only include the parts relevant to the bug — remove anything private (paths, personal shortcuts).
+      render: json
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots, screen recordings, or other context. Drag and drop files here.

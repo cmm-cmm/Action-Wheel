@@ -1,0 +1,131 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>Action_Wheel</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!-- Compiled into the exe as icon resource #1: Explorer, the taskbar and Alt+Tab pick it up,
+         and Services/AppIcon reads it back out at runtime for the window title bars and the tray.
+         Embedding rather than shipping the .ico alongside is what makes the single-file publish
+         work - there is no file next to the exe to point at. -->
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+    <Platforms>x86;x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+
+    <!-- The SDK defaults Platform to AnyCPU, which is not in Platforms and has no matching RID.
+         WindowsAppSDKSelfContained then fails with "requires a supported Windows architecture",
+         so a bare "dotnet build" used to be an error and every command had to carry -r win-x64.
+         Defaulting the pair here makes "dotnet build" / "dotnet publish" work as-is, while
+         -p:Platform=ARM64 or -r win-x86 still override it. Visual Studio always passes an explicit
+         Platform from the solution, so this only affects the command line. -->
+    <Platform Condition="'$(Platform)' == '' Or '$(Platform)' == 'AnyCPU'">x64</Platform>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$(Platform.ToLowerInvariant())</RuntimeIdentifier>
+
+    <UseWinUI>true</UseWinUI>
+    <WinUISDKReferences>false</WinUISDKReferences>
+    <Nullable>enable</Nullable>
+
+    <!-- For one thing only: reading the hook structures out of the pointer user32 hands the
+         callback. Marshal.PtrToStructure<T> boxes - measured at 48 bytes and 20 ns per call - and
+         the mouse hook runs for every mouse event on the system, so that was constant GC garbage
+         produced inside the callback Windows is timing against LowLevelHooksTimeout. A pointer
+         dereference of a blittable struct is 0 bytes and 0 ns. See MouseHook.ReadEvent. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- Unpackaged app settings.
+         MSIX tooling is off for normal builds because turning it on broke F5 debugging/deploy in
+         this project (see doc/FIX-DEBUG-DEPLOYMENT.md). It has to be ON while publishing though:
+         Microsoft.WindowsAppSDK.SingleFile.targets refuses to run without it, since a single-file
+         app needs resources.pri embedded rather than sitting next to the exe. Scoping it to
+         $(_IsPublishing) gives both - debuggable builds and a working single-file publish. -->
+    <EnableMsixTooling Condition="'$(_IsPublishing)' == 'true'">true</EnableMsixTooling>
+    <EnableMsixTooling Condition="'$(_IsPublishing)' != 'true'">false</EnableMsixTooling>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+
+    <!-- Required by the single-file host: without it the app cannot locate the Windows App SDK
+         runtime once everything is bundled into one executable. -->
+    <WindowsAppSdkUndockedRegFreeWinRTInitialize>true</WindowsAppSdkUndockedRegFreeWinRTInitialize>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    
+    <!-- Version Info -->
+    <AssemblyVersion>2.2.0.0</AssemblyVersion>
+    <FileVersion>2.2.0.0</FileVersion>
+    <Version>2.2.0</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Company>Your Company</Company>
+    <Product>Action Wheel</Product>
+    <Copyright>Copyright © 2025</Copyright>
+    <Description>Global Radial Menu Launcher for Windows</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Also ship the real application icon as content for the transparent custom title bars. -->
+    <None Remove="icon.ico" />
+    <Content Include="icon.ico" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The icon font the ring draws its glyphs from. Shipped rather than assumed: the app cannot
+         require every machine to have installed a Nerd Font, and a missing icon font shows as empty
+         boxes on every button with no way to tell why. -->
+    <Content Include="Assets\Fonts\CaskaydiaCoveNerdFontPropo-Regular.ttf" CopyToOutputDirectory="PreserveNewest" />
+    <!-- FontGlyphs needs the raw bytes too. In a single-file publish AppContext.BaseDirectory is
+         the EXE directory, not the bundle extraction directory, so a physical-path lookup cannot
+         see the bundled content. The stable logical name lets IconFont read it from any build. -->
+    <EmbeddedResource Include="Assets\Fonts\CaskaydiaCoveNerdFontPropo-Regular.ttf"
+                      LogicalName="ActionWheel.IconFont.ttf" />
+    <!-- The OFL requires the licence to travel with the font, so these ship too. -->
+    <Content Include="Assets\Fonts\Licenses\**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\SplashScreen.scale-200.png" />
+    <Content Include="Assets\LockScreenLogo.scale-200.png" />
+    <Content Include="Assets\Square150x150Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
+    <Content Include="Assets\StoreLogo.png" />
+    <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <!-- ActionWheel.Core lives in a subfolder of this project, so the SDK's **/*.cs glob would
+       otherwise compile its sources into this assembly as well as its own - two definitions of
+       ActionItem, and a stale copy of every file the moment the two drift apart. -->
+  <ItemGroup>
+    <Compile Remove="ActionWheel.Core\**" />
+    <Content Remove="ActionWheel.Core\**" />
+    <EmbeddedResource Remove="ActionWheel.Core\**" />
+    <None Remove="ActionWheel.Core\**" />
+    <Page Remove="ActionWheel.Core\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="ActionWheel.Core\ActionWheel.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7175" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.251106002" />
+  </ItemGroup>
+
+  <!-- Publish-only properties for Release. These must stay scoped to an actual publish
+       (not a plain "dotnet build -c Release"): PublishSingleFile requires MSIX tooling to
+       generate resources.pri unless it's a publish, and this project intentionally runs
+       unpackaged (EnableMsixTooling=false, see doc/FIX-DEBUG-DEPLOYMENT.md). Build-Publish.ps1
+       and Build-Quick.bat already pass the single-file/self-contained flags explicitly via
+       "dotnet publish -p:...", so they don't depend on this PropertyGroup. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' AND '$(_IsPublishing)' == 'true'">
+    <PublishReadyToRun>True</PublishReadyToRun>
+    <PublishTrimmed>False</PublishTrimmed>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+
+  <!-- Debug Properties -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <PublishReadyToRun>False</PublishReadyToRun>
+    <PublishTrimmed>False</PublishTrimmed>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,714 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Action_Wheel.Settings.SettingsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Action_Wheel.Settings"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Action Wheel Settings">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop/>
+    </Window.SystemBackdrop>
+
+    <!--
+        RootGrid.DataContext is the SettingsViewModel (set in the constructor - Window itself is not
+        a FrameworkElement in WinUI 3 and has no DataContext), so everything outside a DataTemplate
+        binds to the view model. Inside ActionRowTemplate the DataContext is the row's
+        ActionEditModel instead, which is why the per-row buttons bind ResetCommand/ClearIconCommand
+        on the row rather than reaching back up: ElementName bindings do not resolve across a
+        template's namescope.
+
+        Các binding ở đây dùng {Binding} cổ điển chứ không phải {x:Bind}: tránh phụ thuộc vào việc
+        x:Bind hoạt động ra sao khi phần tử gốc là Window. Binding cổ điển dùng reflection - dự án
+        đang publish với PublishTrimmed=False nên an toàn; nếu sau này bật trimming thì phải chuyển
+        các binding này sang x:Bind.
+    -->
+    <Grid x:Name="RootGrid">
+        <Grid.Resources>
+            <DataTemplate x:Key="FunctionSuggestionTemplate">
+                <Grid Width="420" Padding="4" ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="28"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <FontIcon Grid.Column="0" FontFamily="{StaticResource IconFontFamily}" Glyph="{Binding Glyph}" FontSize="16"/>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Description}" FontSize="11" TextWrapping="Wrap"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                </Grid>
+            </DataTemplate>
+            <!--
+                Every FontIcon in this window draws from the shipped icon font, including this
+                window's own furniture - browse, record, undo, redo, the status marker. There are no
+                system-icon-font code points left anywhere in the app: a value here is read against
+                one font only, so the family is never left to default.
+            -->
+
+            <!-- Ô icon trong bảng chọn biểu tượng -->
+            <DataTemplate x:Key="GlyphChoiceTemplate">
+                <Border Width="44" Height="44" ToolTipService.ToolTip="{Binding Tooltip}">
+                    <FontIcon FontFamily="{StaticResource IconFontFamily}"
+                              Glyph="{Binding Preview}"
+                              FontSize="20"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"/>
+                </Border>
+            </DataTemplate>
+
+            <!-- Một dòng cấu hình = một nút trên vòng tròn -->
+            <DataTemplate x:Key="ActionRowTemplate">
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="12,8"
+                        Margin="0,0,0,6">
+                    <StackPanel Spacing="6">
+                        <!-- Dòng chính -->
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="126"/>
+                                <ColumnDefinition Width="48"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="1.7*"/>
+                                <ColumnDefinition Width="22"/>
+                                <ColumnDefinition Width="176"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF047;" FontSize="12"
+                                          Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                          ToolTipService.ToolTip="Drag the row to move this button"/>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding PositionName}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding TagCaption}"
+                                               FontSize="11"
+                                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Xem trước đúng như vòng menu sẽ vẽ: nền + icon (glyph hoặc SVG) -->
+                            <Button Grid.Column="1"
+                                    Width="40" Height="40"
+                                    Padding="0"
+                                    CornerRadius="20"
+                                    Background="{Binding BackgroundColor, Mode=OneWay, Converter={StaticResource ColorToBrushConverter}}"
+                                    Content="{Binding IconSource, Mode=OneWay, Converter={StaticResource IconPreviewConverter}}"
+                                    Tag="{Binding}"
+                                    Click="PickGlyph_Click"
+                                    ToolTipService.ToolTip="Choose an icon"/>
+
+                            <TextBox Grid.Column="2"
+                                     VerticalAlignment="Center"
+                                     PlaceholderText="Tooltip text"
+                                     Text="{Binding Label, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <ComboBox Grid.Column="3"
+                                      HorizontalAlignment="Stretch"
+                                      VerticalAlignment="Center"
+                                      SelectedIndex="{Binding KindIndex, Mode=TwoWay}">
+                                <ComboBoxItem Content="Do nothing"/>
+                                <ComboBoxItem Content="Send shortcut"/>
+                                <ComboBoxItem Content="Open app / file"/>
+                                <ComboBoxItem Content="Windows function"/>
+                            </ComboBox>
+
+                            <TextBox Grid.Column="4"
+                                     VerticalAlignment="Center"
+                                     IsEnabled="{Binding IsValueEnabled, Mode=OneWay}"
+                                     Visibility="{Binding IsFunction, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"
+                                     PlaceholderText="{Binding ValuePlaceholder, Mode=OneWay}"
+                                     Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <AutoSuggestBox Grid.Column="4"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Stretch"
+                                            Visibility="{Binding IsFunction, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                            ItemsSource="{Binding FunctionSuggestions, Mode=OneWay}"
+                                            ItemTemplate="{StaticResource FunctionSuggestionTemplate}"
+                                            Text="{Binding FunctionQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            SuggestionChosen="FunctionSuggestion_Chosen"
+                                            GotFocus="FunctionBox_OpenSuggestions"
+                                            Tapped="FunctionBox_OpenSuggestions"
+                                            PlaceholderText="Search Windows functions…"/>
+
+                            <!-- Trạng thái sống của giá trị: tìm thấy / không tìm thấy / trùng / sai -->
+                            <FontIcon Grid.Column="5"
+                                      FontFamily="{StaticResource IconFontFamily}"
+                                      FontSize="14"
+                                      VerticalAlignment="Center"
+                                      Glyph="{Binding StatusGlyph, Mode=OneWay}"
+                                      Foreground="{Binding StatusColor, Mode=OneWay, Converter={StaticResource ColorToBrushConverter}}"
+                                      Visibility="{Binding HasStatus, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                      ToolTipService.ToolTip="{Binding StatusTooltip, Mode=OneWay}"/>
+
+                            <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <ToggleButton Width="40" Height="34"
+                                              Padding="0"
+                                              Tag="{Binding}"
+                                              Checked="Record_Checked"
+                                              Unchecked="Record_Unchecked"
+                                              IsEnabled="{Binding CanRecord, Mode=OneWay}"
+                                              ToolTipService.ToolTip="Record a key press">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF11C;" FontSize="14"/>
+                                </ToggleButton>
+                                <Button Width="40" Height="34"
+                                        Padding="0"
+                                        Tag="{Binding}"
+                                        Click="Browse_Click"
+                                        IsEnabled="{Binding CanBrowse, Mode=OneWay}"
+                                        ToolTipService.ToolTip="Browse for a file">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF115;" FontSize="14"/>
+                                </Button>
+                                <Button Width="40" Height="34"
+                                        Padding="0"
+                                        Command="{Binding ResetCommand}"
+                                        ToolTipService.ToolTip="Reset this button to its default">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF021;" FontSize="14"/>
+                                </Button>
+                                <Button Width="40" Height="34" Padding="0" Tag="{Binding}"
+                                        Click="TestAction_Click" ToolTipService.ToolTip="Test this action without saving">
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF04B;" FontSize="14"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Dòng phụ: icon SVG, màu, tham số -->
+                        <Grid ColumnSpacing="6" Margin="126,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="1.2*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <FontIcon Grid.Column="0" FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF03E;"
+                                      FontSize="13" VerticalAlignment="Center"
+                                      Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                      ToolTipService.ToolTip="Icon file"/>
+
+                            <TextBox Grid.Column="1"
+                                     Height="30" FontSize="12"
+                                     VerticalAlignment="Center"
+                                     PlaceholderText="none — using the glyph"
+                                     Text="{Binding IconPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <Button Grid.Column="2" Width="32" Height="30" Padding="0"
+                                    Tag="{Binding}" Click="BrowseSvg_Click"
+                                    ToolTipService.ToolTip="Choose an .svg, .png or .ico file">
+                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF115;" FontSize="12"/>
+                            </Button>
+
+                            <Button Grid.Column="3" Width="32" Height="30" Padding="0"
+                                    Command="{Binding ClearIconCommand}"
+                                    IsEnabled="{Binding HasIconFile, Mode=OneWay}"
+                                    ToolTipService.ToolTip="Back to the glyph icon">
+                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF00D;" FontSize="12"/>
+                            </Button>
+
+                            <!-- Paint brush. The palette at F53F is a Nerd Fonts v2 code that v3
+                                 dropped, so it drew the notdef box on all nine rows. -->
+                            <FontIcon Grid.Column="4" FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF1FC;"
+                                      FontSize="13" VerticalAlignment="Center" Margin="10,0,0,0"
+                                      Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                      ToolTipService.ToolTip="Icon, button and shadow colours"/>
+
+                            <Button Grid.Column="5" Width="34" Height="30" Padding="0"
+                                    Tag="{Binding}" Click="PickForeground_Click"
+                                    ToolTipService.ToolTip="Icon colour">
+                                <Border Width="20" Height="16" CornerRadius="3"
+                                        BorderThickness="1"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        Background="{Binding ForegroundColor, Mode=OneWay, Converter={StaticResource ColorToBrushConverter}}"/>
+                            </Button>
+
+                            <Button Grid.Column="6" Width="34" Height="30" Padding="0"
+                                    Tag="{Binding}" Click="PickBackground_Click"
+                                    ToolTipService.ToolTip="Button colour">
+                                <Border Width="20" Height="16" CornerRadius="3"
+                                        BorderThickness="1"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        Background="{Binding BackgroundColor, Mode=OneWay, Converter={StaticResource ColorToBrushConverter}}"/>
+                            </Button>
+
+                            <Button Grid.Column="7" Width="34" Height="30" Padding="0"
+                                    Tag="{Binding}" Click="PickShadow_Click"
+                                    ToolTipService.ToolTip="Shadow colour">
+                                <Border Width="20" Height="16" CornerRadius="3"
+                                        BorderThickness="1"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        Background="{Binding ShadowColor, Mode=OneWay, Converter={StaticResource ColorToBrushConverter}}"/>
+                            </Button>
+
+                            <FontIcon Grid.Column="8" FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF120;"
+                                      FontSize="13" VerticalAlignment="Center" Margin="10,0,0,0"
+                                      Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                      ToolTipService.ToolTip="Command-line arguments"/>
+
+                            <TextBox Grid.Column="9"
+                                     Height="30" FontSize="12"
+                                     VerticalAlignment="Center"
+                                     IsEnabled="{Binding CanBrowse, Mode=OneWay}"
+                                     PlaceholderText="only for Open app / file"
+                                     Text="{Binding Arguments, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="126,0,0,0">
+                            <ToggleSwitch IsOn="{Binding ShadowEnabled, Mode=TwoWay}" OnContent="On" OffContent="Off"
+                                          ToolTipService.ToolTip="Enable button shadow">
+                                <ToggleSwitch.Header>
+                                    <!-- A shape and its offset copy, which is what a drop shadow is. -->
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF24D;" FontSize="13"/>
+                                </ToggleSwitch.Header>
+                            </ToggleSwitch>
+                            <NumberBox Width="105" Minimum="0" Maximum="1" SmallChange="0.05"
+                                       Value="{Binding ShadowOpacity, Mode=TwoWay}" SpinButtonPlacementMode="Compact"
+                                       ToolTipService.ToolTip="Shadow opacity (0–1), shown with up to two decimals">
+                                <NumberBox.Header>
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF043;" FontSize="13"/>
+                                </NumberBox.Header>
+                            </NumberBox>
+                            <NumberBox Width="105" Minimum="0" Maximum="64" SmallChange="1"
+                                       Value="{Binding ShadowBlur, Mode=TwoWay}" SpinButtonPlacementMode="Compact"
+                                       ToolTipService.ToolTip="Shadow blur, shown with up to one decimal">
+                                <NumberBox.Header>
+                                    <!-- Radial blur. F1DC is the letter H (a heading mark), which
+                                         said nothing about blur. Five hex digits: most of this
+                                         font's icons live above U+FFFF. -->
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF00B8;" FontSize="13"/>
+                                </NumberBox.Header>
+                            </NumberBox>
+                            <NumberBox Width="105" Minimum="-50" Maximum="50" SmallChange="1"
+                                       Value="{Binding ShadowOffsetX, Mode=TwoWay}" SpinButtonPlacementMode="Compact"
+                                       ToolTipService.ToolTip="Shadow horizontal offset, shown with up to one decimal">
+                                <NumberBox.Header>
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF07E;" FontSize="13"/>
+                                </NumberBox.Header>
+                            </NumberBox>
+                            <NumberBox Width="105" Minimum="-50" Maximum="50" SmallChange="1"
+                                       Value="{Binding ShadowOffsetY, Mode=TwoWay}" SpinButtonPlacementMode="Compact"
+                                       ToolTipService.ToolTip="Shadow vertical offset, shown with up to one decimal">
+                                <NumberBox.Header>
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF07D;" FontSize="13"/>
+                                </NumberBox.Header>
+                            </NumberBox>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="126,0,0,0">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF065;" FontSize="14"
+                                      VerticalAlignment="Bottom" Margin="8,0,0,9"
+                                      Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                      ToolTipService.ToolTip="Icon display size and position"/>
+                            <ToggleSwitch IsOn="{Binding IconTint, Mode=TwoWay}"
+                                          IsEnabled="{Binding CanTintIcon, Mode=OneWay}"
+                                          OnContent="Icon colour" OffContent="File colours"
+                                          ToolTipService.ToolTip="Recolour an .svg to the icon colour. Only an .svg can be recoloured.">
+                                <ToggleSwitch.Header>
+                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF1FB;" FontSize="13"/>
+                                </ToggleSwitch.Header>
+                            </ToggleSwitch>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF065;" FontSize="13"
+                                          VerticalAlignment="Center" ToolTipService.ToolTip="Icon size"/>
+                                <Slider Width="120" Minimum="0.25" Maximum="3" StepFrequency="0.05"
+                                        TickFrequency="0.25" SnapsTo="StepValues" VerticalAlignment="Center"
+                                        Value="{Binding IconScale, Mode=TwoWay}"
+                                        ToolTipService.ToolTip="Icon size (0.25× to 3×)"/>
+                                <Border Width="42" Height="26" CornerRadius="4" BorderThickness="1"
+                                        Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                        ToolTipService.ToolTip="Current icon size">
+                                    <TextBlock Text="{Binding IconScaleText, Mode=OneWay}" FontSize="12"
+                                               TextAlignment="Center" HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF07E;" FontSize="13"
+                                          VerticalAlignment="Center" ToolTipService.ToolTip="Icon horizontal position"/>
+                                <Slider Width="110" Minimum="-50" Maximum="50" StepFrequency="0.25"
+                                        TickFrequency="5" Value="{Binding IconOffsetX, Mode=TwoWay}"
+                                        IsEnabled="{Binding HasIconFile}"
+                                        VerticalAlignment="Center" ToolTipService.ToolTip="Move icon horizontally"/>
+                                <Border Width="42" Height="26" CornerRadius="4" BorderThickness="1"
+                                        Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                        ToolTipService.ToolTip="Icon horizontal offset">
+                                    <TextBlock Text="{Binding IconOffsetXText, Mode=OneWay}" FontSize="12"
+                                               TextAlignment="Center" HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF07D;" FontSize="13"
+                                          VerticalAlignment="Center" ToolTipService.ToolTip="Icon vertical position"/>
+                                <Slider Width="110" Minimum="-50" Maximum="50" StepFrequency="0.25"
+                                        TickFrequency="5" Value="{Binding IconOffsetY, Mode=TwoWay}"
+                                        IsEnabled="{Binding HasIconFile}"
+                                        VerticalAlignment="Center" ToolTipService.ToolTip="Move icon vertically"/>
+                                <Border Width="42" Height="26" CornerRadius="4" BorderThickness="1"
+                                        Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                        ToolTipService.ToolTip="Icon vertical offset">
+                                    <TextBlock Text="{Binding IconOffsetYText, Mode=OneWay}" FontSize="12"
+                                               TextAlignment="Center" HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </DataTemplate>
+        </Grid.Resources>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid x:Name="TitleBarArea" Grid.Row="0" Height="32" Background="Transparent">
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="12,0,140,0"
+                        VerticalAlignment="Center">
+                <Image Source="/icon.ico" Width="16" Height="16"/>
+                <TextBlock Text="Action Wheel — Settings" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Heading -->
+        <StackPanel Grid.Row="1" Padding="24,6,24,10" Spacing="2">
+            <TextBlock Text="Button settings" FontSize="24" FontWeight="SemiBold"/>
+            <TextBlock TextWrapping="Wrap"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Text="Each button can send a keyboard shortcut or open an app, file, folder or URL. Drag a row to move that button around the ring. Save applies the changes to the next menu you open."/>
+            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,10,0,0">
+                <TextBlock Text="Appearance" VerticalAlignment="Bottom" Margin="0,0,0,9"
+                           ToolTipService.ToolTip="Apply an appearance preset to all nine buttons."/>
+                <Button Content="Light" Command="{Binding LightPresetCommand}" VerticalAlignment="Bottom"
+                        Background="#FFF7F7F7" Foreground="#FF202020"
+                        BorderBrush="#FFB8B8B8" BorderThickness="1"
+                        ToolTipService.ToolTip="Apply the light preset to all buttons."/>
+                <Button Content="Dark" Command="{Binding DarkPresetCommand}" VerticalAlignment="Bottom"
+                        Background="#FF242424" Foreground="#FFF5F5F5"
+                        BorderBrush="#FF5A5A5A" BorderThickness="1"
+                        ToolTipService.ToolTip="Apply the dark preset to all buttons."/>
+                <Button Content="Colourful" Command="{Binding ColorfulPresetCommand}" VerticalAlignment="Bottom"
+                        Foreground="White" BorderBrush="#668B5CF6" BorderThickness="1"
+                        ToolTipService.ToolTip="Apply a different accent colour to each button.">
+                    <Button.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#FF5B8DEF" Offset="0"/>
+                            <GradientStop Color="#FF8B5CF6" Offset="0.35"/>
+                            <GradientStop Color="#FFEC4899" Offset="0.68"/>
+                            <GradientStop Color="#FFF97316" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Button.Background>
+                </Button>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                <TextBox Width="180" Header="Profile name" Text="{Binding ProfileName, Mode=TwoWay}"
+                         PlaceholderText="Work, Browser, Design…"/>
+                <Button Content="Save profile" Command="{Binding SaveProfileCommand}" VerticalAlignment="Bottom"/>
+                <ComboBox Width="180" Header="Saved profiles" ItemsSource="{Binding Profiles}"
+                          SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"/>
+                <Button Content="Load" Command="{Binding LoadProfileCommand}" VerticalAlignment="Bottom"/>
+                <Button Content="Rename" Command="{Binding RenameProfileCommand}" VerticalAlignment="Bottom"/>
+                <Button Content="Delete" Command="{Binding DeleteProfileCommand}" VerticalAlignment="Bottom"/>
+                <TextBlock Text="{Binding ProfileCountText}" VerticalAlignment="Bottom" Margin="8,0,0,8"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <!-- MaxWidth + trimming because the profile name is user-supplied and unbounded.
+                     This row has no horizontal scroller above it, so without a cap a long name
+                     pushes whatever follows it straight off the right edge, silently. -->
+                <Border VerticalAlignment="Bottom" Margin="4,0,0,2" Padding="10,6" CornerRadius="12"
+                        Background="{ThemeResource AccentFillColorSecondaryBrush}">
+                    <TextBlock Text="{Binding ActiveProfileText, Mode=OneWay}" FontWeight="SemiBold"
+                               MaxWidth="170" TextTrimming="CharacterEllipsis"
+                               ToolTipService.ToolTip="{Binding ActiveProfileText, Mode=OneWay}"
+                               Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+                </Border>
+
+                <!-- Save is blocked on a key name this app does not recognise, so the list of the
+                     ones it does has to stay somewhere inside the app. Recording a shortcut covers
+                     most of it, but not Win+... - the shell claims the Windows key before it ever
+                     reaches here, so that combination can only be typed.
+
+                     A button opening a dialog rather than an inline Expander: this row is already
+                     within ~90 px of the window's width before the active profile name is counted,
+                     and there is no horizontal scroller above it, so anything that grows here is
+                     silently clipped instead of scrolled to. -->
+                <!-- The name has to be stated: the content is a panel, not a string, so the button
+                     would otherwise report nothing at all to a screen reader. -->
+                <Button VerticalAlignment="Bottom" Margin="8,0,0,0" Click="ShowKeyNames_Click"
+                        AutomationProperties.Name="Recognised key names"
+                        ToolTipService.ToolTip="The key names a shortcut can be typed from.">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF11C;" FontSize="14"/>
+                        <TextBlock Text="Key names" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </StackPanel>
+
+        <Grid Grid.Row="2" Padding="24,0,24,0" ColumnSpacing="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Nhãn cột: cùng bề rộng với các cột trong ActionRowTemplate -->
+            <Grid Grid.Row="0" Grid.Column="0" ColumnSpacing="10" Margin="13,0,13,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="126"/>
+                    <ColumnDefinition Width="48"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="1.7*"/>
+                    <ColumnDefinition Width="22"/>
+                    <ColumnDefinition Width="176"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Position" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock Grid.Column="1" Text="Icon" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock Grid.Column="2" Text="Label" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock Grid.Column="3" Text="Action type" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock Grid.Column="4" Text="Value" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </Grid>
+
+            <!-- Danh sách các nút. ListView chứ không phải ItemsControl vì nó cung cấp sẵn
+                 kéo-thả sắp xếp lại; code-behind gán lại tag theo thứ tự mới sau mỗi lần kéo. -->
+            <ListView x:Name="ActionsHost"
+                      Grid.Row="1" Grid.Column="0"
+                      ItemTemplate="{StaticResource ActionRowTemplate}"
+                      SelectionMode="Single"
+                      CanReorderItems="True"
+                      CanDragItems="True"
+                      AllowDrop="True"
+                      IsItemClickEnabled="False"
+                      Padding="0,0,0,12">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="MinHeight" Value="0"/>
+                        <Setter Property="Margin" Value="0"/>
+                    </Style>
+                </ListView.ItemContainerStyle>
+            </ListView>
+
+            <!-- Cột phải: xem trước vòng menu và trợ giúp -->
+            <!-- Scrolled because this column now carries three cards. It is sized by its row, not
+                 by its content, so anything past the bottom is silently clipped rather than
+                 reachable - the same trap the profile row hit horizontally. -->
+            <ScrollViewer Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="336"
+                          VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled"
+                          Padding="0,0,8,0">
+            <StackPanel Width="320" Spacing="12" HorizontalAlignment="Left">
+                <TextBlock Text="Preview" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="10">
+                    <Canvas x:Name="PreviewCanvas" Width="290" Height="290"/>
+                </Border>
+
+                <TextBlock TextWrapping="Wrap" FontSize="12"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                           Text="This is the ring as it will look with your unsaved changes. Drag a row on the left to move a button; the first row is the centre button."/>
+
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="12">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF245;" FontSize="14"/>
+                            <TextBlock Text="Open-menu mouse trigger" FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF05A;" FontSize="13"
+                                      Margin="4,0,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                      ToolTipService.ToolTip="Chord triggers must meet both limits. Emergency trigger: Ctrl+Alt+Space."/>
+                        </StackPanel>
+                        <ComboBox HorizontalAlignment="Stretch"
+                                  SelectedIndex="{Binding TriggerIndex, Mode=TwoWay}"
+                                  ToolTipService.ToolTip="Choose the mouse gesture that opens the radial menu. Ctrl+Alt+Space always remains available as an emergency trigger.">
+                            <ComboBoxItem Content="Middle mouse button"/>
+                            <ComboBoxItem Content="Hold right + press left"/>
+                            <ComboBoxItem Content="Hold left + press right"/>
+                            <ComboBoxItem Content="Mouse Button 4 (Back)"/>
+                            <ComboBoxItem Content="Mouse Button 5 (Forward)"/>
+                        </ComboBox>
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <NumberBox Grid.Column="0" Header="Timeout (ms)"
+                                       Minimum="200" Maximum="2000" SmallChange="50"
+                                       Value="{Binding ChordTimeoutMs, Mode=TwoWay}"
+                                       SpinButtonPlacementMode="Compact"
+                                       ToolTipService.ToolTip="Maximum delay between pressing the first and second mouse buttons. Lower values reduce accidental activation."/>
+                            <NumberBox Grid.Column="1" Header="Movement (px)"
+                                       Minimum="2" Maximum="100" SmallChange="1"
+                                       Value="{Binding MovementThreshold, Mode=TwoWay}"
+                                       SpinButtonPlacementMode="Compact"
+                                       ToolTipService.ToolTip="Maximum pointer movement allowed while completing a mouse chord. Lower values make the chord more deliberate."/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="12">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <!-- Concentric rings. F0335, the first pick, is in the font and passes
+                                 the codepoint audit - it is a lightbulb. Rendered, not assumed. -->
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF140;" FontSize="14"/>
+                            <TextBlock Text="Ring size and animation" FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF05A;" FontSize="13"
+                                      Margin="4,0,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                      ToolTipService.ToolTip="These apply to every profile - they are your preference, not part of a shared button set."/>
+                        </StackPanel>
+
+                        <!-- The picker replays the animation in the preview above by itself; the
+                             button beside it is how you watch it again, and the only way to see one
+                             at a size that was typed rather than picked. -->
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- This order must match SettingsViewModel.AnimationOrder, which maps it
+                                 to the RingAnimation enum. It is NOT the enum's own order: those
+                                 numbers go into preferences.json and are append-only, so the two
+                                 sweeps sit at opposite ends of it and would be separated here. -->
+                            <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" Header="Opening animation"
+                                      SelectedIndex="{Binding RingAnimationIndex, Mode=TwoWay}"
+                                      ToolTipService.ToolTip="How the ring appears. Every option finishes within about 200 ms, so none of them delays a click.">
+                                <ComboBoxItem Content="None (instant)"/>
+                                <ComboBoxItem Content="Fade and scale"/>
+                                <ComboBoxItem Content="Pop"/>
+                                <ComboBoxItem Content="Radiate from centre"/>
+                                <ComboBoxItem Content="Converge from outside"/>
+                                <ComboBoxItem Content="Clockwise sweep"/>
+                                <ComboBoxItem Content="Counter-clockwise sweep"/>
+                            </ComboBox>
+
+                            <!-- Bottom-aligned: the ComboBox beside it carries a Header, so the two
+                                 only line up along their lower edge. The name has to be stated
+                                 because the content is a glyph, which reads as nothing at all to a
+                                 screen reader. -->
+                            <Button Grid.Column="1" VerticalAlignment="Bottom" Width="36" Height="32" Padding="0"
+                                    Command="{Binding PlayAnimationCommand}"
+                                    AutomationProperties.Name="Play the opening animation"
+                                    ToolTipService.ToolTip="Play the animation again in the preview above.">
+                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF04B;" FontSize="13"/>
+                            </Button>
+                        </Grid>
+
+                        <TextBlock Text="{Binding RingAnimationDescription, Mode=OneWay}"
+                                   TextWrapping="Wrap" FontSize="12"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <NumberBox Grid.Column="0" Header="Button size"
+                                       Minimum="{Binding MinButtonSize, Mode=OneWay}"
+                                       Maximum="{Binding MaxButtonSize, Mode=OneWay}"
+                                       SmallChange="2"
+                                       Value="{Binding ButtonSize, Mode=TwoWay}"
+                                       SpinButtonPlacementMode="Compact"
+                                       ToolTipService.ToolTip="Diameter of each outer button, in device-independent pixels. The centre button and the icons scale with it."/>
+                            <!-- Bound limits, not literals: the legal orbit depends on the button
+                                 size, so both ends of this range move when the box beside it does. -->
+                            <NumberBox Grid.Column="1" Header="Distance from centre"
+                                       Minimum="{Binding MinOrbitRadius, Mode=OneWay}"
+                                       Maximum="{Binding MaxOrbitRadius, Mode=OneWay}"
+                                       SmallChange="4"
+                                       Value="{Binding OrbitRadius, Mode=TwoWay}"
+                                       SpinButtonPlacementMode="Compact"
+                                       ToolTipService.ToolTip="Distance from the ring's centre to each outer button. The lower limit rises as the buttons grow, so they never touch; the overlay window grows with the ring, so the upper limit does not move."/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- Command bar -->
+        <Border Grid.Row="3"
+                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="0,1,0,0">
+            <StackPanel Padding="24,12,24,16" Spacing="10">
+                <InfoBar IsOpen="{Binding IsStatusOpen, Mode=TwoWay}"
+                         IsClosable="True"
+                         Severity="{Binding StatusSeverity, Mode=OneWay, Converter={StaticResource StatusLevelConverter}}"
+                         Title="{Binding StatusTitle, Mode=OneWay}"
+                         Message="{Binding StatusMessage, Mode=OneWay}"/>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Text="Configuration file"
+                                   FontSize="11"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                        <TextBlock Text="{Binding ConfigPath, Mode=OneWay}"
+                                   FontSize="12"
+                                   TextTrimming="CharacterEllipsis"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <Button Width="40" Height="34" Padding="0"
+                                Command="{Binding UndoCommand}"
+                                ToolTipService.ToolTip="Undo (unsaved changes)">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF0E2;" FontSize="14"/>
+                        </Button>
+                        <Button Width="40" Height="34" Padding="0"
+                                Command="{Binding RedoCommand}"
+                                ToolTipService.ToolTip="Redo">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF01E;" FontSize="14"/>
+                        </Button>
+                        <Button Content="Restore defaults" Command="{Binding RestoreDefaultsCommand}"/>
+                        <Button Content="Open config file" Command="{Binding OpenConfigFileCommand}"/>
+                        <Button Content="Import XML" Click="ImportProfile_Click"/>
+                        <Button Content="Export XML" Click="ExportProfile_Click"/>
+                        <Button Content="Save" Style="{StaticResource AccentButtonStyle}"
+                                Command="{Binding SaveCommand}"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

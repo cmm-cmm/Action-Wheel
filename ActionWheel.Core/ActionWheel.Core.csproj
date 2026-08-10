@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The business logic of Action Wheel, with no reference to WinUI, XAML or user32. Keeping it in
+       its own assembly is what makes the layering real: the compiler now refuses a stray
+       "using Microsoft.UI.Xaml" in here, which a folder convention inside the app project could
+       not. Everything here is plain net10.0, so it can be exercised without a desktop session. -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Action_Wheel.Core</RootNamespace>
+    <AssemblyName>ActionWheel.Core</AssemblyName>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <!-- The app is RID-specific (see "Action Wheel.csproj"); a plain net10.0 library builds for every
+         RID it is referenced from, so it must not inherit one of its own. -->
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+
+</Project>

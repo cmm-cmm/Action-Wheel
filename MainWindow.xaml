@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Action_Wheel.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Action_Wheel"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Action Wheel">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <!-- Everything below binds to MainViewModel, set as RootScroller's DataContext in the
+         code-behind. Window is not a FrameworkElement in WinUI 3 and has no DataContext of its
+         own, so the binding root has to be the content element. -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid x:Name="TitleBarArea" Grid.Row="0" Background="Transparent">
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="12,0,140,0"
+                        VerticalAlignment="Center">
+                <Image Source="/icon.ico" Width="16" Height="16"/>
+                <TextBlock Text="Action Wheel" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+        </Grid>
+
+        <ScrollViewer x:Name="RootScroller" Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <Grid Padding="24,40,24,32">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" MaxWidth="560">
+                <TextBlock
+                    Text="Action Wheel"
+                    FontSize="32"
+                    FontWeight="Bold"
+                    HorizontalAlignment="Center"/>
+
+                <TextBlock
+                    Text="Global Radial Menu Launcher"
+                    FontSize="18"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    HorizontalAlignment="Center"/>
+
+                <TextBlock
+                    Text="{Binding VersionText, Mode=OneWay}"
+                    FontSize="12"
+                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    HorizontalAlignment="Center"/>
+
+                <Border
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="24"
+                    Margin="0,16,0,0">
+                    <StackPanel Spacing="12">
+                        <TextBlock
+                            Text="How to Use"
+                            FontSize="20"
+                            FontWeight="SemiBold"/>
+
+                        <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                            <Run Text="Use your configured "/>
+                            <Run Text="mouse trigger" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                            <Run Text=" anywhere on your screen to open the radial menu. The default is the middle mouse button; Settings also offers right+left and left+right mouse chords."/>
+                        </TextBlock>
+
+                        <TextBlock Text="Features:" FontWeight="SemiBold" Margin="0,8,0,0"/>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock>
+                                <Run Text="•" FontSize="16"/>
+                                <Run Text="  Works in every app and every window"/>
+                            </TextBlock>
+                            <TextBlock>
+                                <Run Text="•" FontSize="16"/>
+                                <Run Text="  Opens exactly at the cursor"/>
+                            </TextBlock>
+                            <TextBlock>
+                                <Run Text="•" FontSize="16"/>
+                                <Run Text="  Press Esc or click outside to dismiss"/>
+                            </TextBlock>
+                            <TextBlock>
+                                <Run Text="•" FontSize="16"/>
+                                <Run Text="  Stays out of Alt+Tab and the taskbar"/>
+                            </TextBlock>
+                            <TextBlock>
+                                <Run Text="•" FontSize="16"/>
+                                <Run Text="  9 configurable buttons: send a shortcut, or open an app, file or URL"/>
+                            </TextBlock>
+                            <TextBlock>
+                                <Run Text="•" FontSize="16"/>
+                                <Run Text="  Configurable mouse trigger, including two-button chords"/>
+                            </TextBlock>
+                        </StackPanel>
+
+                        <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,8,0,0">
+                            <Run Text="Closing this window only hides it — the app keeps running in the notification area. Right-click the tray icon to bring it back, open"/>
+                            <Run Text=" Settings" FontWeight="SemiBold"/>
+                            <Run Text=", or quit."/>
+                        </TextBlock>
+
+                        <ToggleSwitch
+                            Header="Start with Windows"
+                            OnContent="On"
+                            OffContent="Off"
+                            Margin="0,8,0,0"
+                            IsOn="{Binding StartWithWindows, Mode=TwoWay}"/>
+
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                            <Button Content="Button Settings"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    Command="{Binding OpenSettingsCommand}"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding ActiveProfileText, Mode=OneWay}" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                        <InfoBar
+                            IsOpen="{Binding HasStartupError, Mode=OneWay}"
+                            IsClosable="True"
+                            Severity="Error"
+                            Title="Could not change the startup setting"
+                            Message="{Binding StartupError}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Hook status. The whole app is one global hook away from doing nothing at all. -->
+                <InfoBar
+                    IsOpen="True"
+                    IsClosable="False"
+                    Severity="{Binding HookSeverity, Converter={StaticResource StatusLevelConverter}}"
+                    Title="{Binding HookTitle}"
+                    Message="{Binding HookMessage}"
+                    Margin="0,16,0,0"/>
+
+                <InfoBar
+                    IsOpen="True"
+                    IsClosable="False"
+                    Severity="Warning"
+                    Title="actions.json could not be used"
+                    Message="{Binding ConfigProblemMessage}"
+                    Visibility="{Binding ConfigProblemVisibility}">
+                    <InfoBar.ActionButton>
+                        <Button
+                            Content="Restore the backup"
+                            Command="{Binding RestoreBackupCommand}"
+                            Visibility="{Binding RestoreBackupVisibility}"/>
+                    </InfoBar.ActionButton>
+                </InfoBar>
+
+                <InfoBar
+                    IsOpen="{Binding HasActionError, Mode=OneWay}"
+                    IsClosable="True"
+                    Severity="Warning"
+                    Title="Something did not work"
+                    Message="{Binding ActionError}"/>
+
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                    <Button Content="Copy diagnostics" Command="{Binding CopyDiagnosticsCommand}"/>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+        </ScrollViewer>
+    </Grid>
+</Window>

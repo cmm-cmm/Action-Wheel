@@ -1,22 +1,57 @@
-# Action Wheel — WinUI 3 Radial Menu
+<div align="center">
+
+# 🎯 Action Wheel
+
+**A radial "pie" menu for Windows — one middle click puts any shortcut or app right under your cursor.**
 
 A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor whenever you press the middle mouse button, anywhere in Windows.
 
+[![License: MIT](https://img.shields.io/github/license/cmm-cmm/Action-Wheel?color=blue)](LICENSE.txt)
+[![Latest tag](https://img.shields.io/github/v/tag/cmm-cmm/Action-Wheel?label=version&color=success)](https://github.com/cmm-cmm/Action-Wheel/tags)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-0078D6?logo=windows&logoColor=white)](#requirements)
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](#requirements)
+[![Windows App SDK](https://img.shields.io/badge/Windows%20App%20SDK-1.8-0078D6?logo=windowsxp&logoColor=white)](#requirements)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+</div>
+
+---
+
+## Table of contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Build & run](#build--run)
+- [Using it](#using-it)
+- [Configuring the buttons](#configuring-the-buttons)
+- [How it works](#how-it-works)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Features
+
+### 🖱️ Interaction
 
 - **Global trigger** — a low-level `WH_MOUSE_LL` hook watches for the middle mouse button system-wide. The click is *swallowed*, so the app underneath doesn't also get it (no stray browser tabs or autoscroll).
 - **Opens at the cursor** — the menu centres itself on the pointer and is clamped to the current monitor's work area.
-- **Truly transparent** — per-pixel alpha, so only the buttons are drawn; the desktop shows through everywhere else.
-- **Configurable buttons** — 8 outer buttons plus a centre button. Each can send a keyboard shortcut or launch a program/file/URL. Edit them in the built-in settings window, or by hand in `actions.json`.
 - **Pick by gesture** — keep the middle button held, flick towards a button and let go. Faster than aiming, and it is what a radial menu is for. Release without moving and the menu simply stays open to be clicked.
 - **Dismiss any way you like** — click a button, click anywhere off the buttons, click elsewhere on screen, or press <kbd>Esc</kbd>.
+
+### 🎨 Customization
+
+- **Configurable buttons** — 8 outer buttons plus a centre button. Each can send a keyboard shortcut or launch a program/file/URL. Edit them in the built-in settings window, or by hand in `actions.json`.
+- **Truly transparent** — per-pixel alpha, so only the buttons are drawn; the desktop shows through everywhere else.
+- **Buttons carry a drop shadow** — they stay readable over a white window underneath, which matters because the overlay is genuinely transparent.
+- **Picks up edits to `actions.json` on its own** — the file is watched in both locations it can live in.
+
+### 🔒 Reliability & privacy
+
 - **One instance only** — starting the app again asks the copy already running to open its settings instead of installing a second global hook.
 - **Runs in the notification area** — closing the main window hides it; the app keeps listening in the background.
 - **Says when it isn't working** — the main window reports whether the hooks installed and whether `actions.json` was usable.
 - **Private by design** — no usage events, clicks, gestures, launched actions, profile changes or errors are written to a log file.
-- **Picks up edits to `actions.json` on its own** — the file is watched in both locations it can live in.
 - **Starts with Windows** — optional, from the main window's toggle or the tray menu. Uses the per-user Run key, so it needs no elevation and shows up in Windows' own Startup Apps settings.
-- **Buttons carry a drop shadow** — they stay readable over a white window underneath, which matters because the overlay is genuinely transparent.
 - **Stays out of the way** — `WS_EX_TOOLWINDOW` + `WS_EX_NOACTIVATE` keep the overlay out of Alt+Tab and the taskbar, and it never steals focus, so shortcuts land in the app you were actually using.
 
 ## Requirements
@@ -46,8 +81,6 @@ Plain `dotnet build` also works: the project defaults `Platform` to `x64` and de
 In Visual Studio, press F5 — there is one launch profile, **"Action Wheel (Unpackaged)"**.
 
 Self-contained publishes are large (roughly 250–300 MB). That is normal for a self-contained WinUI 3 / .NET 10 app.
-
-`.gitlab-ci.yml` builds Debug and Release on every push and merge request, and publishes the single-file exe as an artifact on the default branch and on tags. The jobs need a runner tagged `windows` with the .NET 10 SDK — a WinUI 3 app needs the real Windows SDK, so no Linux image will do.
 
 ## Using it
 
@@ -197,6 +230,10 @@ Both hooks are installed together or not at all. If only one goes in, the other 
 
 **No tray icon** — the app falls back to exiting when the main window closes, so it can't become unquittable.
 
+## Contributing
+
+Bug reports, feature requests and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for the build/test workflow and coding conventions, and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for the ground rules. Found a security issue? Please report it privately per [SECURITY.md](SECURITY.md) rather than opening a public issue.
+
 ## License
 
-Demonstration project — see `LICENSE.txt`.
+[MIT](LICENSE.txt) © 2026 Minh Pham

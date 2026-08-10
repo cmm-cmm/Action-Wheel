@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🎯 Action Wheel
+<img src="Assets/AppIcon.png" alt="Action Wheel icon" width="120" height="120">
+
+# Action Wheel
 
 **A radial "pie" menu for Windows — one middle click puts any shortcut or app right under your cursor.**
 

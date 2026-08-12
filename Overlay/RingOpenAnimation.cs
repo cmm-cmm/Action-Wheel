@@ -21,11 +21,17 @@ namespace Action_Wheel.Overlay
     /// The side of the square the ring is drawn on. Only Converge reads it, to work out how far
     /// outside the orbit a button can start without being clipped by the edge.
     /// </param>
-    internal readonly record struct RingMetrics(double OrbitRadius, double ButtonSize, double SurfaceSize)
+    /// <param name="DurationScale">
+    /// <see cref="RingAppearance.AnimationDurationPercent"/> divided by 100 - multiplies every begin
+    /// and duration value a preset builds. 1 plays a preset exactly as tuned.
+    /// </param>
+    internal readonly record struct RingMetrics(
+        double OrbitRadius, double ButtonSize, double SurfaceSize, double DurationScale)
     {
         /// <summary>The live overlay: the ring at its own size, on the window derived from it.</summary>
         public static RingMetrics For(RingAppearance appearance) =>
-            new(appearance.OrbitRadius, appearance.ButtonSize, appearance.MenuSize);
+            new(appearance.OrbitRadius, appearance.ButtonSize, appearance.MenuSize,
+                appearance.AnimationDurationPercent / 100.0);
     }
 
     /// <summary>
@@ -53,11 +59,14 @@ namespace Action_Wheel.Overlay
     ///
     /// The timings are bounded, not free. Click-to-first-pixel is around 15 ms, so the animation is
     /// almost the entire delay the user actually feels; the original storyboard was retuned from
-    /// 400 ms down to 186 ms for exactly that reason. Every preset finishes inside <see cref="BudgetMs"/>.
+    /// 400 ms down to 186 ms for exactly that reason. Every preset finishes inside <see cref="BudgetMs"/>
+    /// at <see cref="RingAppearance.AnimationDurationPercent"/> 100 - the user's own duration setting
+    /// is the one deliberate way past that budget, traded off against the ratios above still holding
+    /// at any scale since every value in a preset is multiplied by the same factor.
     /// </remarks>
     internal static class RingOpenAnimation
     {
-        /// <summary>Total wall-clock budget for an opening animation, in milliseconds.</summary>
+        /// <summary>Total wall-clock budget for an opening animation, in milliseconds, at 100% duration.</summary>
         public const double BudgetMs = 200.0;
 
         /// <summary>
@@ -112,7 +121,7 @@ namespace Action_Wheel.Overlay
             switch (kind)
             {
                 case RingAnimation.Pop:
-                    BuildPop(storyboard, container, buttons);
+                    BuildPop(storyboard, container, buttons, metrics);
                     break;
                 case RingAnimation.Radiate:
                     BuildRadiate(storyboard, container, buttons, metrics);
@@ -121,13 +130,13 @@ namespace Action_Wheel.Overlay
                     BuildConverge(storyboard, container, buttons, metrics);
                     break;
                 case RingAnimation.Sweep:
-                    BuildSweep(storyboard, container, buttons, clockwise: true);
+                    BuildSweep(storyboard, container, buttons, clockwise: true, metrics);
                     break;
                 case RingAnimation.CounterSweep:
-                    BuildSweep(storyboard, container, buttons, clockwise: false);
+                    BuildSweep(storyboard, container, buttons, clockwise: false, metrics);
                     break;
                 default:
-                    BuildFade(storyboard, container, buttons);
+                    BuildFade(storyboard, container, buttons, metrics);
                     break;
             }
 
@@ -140,21 +149,25 @@ namespace Action_Wheel.Overlay
         /// one - it is the reference the other six are variations on.
         /// </summary>
         private static void BuildFade(Storyboard storyboard, FrameworkElement container,
-            IReadOnlyList<UIElement> buttons)
+            IReadOnlyList<UIElement> buttons, RingMetrics metrics)
         {
-            Fade(storyboard, container, 0, 0, 90);
-            Scale(storyboard, container, 0.85, 0, 120);
+            double scale = metrics.DurationScale;
 
-            Fade(storyboard, buttons[0], 0, 0, 80);
+            Fade(storyboard, container, 0, 0, 90, scale);
+            Scale(storyboard, container, 0.85, 0, 120, scale);
+
+            Fade(storyboard, buttons[0], 0, 0, 80, scale);
             for (int tag = 1; tag < buttons.Count; tag++)
-                Fade(storyboard, buttons[tag], 0, 12 * tag, 90);
+                Fade(storyboard, buttons[tag], 0, 12 * tag, 90, scale);
         }
 
         /// <summary>Each button springs up from a quarter of its size, overshooting on the way.</summary>
         private static void BuildPop(Storyboard storyboard, FrameworkElement container,
-            IReadOnlyList<UIElement> buttons)
+            IReadOnlyList<UIElement> buttons, RingMetrics metrics)
         {
-            Fade(storyboard, container, 0, 0, 50);
+            double scale = metrics.DurationScale;
+
+            Fade(storyboard, container, 0, 0, 50, scale);
 
             for (int tag = 0; tag < buttons.Count; tag++)
             {
@@ -163,8 +176,8 @@ namespace Action_Wheel.Overlay
                 // 35 ms against 140 ms of growth: the button is solid for three quarters of its
                 // journey, which is the whole point of the preset. Matching the two durations is
                 // what made this look like a plain fade.
-                Fade(storyboard, buttons[tag], 0, begin, 35);
-                Scale(storyboard, buttons[tag], 0.25, begin, 140,
+                Fade(storyboard, buttons[tag], 0, begin, 35, scale);
+                Scale(storyboard, buttons[tag], 0.25, begin, 140, scale,
                     new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.9 });
             }
         }
@@ -176,9 +189,11 @@ namespace Action_Wheel.Overlay
         private static void BuildRadiate(Storyboard storyboard, FrameworkElement container,
             IReadOnlyList<UIElement> buttons, RingMetrics metrics)
         {
-            Fade(storyboard, container, 0, 0, 45);
-            Fade(storyboard, buttons[0], 0, 0, 45);
-            Scale(storyboard, buttons[0], 0.5, 0, 110, new CubicEase { EasingMode = EasingMode.EaseOut });
+            double scale = metrics.DurationScale;
+
+            Fade(storyboard, container, 0, 0, 45, scale);
+            Fade(storyboard, buttons[0], 0, 0, 45, scale);
+            Scale(storyboard, buttons[0], 0.5, 0, 110, scale, new CubicEase { EasingMode = EasingMode.EaseOut });
 
             for (int tag = 1; tag < buttons.Count; tag++)
             {
@@ -186,12 +201,12 @@ namespace Action_Wheel.Overlay
                 double begin = 6 * tag;
                 var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
 
-                Fade(storyboard, buttons[tag], 0, begin, 45);
-                Scale(storyboard, buttons[tag], 0.65, begin, 150, easing);
+                Fade(storyboard, buttons[tag], 0, begin, 45, scale);
+                Scale(storyboard, buttons[tag], 0.65, begin, 150, scale, easing);
 
                 // Negated: the button is laid out at its final position, so travelling *out* from
                 // the centre means starting at minus its own offset and animating back to zero.
-                Translate(storyboard, buttons[tag], -offsetX, -offsetY, begin, 150, easing);
+                Translate(storyboard, buttons[tag], -offsetX, -offsetY, begin, 150, scale, easing);
             }
         }
 
@@ -213,13 +228,14 @@ namespace Action_Wheel.Overlay
         private static void BuildConverge(Storyboard storyboard, FrameworkElement container,
             IReadOnlyList<UIElement> buttons, RingMetrics metrics)
         {
+            double scale = metrics.DurationScale;
             double room = metrics.SurfaceSize / 2.0
                 - metrics.OrbitRadius - metrics.ButtonSize * 0.56 - 2.0;
             double travel = Math.Clamp(room, MinConvergeTravelDip, MaxConvergeTravelDip);
 
-            Fade(storyboard, container, 0, 0, 45);
-            Fade(storyboard, buttons[0], 0, 110, 60);
-            Scale(storyboard, buttons[0], 0.4, 110, 90,
+            Fade(storyboard, container, 0, 0, 45, scale);
+            Fade(storyboard, buttons[0], 0, 110, 60, scale);
+            Scale(storyboard, buttons[0], 0.4, 110, 90, scale,
                 new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.7 });
 
             for (int tag = 1; tag < buttons.Count; tag++)
@@ -228,10 +244,10 @@ namespace Action_Wheel.Overlay
                 double begin = 5 * tag;
                 var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
 
-                Fade(storyboard, buttons[tag], 0, begin, 40);
+                Fade(storyboard, buttons[tag], 0, begin, 40, scale);
                 // Positive, unlike Radiate: outside the orbit rather than inside it.
-                Translate(storyboard, buttons[tag], offsetX, offsetY, begin, 150, easing);
-                Scale(storyboard, buttons[tag], 1.25, begin, 150, easing);
+                Translate(storyboard, buttons[tag], offsetX, offsetY, begin, 150, scale, easing);
+                Scale(storyboard, buttons[tag], 1.25, begin, 150, scale, easing);
             }
         }
 
@@ -248,19 +264,20 @@ namespace Action_Wheel.Overlay
         /// why only the opacity and scale are staggered here.
         /// </remarks>
         private static void BuildSweep(Storyboard storyboard, FrameworkElement container,
-            IReadOnlyList<UIElement> buttons, bool clockwise)
+            IReadOnlyList<UIElement> buttons, bool clockwise, RingMetrics metrics)
         {
+            double scale = metrics.DurationScale;
             var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
 
             // A clockwise arrival means starting turned anticlockwise. XAML's Rotation is positive
             // clockwise, so the wind-up is negative for a clockwise sweep.
             double windUp = clockwise ? -SweepDegrees : SweepDegrees;
 
-            Fade(storyboard, container, 0, 0, 50);
-            Rotate(storyboard, container, windUp, 0, 190, easing);
+            Fade(storyboard, container, 0, 0, 50, scale);
+            Rotate(storyboard, container, windUp, 0, 190, scale, easing);
 
-            Fade(storyboard, buttons[0], 0, 0, 45);
-            Scale(storyboard, buttons[0], 0.7, 0, 110, easing);
+            Fade(storyboard, buttons[0], 0, 0, 45, scale);
+            Scale(storyboard, buttons[0], 0.7, 0, 110, scale, easing);
 
             for (int tag = 1; tag < buttons.Count; tag++)
             {
@@ -270,9 +287,9 @@ namespace Action_Wheel.Overlay
                 int order = clockwise ? tag : buttons.Count - tag;
                 double begin = 12 * order;
 
-                Fade(storyboard, buttons[tag], 0, begin, 30);
-                Scale(storyboard, buttons[tag], 0.85, begin, 90, easing);
-                Rotate(storyboard, buttons[tag], -windUp, 0, 190, easing);
+                Fade(storyboard, buttons[tag], 0, begin, 30, scale);
+                Scale(storyboard, buttons[tag], 0.85, begin, 90, scale, easing);
+                Rotate(storyboard, buttons[tag], -windUp, 0, 190, scale, easing);
             }
         }
 
@@ -307,48 +324,50 @@ namespace Action_Wheel.Overlay
         }
 
         private static void Fade(Storyboard storyboard, UIElement element,
-            double from, double beginMs, double durationMs) =>
-            Add(storyboard, element, "Opacity", from, 1, beginMs, durationMs,
+            double from, double beginMs, double durationMs, double scale) =>
+            Add(storyboard, element, "Opacity", from, 1, beginMs, durationMs, scale,
                 new QuadraticEase { EasingMode = EasingMode.EaseOut });
 
         private static void Scale(Storyboard storyboard, UIElement element,
-            double from, double beginMs, double durationMs, EasingFunctionBase? easing = null)
+            double from, double beginMs, double durationMs, double scale, EasingFunctionBase? easing = null)
         {
             EnsureTransform(element);
             easing ??= new QuadraticEase { EasingMode = EasingMode.EaseOut };
             Add(storyboard, element, "(UIElement.RenderTransform).(CompositeTransform.ScaleX)",
-                from, 1, beginMs, durationMs, easing);
+                from, 1, beginMs, durationMs, scale, easing);
             Add(storyboard, element, "(UIElement.RenderTransform).(CompositeTransform.ScaleY)",
-                from, 1, beginMs, durationMs, easing);
+                from, 1, beginMs, durationMs, scale, easing);
         }
 
         private static void Translate(Storyboard storyboard, UIElement element,
-            double fromX, double fromY, double beginMs, double durationMs, EasingFunctionBase easing)
+            double fromX, double fromY, double beginMs, double durationMs, double scale,
+            EasingFunctionBase easing)
         {
             EnsureTransform(element);
             Add(storyboard, element, "(UIElement.RenderTransform).(CompositeTransform.TranslateX)",
-                fromX, 0, beginMs, durationMs, easing);
+                fromX, 0, beginMs, durationMs, scale, easing);
             Add(storyboard, element, "(UIElement.RenderTransform).(CompositeTransform.TranslateY)",
-                fromY, 0, beginMs, durationMs, easing);
+                fromY, 0, beginMs, durationMs, scale, easing);
         }
 
         private static void Rotate(Storyboard storyboard, UIElement element,
-            double fromDegrees, double beginMs, double durationMs, EasingFunctionBase easing)
+            double fromDegrees, double beginMs, double durationMs, double scale, EasingFunctionBase easing)
         {
             EnsureTransform(element);
             Add(storyboard, element, "(UIElement.RenderTransform).(CompositeTransform.Rotation)",
-                fromDegrees, 0, beginMs, durationMs, easing);
+                fromDegrees, 0, beginMs, durationMs, scale, easing);
         }
 
         private static void Add(Storyboard storyboard, DependencyObject target, string path,
-            double from, double to, double beginMs, double durationMs, EasingFunctionBase easing)
+            double from, double to, double beginMs, double durationMs, double scale,
+            EasingFunctionBase easing)
         {
             var animation = new DoubleAnimation
             {
                 From = from,
                 To = to,
-                BeginTime = TimeSpan.FromMilliseconds(beginMs),
-                Duration = new Duration(TimeSpan.FromMilliseconds(durationMs)),
+                BeginTime = TimeSpan.FromMilliseconds(beginMs * scale),
+                Duration = new Duration(TimeSpan.FromMilliseconds(durationMs * scale)),
                 EasingFunction = easing,
             };
 

@@ -44,6 +44,7 @@ namespace Action_Wheel.Services
                         Animation = (RingAnimation)ReadInt(root, "animation", (int)RingAnimation.Fade),
                         ButtonSize = ReadInt(root, "buttonSize", (int)RingGeometry.OuterButtonSizeDip),
                         OrbitRadius = ReadInt(root, "orbitRadius", (int)RingGeometry.OrbitRadiusDip),
+                        AnimationDurationPercent = ReadInt(root, "animationDuration", 100),
                     }.Normalised(),
                 };
             }
@@ -71,6 +72,7 @@ namespace Action_Wheel.Services
                     writer.WriteNumber("animation", (int)appearance.Animation);
                     writer.WriteNumber("buttonSize", (int)appearance.ButtonSize);
                     writer.WriteNumber("orbitRadius", (int)appearance.OrbitRadius);
+                    writer.WriteNumber("animationDuration", (int)appearance.AnimationDurationPercent);
                     writer.WriteEndObject();
                 }
 

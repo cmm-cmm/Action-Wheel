@@ -607,7 +607,7 @@
                                  sweeps sit at opposite ends of it and would be separated here. -->
                             <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" Header="Opening animation"
                                       SelectedIndex="{Binding RingAnimationIndex, Mode=TwoWay}"
-                                      ToolTipService.ToolTip="How the ring appears. Every option finishes within about 200 ms, so none of them delays a click.">
+                                      ToolTipService.ToolTip="How the ring appears. Every option finishes within about 200 ms at 100% effect duration, so none of them delays a click.">
                                 <ComboBoxItem Content="None (instant)"/>
                                 <ComboBoxItem Content="Fade and scale"/>
                                 <ComboBoxItem Content="Pop"/>
@@ -655,6 +655,14 @@
                                        SpinButtonPlacementMode="Compact"
                                        ToolTipService.ToolTip="Distance from the ring's centre to each outer button. The lower limit rises as the buttons grow, so they never touch; the overlay window grows with the ring, so the upper limit does not move."/>
                         </Grid>
+
+                        <NumberBox Header="Effect duration (%)"
+                                   Minimum="{Binding MinAnimationDurationPercent, Mode=OneWay}"
+                                   Maximum="{Binding MaxAnimationDurationPercent, Mode=OneWay}"
+                                   SmallChange="10"
+                                   Value="{Binding AnimationDurationPercent, Mode=TwoWay}"
+                                   SpinButtonPlacementMode="Compact"
+                                   ToolTipService.ToolTip="How long the opening animation takes, as a percentage of its tuned speed. 100 is the default; lower plays faster, higher plays slower."/>
                     </StackPanel>
                 </Border>
             </StackPanel>

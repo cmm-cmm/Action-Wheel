@@ -75,6 +75,22 @@ namespace Action_Wheel.ViewModels
             set => ApplyAppearance(_appearance with { OrbitRadius = value }, nameof(OrbitRadius));
         }
 
+        /// <summary>
+        /// How long the opening animation takes, as a percentage of its tuned timings. Not on the
+        /// animation-picker card's replay path: like <see cref="ButtonSize"/> and
+        /// <see cref="OrbitRadius"/> it is a number typed or spun rather than a single deliberate
+        /// pick, so it does not replay the preview by itself - the Play button is how it is reviewed.
+        /// </summary>
+        public double AnimationDurationPercent
+        {
+            get => _appearance.AnimationDurationPercent;
+            set => ApplyAppearance(
+                _appearance with { AnimationDurationPercent = value }, nameof(AnimationDurationPercent));
+        }
+
+        public double MinAnimationDurationPercent => RingAppearance.MinAnimationDurationPercent;
+        public double MaxAnimationDurationPercent => RingAppearance.MaxAnimationDurationPercent;
+
         public double MinButtonSize => RingGeometry.MinButtonSizeDip;
         public double MaxButtonSize => RingGeometry.MaxButtonSizeDip;
 
@@ -135,6 +151,7 @@ namespace Action_Wheel.ViewModels
             Raise(nameof(RingAnimationDescription));
             Raise(nameof(ButtonSize));
             Raise(nameof(OrbitRadius));
+            Raise(nameof(AnimationDurationPercent));
             Raise(nameof(Appearance));
             ScheduleRefresh(redraw: true, animate: animate);
         }

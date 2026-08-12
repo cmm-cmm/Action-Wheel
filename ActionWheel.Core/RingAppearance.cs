@@ -46,6 +46,26 @@ namespace Action_Wheel.Core
 
         public RingAnimation Animation { get; init; } = RingAnimation.Fade;
 
+        /// <summary>
+        /// How long the opening animation takes, as a percentage of its tuned timings: 100 is every
+        /// begin/duration value exactly as <see cref="RingOpenAnimation"/> defines it, below that
+        /// plays faster, above that slower.
+        /// </summary>
+        /// <remarks>
+        /// A percentage of the existing begin/duration values rather than a free millisecond figure,
+        /// because the presets are not one number each - Fade alone staggers nine begin times against
+        /// each other - and a scalar is the only edit that moves all of them together without
+        /// disturbing the ratios <see cref="RingOpenAnimation"/>'s remarks describe as "fade fast,
+        /// move slowly."
+        /// </remarks>
+        public double AnimationDurationPercent { get; init; } = 100.0;
+
+        /// <summary>How much faster than tuned the user is allowed to make the opening animation.</summary>
+        public const double MinAnimationDurationPercent = 50.0;
+
+        /// <summary>How much slower than tuned the user is allowed to make the opening animation.</summary>
+        public const double MaxAnimationDurationPercent = 200.0;
+
         /// <summary>Diameter of one of the eight outer buttons, in DIPs.</summary>
         public double ButtonSize { get; init; } = RingGeometry.OuterButtonSizeDip;
 
@@ -79,11 +99,16 @@ namespace Action_Wheel.Core
                 ? Math.Round(OrbitRadius) : RingGeometry.OrbitRadiusDip;
             orbit = Math.Clamp(orbit, RingGeometry.MinOrbitFor(button), RingGeometry.MaxOrbitFor(button));
 
+            double duration = Math.Clamp(
+                double.IsFinite(AnimationDurationPercent) ? Math.Round(AnimationDurationPercent) : 100.0,
+                MinAnimationDurationPercent, MaxAnimationDurationPercent);
+
             return this with
             {
                 Animation = Enum.IsDefined(typeof(RingAnimation), Animation) ? Animation : RingAnimation.Fade,
                 ButtonSize = button,
                 OrbitRadius = orbit,
+                AnimationDurationPercent = duration,
             };
         }
     }

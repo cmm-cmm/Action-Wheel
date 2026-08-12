@@ -51,9 +51,9 @@
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     
     <!-- Version Info -->
-    <AssemblyVersion>2.2.0.0</AssemblyVersion>
-    <FileVersion>2.2.0.0</FileVersion>
-    <Version>2.2.0</Version>
+    <AssemblyVersion>2.3.0.0</AssemblyVersion>
+    <FileVersion>2.3.0.0</FileVersion>
+    <Version>2.3.0</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Company>Your Company</Company>
     <Product>Action Wheel</Product>

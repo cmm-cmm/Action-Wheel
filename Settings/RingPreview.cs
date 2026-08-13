@@ -116,6 +116,39 @@ namespace Action_Wheel.Settings
                 var host = new Grid { Width = diameter, Height = diameter };
                 host.Children.Add(shadowHost);
                 host.Children.Add(bubble);
+
+                // A static hint rather than a working simulation of the group actually opening:
+                // this preview draws Borders, not the real Buttons RadialMenu.ExpandGroup adds and
+                // removes at runtime, so reusing that logic here would mean a second implementation
+                // of the same feature rather than a preview of the one that exists. The badge is
+                // what tells the user this button is a group at all before they open the real ring.
+                if (item.IsGroup)
+                {
+                    double badgeSize = Math.Max(14, diameter * 0.32);
+                    var badge = new Border
+                    {
+                        Width = badgeSize,
+                        Height = badgeSize,
+                        CornerRadius = new CornerRadius(badgeSize / 2),
+                        Background = new SolidColorBrush(Microsoft.UI.Colors.White),
+                        BorderThickness = new Thickness(1.5),
+                        BorderBrush = new SolidColorBrush(item.BackgroundColor),
+                        HorizontalAlignment = HorizontalAlignment.Right,
+                        VerticalAlignment = VerticalAlignment.Bottom,
+                        Child = new FontIcon
+                        {
+                            FontFamily = IconFont.Family,
+                            Glyph = "",
+                            FontSize = badgeSize * 0.55,
+                            Foreground = new SolidColorBrush(Microsoft.UI.Colors.Black),
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            VerticalAlignment = VerticalAlignment.Center,
+                        },
+                    };
+                    ToolTipService.SetToolTip(badge, $"Group of {item.GroupChildren.Count} button(s)");
+                    host.Children.Add(badge);
+                }
+
                 if (item.ShadowEnabled)
                 {
                     // Blur and offset scale with everything else, or a shrunken ring keeps a shadow

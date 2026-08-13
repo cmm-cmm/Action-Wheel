@@ -445,8 +445,6 @@ namespace Action_Wheel.Overlay
         /// </summary>
         private readonly DispatcherQueueTimer _holdTimer;
 
-        /// <summary>The tag <see cref="_holdTimer"/> is currently counting down for, or null.</summary>
-        private int? _heldTag;
 
         /// <summary>
         /// Highlights the button the drag gesture is pointing at, or clears the highlight when
@@ -468,19 +466,49 @@ namespace Action_Wheel.Overlay
         }
 
         /// <summary>
-        /// Starts (or restarts) the hold countdown for <paramref name="tag"/>, or does nothing if
-        /// that button has no hold action configured - the common case, and the one that must cost
-        /// nothing: no timer ever runs for a button nobody set one up on.
+        /// What <see cref="FireHold"/> runs when the countdown elapses. An <see cref="Action"/>
+        /// rather than a bare tag: a main-ring hold and a group child's hold resolve completely
+        /// differently (<see cref="InvokeTag"/> vs <see cref="InvokeGroupChildHold"/>), and unifying
+        /// them behind one delegate is what let both share a single timer and a single visual
+        /// indicator instead of duplicating the arm/disarm/fire plumbing per case.
+        /// </summary>
+        private Action? _heldAction;
+
+        /// <summary>
+        /// Starts (or restarts) the hold countdown for the main ring's <paramref name="tag"/>, or
+        /// does nothing if that button has no hold action configured - the common case, and the one
+        /// that must cost nothing: no timer ever runs for a button nobody set one up on.
         /// </summary>
         private void ArmHold(int tag)
         {
-            DisarmHold();
-
             var action = tag is >= 0 and <= 8 ? ActionsByTag[tag] : null;
             if (action == null || action.HoldKind == ActionKind.None)
+            {
+                DisarmHold();
                 return;
+            }
 
-            _heldTag = tag;
+            ArmHoldCore(() => InvokeTag(tag, hold: true), AllButtons[tag],
+                tag == 0 ? _appearance.CenterButtonSize : _appearance.ButtonSize);
+        }
+
+        /// <summary>The same countdown, for a group's satellite button - see <see cref="ArmHold"/>.</summary>
+        private void ArmChildHold(int parentTag, int childIndex, ActionItem child, Button button)
+        {
+            if (child.HoldKind == ActionKind.None)
+            {
+                DisarmHold();
+                return;
+            }
+
+            ArmHoldCore(() => InvokeGroupChildHold(parentTag, childIndex), button, GroupButtonSize);
+        }
+
+        private void ArmHoldCore(Action onFire, FrameworkElement target, double diameter)
+        {
+            DisarmHold();
+            _heldAction = onFire;
+            StartHoldVisual(target, diameter);
             _holdTimer.Interval = TimeSpan.FromMilliseconds(RingGeometry.HoldThresholdMs);
             _holdTimer.Start();
         }
@@ -492,8 +520,9 @@ namespace Action_Wheel.Overlay
         /// </summary>
         private void DisarmHold()
         {
-            _heldTag = null;
+            _heldAction = null;
             _holdTimer.Stop();
+            StopHoldVisual();
         }
 
         /// <summary>
@@ -508,12 +537,81 @@ namespace Action_Wheel.Overlay
         /// </summary>
         private void FireHold()
         {
-            if (_closed || _heldTag is not int tag)
+            if (_closed || _heldAction is not Action fire)
                 return;
 
-            _heldTag = null;
-            InvokeTag(tag, hold: true);
+            _heldAction = null;
+            StopHoldVisual();
+            fire();
         }
+
+        /// <summary>
+        /// The ring displayed while a button counts down to its hold action, so holding reads as
+        /// "something is about to happen" instead of an ordinary press that never lets go. One
+        /// instance, moved to wherever the current hold is - only one button can be held at a time,
+        /// on either the main ring or a group's satellite ring.
+        /// </summary>
+        private ProgressRing? _holdIndicator;
+
+        private ProgressRing EnsureHoldIndicator()
+        {
+            if (_holdIndicator != null)
+                return _holdIndicator;
+
+            _holdIndicator = new ProgressRing
+            {
+                IsIndeterminate = false,
+                Minimum = 0,
+                Maximum = 1,
+                Foreground = new SolidColorBrush(Colors.White),
+                IsHitTestVisible = false,
+                Visibility = Visibility.Collapsed,
+            };
+            Canvas.SetZIndex(_holdIndicator, 1000);
+            ButtonsCanvas.Children.Add(_holdIndicator);
+            return _holdIndicator;
+        }
+
+        private void StartHoldVisual(FrameworkElement target, double diameter)
+        {
+            var ring = EnsureHoldIndicator();
+            double size = diameter + 12;
+            ring.Width = size;
+            ring.Height = size;
+            Canvas.SetLeft(ring, Canvas.GetLeft(target) - (size - diameter) / 2.0);
+            Canvas.SetTop(ring, Canvas.GetTop(target) - (size - diameter) / 2.0);
+            ring.Value = 0;
+            ring.Visibility = Visibility.Visible;
+
+            var animation = new DoubleAnimation
+            {
+                From = 0,
+                To = 1,
+                Duration = new Duration(TimeSpan.FromMilliseconds(RingGeometry.HoldThresholdMs)),
+            };
+            Storyboard.SetTarget(animation, ring);
+            Storyboard.SetTargetProperty(animation, "Value");
+
+            var storyboard = new Storyboard();
+            storyboard.Children.Add(animation);
+            storyboard.Begin();
+        }
+
+        private void StopHoldVisual()
+        {
+            if (_holdIndicator != null)
+                _holdIndicator.Visibility = Visibility.Collapsed;
+        }
+
+        /// <summary>
+        /// Lets <see cref="LauncherService"/> drive the same hold countdown and indicator for the
+        /// flick/drag path, which never touches a Button directly - the gesture is resolved from
+        /// raw cursor movement against <see cref="RingGeometry.TagForDirection"/>, entirely outside
+        /// WinUI's own pointer routing.
+        /// </summary>
+        public void ShowHoldProgress(int tag) => ArmHold(tag);
+
+        public void HideHoldProgress() => DisarmHold();
 
         /// <summary>
         /// Runs the action for a tag as if its button had been clicked or held. Used to complete a
@@ -668,6 +766,34 @@ namespace Action_Wheel.Overlay
 
                 button.Click += GroupChildButton_Click;
 
+                // Same trap as the main ring's ApplyPointerStates: ButtonBase marks pointer events
+                // Handled while driving its own visual states, so a plain "+=" here would never run.
+                int childIndex = i;
+                button.AddHandler(UIElement.PointerPressedEvent,
+                    new PointerEventHandler((s2, e2) => ArmChildHold(parentTag, childIndex, child, button)), true);
+                button.AddHandler(UIElement.PointerReleasedEvent, new PointerEventHandler((s2, e2) => DisarmHold()), true);
+                button.AddHandler(UIElement.PointerExitedEvent, new PointerEventHandler((s2, e2) => DisarmHold()), true);
+                button.AddHandler(UIElement.PointerCanceledEvent, new PointerEventHandler((s2, e2) => DisarmHold()), true);
+                button.AddHandler(UIElement.PointerCaptureLostEvent, new PointerEventHandler((s2, e2) => DisarmHold()), true);
+
+                // The template is only applied once the button is actually in the visual tree, which
+                // for one built here happens asynchronously after ButtonsCanvas.Children.Add below -
+                // unlike the main ring's static XAML buttons, whose templates are already applied by
+                // the time RadialMenu_Loaded calls ApplyShadows.
+                if (child.ShadowEnabled)
+                {
+                    var shadowColor = IconFactory.ColorOr(child.Shadow, Colors.Black);
+                    button.Loaded += (s2, e2) =>
+                    {
+                        var host = ButtonShadow.FindTemplatePart(button, "ShadowHost");
+                        if (host != null)
+                        {
+                            ButtonShadow.Apply(host, size, shadowColor,
+                                child.ShadowOpacity, child.ShadowBlur, child.ShadowOffsetX, child.ShadowOffsetY);
+                        }
+                    };
+                }
+
                 Canvas.SetLeft(button, x - size / 2.0);
                 Canvas.SetTop(button, y - size / 2.0);
                 ButtonsCanvas.Children.Add(button);
@@ -679,21 +805,59 @@ namespace Action_Wheel.Overlay
             return buttons;
         }
 
+        /// <summary>The child a satellite button's "parentTag:childIndex" Tag refers to, or null.</summary>
+        private ActionItem? ResolveGroupChild(int parentTag, int childIndex)
+        {
+            var parent = parentTag is >= 0 and <= 8 ? ActionsByTag[parentTag] : null;
+            if (parent == null || childIndex < 0 || childIndex >= parent.GroupChildren.Count)
+                return null;
+            return parent.GroupChildren[childIndex];
+        }
+
+        private static bool TryParseChildTag(string tag, out int parentTag, out int childIndex)
+        {
+            parentTag = 0;
+            childIndex = 0;
+            var parts = tag.Split(':');
+            return parts.Length == 2
+                && int.TryParse(parts[0], out parentTag)
+                && int.TryParse(parts[1], out childIndex);
+        }
+
         /// <summary>Runs a group child's action. Mirrors InvokeTag's own close-then-dispatch order.</summary>
         private void GroupChildButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_closed || sender is not Button button || button.Tag is not string tag)
+            if (_closed || sender is not Button button || button.Tag is not string tag
+                || !TryParseChildTag(tag, out int parentTag, out int childIndex))
+            {
+                return;
+            }
+
+            DisarmHold();
+            var action = ResolveGroupChild(parentTag, childIndex);
+            if (action == null)
                 return;
 
-            var parts = tag.Split(':');
-            if (parts.Length != 2 || !int.TryParse(parts[0], out int parentTag) || !int.TryParse(parts[1], out int childIndex))
+            CloseMenu();
+            ActionInvoked?.Invoke(this, action);
+        }
+
+        /// <summary>
+        /// A group child's hold countdown elapsed. Mirrors InvokeTag's own hold substitution: the
+        /// child's <see cref="ActionItem.HoldKind"/> fields stand in for its primary ones on a copy
+        /// of the same <see cref="ActionItem"/>, so <see cref="ActionInvoked"/> still only ever sees
+        /// one shape of thing to dispatch.
+        /// </summary>
+        private void InvokeGroupChildHold(int parentTag, int childIndex)
+        {
+            if (_closed)
                 return;
 
-            var parent = parentTag is >= 0 and <= 8 ? ActionsByTag[parentTag] : null;
-            if (parent == null || childIndex < 0 || childIndex >= parent.GroupChildren.Count)
+            var child = ResolveGroupChild(parentTag, childIndex);
+            if (child == null || child.HoldKind == ActionKind.None)
                 return;
 
-            var action = parent.GroupChildren[childIndex];
+            var action = child with { Kind = child.HoldKind, Value = child.HoldValue, Arguments = child.HoldArguments };
 
             CloseMenu();
             ActionInvoked?.Invoke(this, action);
@@ -836,7 +1000,7 @@ namespace Action_Wheel.Overlay
             // Also reached on release (see ApplyPointerStates), which is exactly when a held-past-
             // threshold press needs its countdown cancelled - the button is either about to raise a
             // normal Click (release before the threshold) or already handled by FireHold (release
-            // after it, but that path clears _heldTag itself before this ever runs).
+            // after it, but that path clears _heldAction itself before this ever runs).
             DisarmHold();
             PainterFor(sender)?.Hover();
         }

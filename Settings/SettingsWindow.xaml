@@ -172,6 +172,7 @@
                                 <Button Padding="8,0" Height="34"
                                         Tag="{Binding}"
                                         Click="EditGroup_Click"
+                                        AutomationProperties.Name="Edit group"
                                         Visibility="{Binding IsGroup, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
                                         ToolTipService.ToolTip="Choose this group's up to 5 buttons">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
@@ -505,13 +506,15 @@
             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
                 <TextBlock Text="Everything (profiles, trigger, appearance, icons):" VerticalAlignment="Center"
                            FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-                <Button Click="BackupAll_Click" ToolTipService.ToolTip="Save every profile, the trigger, the ring appearance, and extracted icons into one file">
+                <Button Click="BackupAll_Click" AutomationProperties.Name="Backup all"
+                        ToolTipService.ToolTip="Save every profile, the trigger, the ring appearance, and extracted icons into one file">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF019;" FontSize="13"/>
                         <TextBlock Text="Backup all…" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-                <Button Click="RestoreAll_Click" ToolTipService.ToolTip="Restore everything from a backup file, after showing what it contains">
+                <Button Click="RestoreAll_Click" AutomationProperties.Name="Restore backup"
+                        ToolTipService.ToolTip="Restore everything from a backup file, after showing what it contains">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF0ED;" FontSize="13"/>
                         <TextBlock Text="Restore backup…" VerticalAlignment="Center"/>

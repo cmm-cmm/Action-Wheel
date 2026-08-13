@@ -113,6 +113,17 @@ namespace Action_Wheel.ViewModels
 
             Items.CollectionChanged += OnItemsCollectionChanged;
 
+            LoadFromDisk();
+        }
+
+        /// <summary>
+        /// Reads actions, profiles, trigger settings, ring appearance and the active profile label
+        /// from disk, and marks the result as saved. Shared by the constructor and
+        /// <see cref="ReloadFromDisk"/> - the same read, just with nothing yet listening for the
+        /// second one to raise change notifications for.
+        /// </summary>
+        private void LoadFromDisk()
+        {
             RefreshProfiles();
             LoadItems(ActionConfig.Load());
             _history = new UndoHistory<ActionItem>(Snapshot());
@@ -122,13 +133,48 @@ namespace Action_Wheel.ViewModels
             _triggerIndex = (int)triggerPreferences.Trigger;
             _chordTimeoutMs = triggerPreferences.ChordTimeoutMs;
             _movementThreshold = triggerPreferences.MovementThreshold;
-            _appearance = triggerPreferences.Appearance ?? RingAppearance.Default;
+            _appearance = (triggerPreferences.Appearance ?? RingAppearance.Default).Normalised();
             _activeProfileName = ActiveProfileSettings.Load();
             _loadedProfileName = _activeProfileName;
 
             // Last, so the baseline is everything as it came off disk. Anything after this point is
             // the user changing something.
             MarkSaved();
+        }
+
+        /// <summary>
+        /// Re-reads everything <see cref="LoadFromDisk"/> does and tells every bound control about
+        /// it. Used after a full backup restore: that writes actions.json, preferences.json, the
+        /// profiles directory and active-profile.txt directly, none of it through this view model, so
+        /// without an explicit reload the window would keep showing whatever it had in memory before
+        /// the restore until closed and reopened.
+        /// </summary>
+        public void ReloadFromDisk()
+        {
+            LoadFromDisk();
+
+            Raise(nameof(ConfigPath));
+            Raise(nameof(TriggerIndex));
+            Raise(nameof(ChordTimeoutMs));
+            Raise(nameof(MovementThreshold));
+            Raise(nameof(ActiveProfileText));
+
+            // Mirrors ApplyAppearance's own Raise list - everything the ring size/animation card and
+            // its preview read from _appearance.
+            Raise(nameof(MinOrbitRadius));
+            Raise(nameof(MaxOrbitRadius));
+            Raise(nameof(RingAnimationIndex));
+            Raise(nameof(RingAnimationDescription));
+            Raise(nameof(ButtonSize));
+            Raise(nameof(OrbitRadius));
+            Raise(nameof(AnimationDurationMs));
+            Raise(nameof(AnimationDurationMsText));
+            Raise(nameof(Appearance));
+
+            UndoCommand.RaiseCanExecuteChanged();
+            RedoCommand.RaiseCanExecuteChanged();
+
+            ScheduleRefresh(redraw: true, animate: false);
         }
 
         /// <summary>Raised after actions.json has been written successfully.</summary>
@@ -162,7 +208,10 @@ namespace Action_Wheel.ViewModels
         public RelayCommand LoadProfileCommand { get; }
         public RelayCommand DeleteProfileCommand { get; }
         public RelayCommand RenameProfileCommand { get; }
-        private string _configPath;
+        // Always overwritten by LoadFromDisk() before the constructor returns; the initializer only
+        // exists because that assignment happens in a called method, which the nullable analyzer
+        // does not trace into.
+        private string _configPath = string.Empty;
 
         /// <summary>The file a save will write to - shown in the command bar.</summary>
         public string ConfigPath

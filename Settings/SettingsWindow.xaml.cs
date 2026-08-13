@@ -411,8 +411,15 @@ namespace Action_Wheel.Settings
                 var kind = new ComboBox
                 {
                     Width = 140,
-                    SelectedIndex = ActionValueCodec.KindToIndex(existing?.Kind ?? ActionKind.None),
+                    // ItemsSource before SelectedIndex, deliberately: object initializers run in the
+                    // order written, and a ComboBox with no items yet has Items.Count == 0 - setting
+                    // SelectedIndex to anything but -1 against that throws
+                    // "Value does not fall within the expected range", which is what crashed the
+                    // whole app the moment this dialog's Add button built a second row (the first
+                    // ever call to AddRow(null), since a brand-new group has no existing children to
+                    // have already hit the same bug when the dialog opened).
                     ItemsSource = new[] { "Do nothing", "Send shortcut", "Open app / file", "Windows function" },
+                    SelectedIndex = ActionValueCodec.KindToIndex(existing?.Kind ?? ActionKind.None),
                 };
                 var value = new TextBox { PlaceholderText = "Value", Width = 170, Text = existing?.Value ?? string.Empty };
                 var glyph = new TextBox { PlaceholderText = "Glyph hex", Width = 70, Text = existing?.Glyph ?? string.Empty };
@@ -907,9 +914,9 @@ namespace Action_Wheel.Settings
 
                 if (ConfigBackup.TryImport(path, out string importError))
                 {
+                    ViewModel.ReloadFromDisk();
                     ViewModel.ShowStatus(InfoBarSeverity.Success, "Backup restored",
-                        "Close and reopen Button Settings to see the restored profiles and appearance. "
-                        + "The ring itself already picked up the restored buttons.");
+                        "Every row, profile and appearance setting below now reflects the backup.");
                 }
                 else
                 {

@@ -29,11 +29,6 @@ namespace Action_Wheel.Services
         private int? _gestureTag;
         private IntPtr _targetWindow;
 
-        // Mirrors RadialMenu's own hold countdown, for the flick/drag path: a direct click on a
-        // button never reaches this service at all (WinUI routes it straight to the button), so a
-        // gesture that never releases outside the ring needs its own timer to notice a hold.
-        private readonly DispatcherQueueTimer _holdTimer;
-        private int? _holdArmedTag;
         private PointInt32? _lastHealthCursor;
         private long _lastHealthMouseCallback;
 
@@ -78,10 +73,6 @@ namespace Action_Wheel.Services
             _hookHealthTimer.Interval = TimeSpan.FromSeconds(5);
             _hookHealthTimer.IsRepeating = true;
             _hookHealthTimer.Tick += CheckHookHealth;
-
-            _holdTimer = _dispatcherQueue.CreateTimer();
-            _holdTimer.IsRepeating = false;
-            _holdTimer.Tick += (s, e) => FireGestureHold();
 
             ActionDispatcher.ActionFailed += OnActionFailed;
             ActionDispatcher.SettingsRequested += OnSettingsRequested;
@@ -325,8 +316,6 @@ namespace Action_Wheel.Services
             _gestureTag = null;
             _mouseHook.TrackMovement = true;
 
-            _dispatcherQueue.TryEnqueue(DisarmGestureHold);
-
             OpenMenuAt(position);
         }
 
@@ -395,7 +384,17 @@ namespace Action_Wheel.Services
             _dispatcherQueue.TryEnqueue(() =>
             {
                 _currentMenu?.HighlightTag(tag);
-                ArmGestureHold(tag);
+
+                // The hold countdown and its on-screen indicator both live on RadialMenu, which a
+                // direct click already reaches on its own (WinUI routes the press straight to the
+                // button); ShowHoldProgress/HideHoldProgress is what lets this gesture path - cursor
+                // movement resolved against RingGeometry.TagForDirection, entirely outside WinUI's
+                // own pointer routing - reach the exact same countdown instead of running a second,
+                // separate one that would race it to the same InvokeTag(tag, hold: true) call.
+                if (tag is int t)
+                    _currentMenu?.ShowHoldProgress(t);
+                else
+                    _currentMenu?.HideHoldProgress();
             });
         }
 
@@ -420,70 +419,15 @@ namespace Action_Wheel.Services
 
             _dispatcherQueue.TryEnqueue(() =>
             {
-                // The hold timer belongs to this service, not to the menu, so it has to be
-                // cancelled here regardless of whether a tag was resolved - released too close to
-                // the centre to choose a direction still ends whatever countdown was running.
-                DisarmGestureHold();
+                // Ends whatever countdown ShowHoldProgress started, regardless of whether a tag was
+                // resolved - released too close to the centre to choose a direction still ends it.
+                // If the hold already fired on its own (RadialMenu.FireHold runs preemptively, while
+                // still pressed - see its remarks), the menu and _currentMenu are already gone by the
+                // time this runs, and both calls below are then safe no-ops.
+                _currentMenu?.HideHoldProgress();
                 if (tag != null)
                     _currentMenu?.InvokeTag(tag.Value);
             });
-        }
-
-        /// <summary>
-        /// Restarts the hold countdown for <paramref name="tag"/> (or stops it if the direction has
-        /// nothing configured), mirroring RadialMenu.ArmHold for the flick/drag path. Must run on the
-        /// UI thread - <see cref="_holdTimer"/> was created on it, same as WinUI requires of any
-        /// DispatcherQueueTimer.
-        /// </summary>
-        private void ArmGestureHold(int? tag)
-        {
-            DisarmGestureHold();
-
-            if (tag is not int t)
-                return;
-
-            var action = FindAction(t);
-            if (action == null || action.HoldKind == ActionKind.None)
-                return;
-
-            _holdArmedTag = t;
-            _holdTimer.Interval = TimeSpan.FromMilliseconds(RingGeometry.HoldThresholdMs);
-            _holdTimer.Start();
-        }
-
-        private void DisarmGestureHold()
-        {
-            _holdArmedTag = null;
-            _holdTimer.Stop();
-        }
-
-        /// <summary>
-        /// The flick/drag path's hold countdown elapsed while the trigger button was still down and
-        /// the same tag was still chosen. Fires the tag's hold action immediately, the same
-        /// preemptive way RadialMenu.FireHold does and for the same reason: closing here, rather
-        /// than waiting for the eventual button-up, is what stops that button-up from also
-        /// completing the gesture as a normal (non-hold) selection afterwards.
-        /// </summary>
-        private void FireGestureHold()
-        {
-            if (_holdArmedTag is not int tag || !_gestureActive || _gestureTag != tag)
-                return;
-
-            _gestureActive = false;
-            _mouseHook.TrackMovement = false;
-            _holdArmedTag = null;
-
-            _currentMenu?.InvokeTag(tag, hold: true);
-        }
-
-        private ActionItem? FindAction(int tag)
-        {
-            foreach (var action in _actions)
-            {
-                if (action.Tag == tag)
-                    return action;
-            }
-            return null;
         }
 
         /// <summary>

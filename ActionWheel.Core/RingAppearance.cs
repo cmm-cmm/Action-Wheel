@@ -47,28 +47,35 @@ namespace Action_Wheel.Core
         public RingAnimation Animation { get; init; } = RingAnimation.Fade;
 
         /// <summary>
-        /// How long the opening animation takes, as a percentage of its tuned timings: 100 is every
-        /// begin/duration value exactly as <see cref="RingOpenAnimation"/> defines it - the fastest
-        /// setting available - and anything above that plays slower.
+        /// How long the opening animation takes to finish, in milliseconds.
+        /// <see cref="DefaultAnimationDurationMs"/> plays every begin/duration value exactly as
+        /// <see cref="RingOpenAnimation"/> defines them; below that plays faster, above that slower.
         /// </summary>
         /// <remarks>
-        /// A percentage of the existing begin/duration values rather than a free millisecond figure,
-        /// because the presets are not one number each - Fade alone staggers nine begin times against
-        /// each other - and a scalar is the only edit that moves all of them together without
-        /// disturbing the ratios <see cref="RingOpenAnimation"/>'s remarks describe as "fade fast,
-        /// move slowly."
+        /// A single millisecond figure rather than one per preset, and a straight-line scale against
+        /// <see cref="DefaultAnimationDurationMs"/> rather than each preset's own tuned total (which
+        /// range 186-200 ms across the seven presets, not the same number for each) - because a
+        /// 14 ms difference between presets is not something a person can feel, and a table mapping
+        /// every preset to its own tuned total is a second place a future retune would have to
+        /// remember to update. Internally this still multiplies every begin/duration value in
+        /// lock-step the same way the old percentage did, preserving the ratios
+        /// <see cref="RingOpenAnimation"/>'s remarks describe as "fade fast, move slowly" - see
+        /// <see cref="RingOpenAnimation.RingMetrics.DurationScale"/>.
         /// </remarks>
-        public double AnimationDurationPercent { get; init; } = 100.0;
+        public double AnimationDurationMs { get; init; } = DefaultAnimationDurationMs;
 
         /// <summary>
-        /// The floor is the tuned speed itself, not a way to play it faster - the presets are tuned
-        /// to fit inside <see cref="RingOpenAnimation.BudgetMs"/> already, so there is no faster
-        /// setting to offer.
+        /// Must match <see cref="RingOpenAnimation.BudgetMs"/> - kept as its own literal rather than
+        /// a reference to it because <c>RingOpenAnimation</c> lives in the app project and this one
+        /// does not take a dependency on it.
         /// </summary>
-        public const double MinAnimationDurationPercent = 100.0;
+        public const double DefaultAnimationDurationMs = 200.0;
 
-        /// <summary>How much slower than tuned the user is allowed to make the opening animation.</summary>
-        public const double MaxAnimationDurationPercent = 500.0;
+        /// <summary>The fastest the opening animation can be played.</summary>
+        public const double MinAnimationDurationMs = 100.0;
+
+        /// <summary>The slowest the opening animation can be played.</summary>
+        public const double MaxAnimationDurationMs = 1000.0;
 
         /// <summary>Diameter of one of the eight outer buttons, in DIPs.</summary>
         public double ButtonSize { get; init; } = RingGeometry.OuterButtonSizeDip;
@@ -104,15 +111,15 @@ namespace Action_Wheel.Core
             orbit = Math.Clamp(orbit, RingGeometry.MinOrbitFor(button), RingGeometry.MaxOrbitFor(button));
 
             double duration = Math.Clamp(
-                double.IsFinite(AnimationDurationPercent) ? Math.Round(AnimationDurationPercent) : 100.0,
-                MinAnimationDurationPercent, MaxAnimationDurationPercent);
+                double.IsFinite(AnimationDurationMs) ? Math.Round(AnimationDurationMs) : DefaultAnimationDurationMs,
+                MinAnimationDurationMs, MaxAnimationDurationMs);
 
             return this with
             {
                 Animation = Enum.IsDefined(typeof(RingAnimation), Animation) ? Animation : RingAnimation.Fade,
                 ButtonSize = button,
                 OrbitRadius = orbit,
-                AnimationDurationPercent = duration,
+                AnimationDurationMs = duration,
             };
         }
     }

@@ -607,7 +607,7 @@
                                  sweeps sit at opposite ends of it and would be separated here. -->
                             <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" Header="Opening animation"
                                       SelectedIndex="{Binding RingAnimationIndex, Mode=TwoWay}"
-                                      ToolTipService.ToolTip="How the ring appears. Every option finishes within about 200 ms at 100% effect duration, so none of them delays a click.">
+                                      ToolTipService.ToolTip="How the ring appears. Every option finishes within about 200 ms at the default effect duration, so none of them delays a click.">
                                 <ComboBoxItem Content="None (instant)"/>
                                 <ComboBoxItem Content="Fade and scale"/>
                                 <ComboBoxItem Content="Pop"/>
@@ -656,13 +656,33 @@
                                        ToolTipService.ToolTip="Distance from the ring's centre to each outer button. The lower limit rises as the buttons grow, so they never touch; the overlay window grows with the ring, so the upper limit does not move."/>
                         </Grid>
 
-                        <NumberBox Header="Effect duration (%)"
-                                   Minimum="{Binding MinAnimationDurationPercent, Mode=OneWay}"
-                                   Maximum="{Binding MaxAnimationDurationPercent, Mode=OneWay}"
-                                   SmallChange="10"
-                                   Value="{Binding AnimationDurationPercent, Mode=TwoWay}"
-                                   SpinButtonPlacementMode="Compact"
-                                   ToolTipService.ToolTip="How long the opening animation takes, as a percentage of its tuned speed. 100 is the default and fastest setting; higher plays slower."/>
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Fast" VerticalAlignment="Bottom" Margin="0,0,0,7"
+                                       FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                            <Slider Grid.Column="1" Header="Effect duration" VerticalAlignment="Bottom"
+                                    Minimum="{Binding MinAnimationDurationMs, Mode=OneWay}"
+                                    Maximum="{Binding MaxAnimationDurationMs, Mode=OneWay}"
+                                    StepFrequency="10" TickFrequency="100" TickPlacement="Outside"
+                                    Value="{Binding AnimationDurationMs, Mode=TwoWay}"
+                                    ToolTipService.ToolTip="How long the opening animation takes to finish, in milliseconds. 200 ms is the tuned default; lower plays faster, higher plays slower."/>
+                            <TextBlock Grid.Column="2" Text="Slow" VerticalAlignment="Bottom" Margin="0,0,0,7"
+                                       FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                            <Border Grid.Column="3" Width="56" Height="32" CornerRadius="4" BorderThickness="1"
+                                    VerticalAlignment="Bottom"
+                                    Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                    ToolTipService.ToolTip="Current effect duration">
+                                <TextBlock Text="{Binding AnimationDurationMsText, Mode=OneWay}" FontSize="12"
+                                           TextAlignment="Center" HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                        </Grid>
                     </StackPanel>
                 </Border>
             </StackPanel>

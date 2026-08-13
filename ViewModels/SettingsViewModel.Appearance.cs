@@ -76,20 +76,24 @@ namespace Action_Wheel.ViewModels
         }
 
         /// <summary>
-        /// How long the opening animation takes, as a percentage of its tuned timings. Not on the
+        /// How long the opening animation takes to finish, in milliseconds. Not on the
         /// animation-picker card's replay path: like <see cref="ButtonSize"/> and
-        /// <see cref="OrbitRadius"/> it is a number typed or spun rather than a single deliberate
-        /// pick, so it does not replay the preview by itself - the Play button is how it is reviewed.
+        /// <see cref="OrbitRadius"/> it is a value dragged rather than a single deliberate pick, so
+        /// it does not replay the preview by itself - the Play button is how it is reviewed.
         /// </summary>
-        public double AnimationDurationPercent
+        public double AnimationDurationMs
         {
-            get => _appearance.AnimationDurationPercent;
+            get => _appearance.AnimationDurationMs;
             set => ApplyAppearance(
-                _appearance with { AnimationDurationPercent = value }, nameof(AnimationDurationPercent));
+                _appearance with { AnimationDurationMs = value }, nameof(AnimationDurationMs));
         }
 
-        public double MinAnimationDurationPercent => RingAppearance.MinAnimationDurationPercent;
-        public double MaxAnimationDurationPercent => RingAppearance.MaxAnimationDurationPercent;
+        /// <summary>What the Slider's own Value would otherwise show as a bare, unlabelled number.</summary>
+        public string AnimationDurationMsText =>
+            $"{_appearance.AnimationDurationMs:0} ms";
+
+        public double MinAnimationDurationMs => RingAppearance.MinAnimationDurationMs;
+        public double MaxAnimationDurationMs => RingAppearance.MaxAnimationDurationMs;
 
         public double MinButtonSize => RingGeometry.MinButtonSizeDip;
         public double MaxButtonSize => RingGeometry.MaxButtonSizeDip;
@@ -151,7 +155,8 @@ namespace Action_Wheel.ViewModels
             Raise(nameof(RingAnimationDescription));
             Raise(nameof(ButtonSize));
             Raise(nameof(OrbitRadius));
-            Raise(nameof(AnimationDurationPercent));
+            Raise(nameof(AnimationDurationMs));
+            Raise(nameof(AnimationDurationMsText));
             Raise(nameof(Appearance));
             ScheduleRefresh(redraw: true, animate: animate);
         }

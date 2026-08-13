@@ -142,7 +142,7 @@ namespace Action_Wheel.Settings
             // The ring as drawn here, not as it will be on screen: everything above is already
             // multiplied by scale, so an animation given the real DIPs would move the buttons by
             // the wrong distance. The surface is the canvas for the same reason.
-            var metrics = new RingMetrics(orbit, outer, size, appearance.AnimationDurationPercent / 100.0);
+            var metrics = new RingMetrics(orbit, outer, size, appearance.AnimationDurationMs / RingOpenAnimation.BudgetMs);
 
             var storyboard = RingOpenAnimation.Build(appearance.Animation, canvas, hosts, metrics);
             if (storyboard == null)

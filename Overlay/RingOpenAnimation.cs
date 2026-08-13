@@ -22,8 +22,8 @@ namespace Action_Wheel.Overlay
     /// outside the orbit a button can start without being clipped by the edge.
     /// </param>
     /// <param name="DurationScale">
-    /// <see cref="RingAppearance.AnimationDurationPercent"/> divided by 100 - multiplies every begin
-    /// and duration value a preset builds. 1 plays a preset exactly as tuned.
+    /// <see cref="RingAppearance.AnimationDurationMs"/> divided by <see cref="BudgetMs"/> - multiplies
+    /// every begin and duration value a preset builds. 1 plays a preset exactly as tuned.
     /// </param>
     internal readonly record struct RingMetrics(
         double OrbitRadius, double ButtonSize, double SurfaceSize, double DurationScale)
@@ -31,7 +31,7 @@ namespace Action_Wheel.Overlay
         /// <summary>The live overlay: the ring at its own size, on the window derived from it.</summary>
         public static RingMetrics For(RingAppearance appearance) =>
             new(appearance.OrbitRadius, appearance.ButtonSize, appearance.MenuSize,
-                appearance.AnimationDurationPercent / 100.0);
+                appearance.AnimationDurationMs / RingOpenAnimation.BudgetMs);
     }
 
     /// <summary>
@@ -60,13 +60,17 @@ namespace Action_Wheel.Overlay
     /// The timings are bounded, not free. Click-to-first-pixel is around 15 ms, so the animation is
     /// almost the entire delay the user actually feels; the original storyboard was retuned from
     /// 400 ms down to 186 ms for exactly that reason. Every preset finishes inside <see cref="BudgetMs"/>
-    /// at <see cref="RingAppearance.AnimationDurationPercent"/> 100 - the user's own duration setting
-    /// is the one deliberate way past that budget, traded off against the ratios above still holding
-    /// at any scale since every value in a preset is multiplied by the same factor.
+    /// at <see cref="RingAppearance.DefaultAnimationDurationMs"/> - the user's own duration setting is
+    /// the one deliberate way past that budget, traded off against the ratios above still holding at
+    /// any scale since every value in a preset is multiplied by the same factor.
     /// </remarks>
     internal static class RingOpenAnimation
     {
-        /// <summary>Total wall-clock budget for an opening animation, in milliseconds, at 100% duration.</summary>
+        /// <summary>
+        /// Total wall-clock budget for an opening animation, in milliseconds, at the default
+        /// <see cref="RingAppearance.AnimationDurationMs"/>. Must match
+        /// <see cref="RingAppearance.DefaultAnimationDurationMs"/>.
+        /// </summary>
         public const double BudgetMs = 200.0;
 
         /// <summary>

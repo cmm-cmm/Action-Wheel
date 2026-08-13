@@ -44,7 +44,7 @@ namespace Action_Wheel.Services
                         Animation = (RingAnimation)ReadInt(root, "animation", (int)RingAnimation.Fade),
                         ButtonSize = ReadInt(root, "buttonSize", (int)RingGeometry.OuterButtonSizeDip),
                         OrbitRadius = ReadInt(root, "orbitRadius", (int)RingGeometry.OrbitRadiusDip),
-                        AnimationDurationPercent = ReadInt(root, "animationDuration", 100),
+                        AnimationDurationMs = ReadAnimationDurationMs(root),
                     }.Normalised(),
                 };
             }
@@ -72,7 +72,7 @@ namespace Action_Wheel.Services
                     writer.WriteNumber("animation", (int)appearance.Animation);
                     writer.WriteNumber("buttonSize", (int)appearance.ButtonSize);
                     writer.WriteNumber("orbitRadius", (int)appearance.OrbitRadius);
-                    writer.WriteNumber("animationDuration", (int)appearance.AnimationDurationPercent);
+                    writer.WriteNumber("animationDurationMs", (int)appearance.AnimationDurationMs);
                     writer.WriteEndObject();
                 }
 
@@ -94,6 +94,21 @@ namespace Action_Wheel.Services
             string legacy = char.ToUpperInvariant(name[0]) + name[1..];
             return root.TryGetProperty(legacy, out value) && value.TryGetInt32(out result)
                 ? result : fallback;
+        }
+
+        /// <summary>
+        /// Reads the effect duration in its current unit (milliseconds), or converts a percentage
+        /// written by a version before the slider - <c>ms = percent * DefaultAnimationDurationMs /
+        /// 100</c> is the exact scale those percentages always meant, just now expressed in a unit
+        /// people can picture directly instead of one they had to multiply out themselves.
+        /// </summary>
+        private static int ReadAnimationDurationMs(JsonElement root)
+        {
+            if (root.TryGetProperty("animationDurationMs", out var value) && value.TryGetInt32(out int ms))
+                return ms;
+
+            int percent = ReadInt(root, "animationDuration", 100);
+            return (int)Math.Round(percent * RingAppearance.DefaultAnimationDurationMs / 100.0);
         }
     }
 

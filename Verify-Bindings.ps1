@@ -37,9 +37,10 @@ $scopes = @(
     @{
         Xaml = 'Settings\SettingsWindow.xaml'
         Regions = @{
-            ''                    = @('ViewModels\SettingsViewModel*.cs')
-            'ActionRowTemplate'   = @('Settings\ActionEditModel.cs')
-            'GlyphChoiceTemplate' = @('Settings\GlyphChoice.cs')
+            ''                           = @('ViewModels\SettingsViewModel*.cs')
+            'CompactActionRowTemplate'   = @('Settings\ActionEditModel.cs')
+            'ActionDetailTemplate'       = @('Settings\ActionEditModel.cs')
+            'GlyphChoiceTemplate'        = @('Settings\GlyphChoice.cs')
             'FunctionSuggestionTemplate' = @('ActionWheel.Core\WindowsFunctions.cs')
         }
     }
@@ -109,8 +110,16 @@ foreach ($scope in $scopes) {
 
     # {Binding Foo}, {Binding Foo, Mode=OneWay}. A bare {Binding} binds the whole DataContext and
     # has no path to check.
-    foreach ($binding in [regex]::Matches($xaml, '\{Binding\s+(?<path>[A-Za-z_][\w\.]*)')) {
+    foreach ($binding in [regex]::Matches($xaml, '\{Binding\s+(?<path>[A-Za-z_][\w\.]*)(?<rest>[^}]*)\}')) {
         $path = $binding.Groups['path'].Value
+
+        # An ElementName binding reads a property off a named element, not off the region's
+        # DataContext - "Content="{Binding SelectedItem, ElementName=ActionsHost}"" binds to the
+        # ListView's own SelectedItem, never to SettingsViewModel. This script has no name-to-type
+        # map to check that against, so it is skipped rather than checked against the wrong type.
+        if ($binding.Groups['rest'].Value -match 'ElementName\s*=') {
+            continue
+        }
 
         # Only the first segment can be checked against the declaring type; the rest would need the
         # property's own type, and nothing in this project binds deeper than one level.

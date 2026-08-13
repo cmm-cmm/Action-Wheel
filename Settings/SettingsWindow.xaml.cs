@@ -69,6 +69,10 @@ namespace Action_Wheel.Settings
             // binding root is the content element.
             RootGrid.DataContext = ViewModel;
             ActionsHost.ItemsSource = ViewModel.Items;
+            // The detail panel's own DataContext is an ElementName binding to ActionsHost.SelectedItem
+            // (see SettingsWindow.xaml), so it would otherwise start out blank until something is
+            // clicked - there are always exactly nine rows, so the first one is always there to select.
+            ActionsHost.SelectedIndex = 0;
 
             // The bool is "replay the opening animation" - see SettingsViewModel.PreviewInvalidated.
             ViewModel.PreviewInvalidated += (s, animate) => RingPreview.Render(
@@ -98,6 +102,22 @@ namespace Action_Wheel.Settings
 
             // The canvas only exists now, so this is the first render that can actually draw.
             ViewModel.RefreshDerivedState();
+        }
+
+        /// <summary>
+        /// Swaps which of the three pre-built section panels is visible. A plain Visibility toggle
+        /// rather than a Frame/Page navigation: there are only three sections, none of them is ever
+        /// created more than once, and nothing about them needs a back/forward history - a Frame
+        /// would add a navigation stack this window has no use for.
+        /// </summary>
+        private void SectionsNav_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+        {
+            if (args.SelectedItemContainer is not NavigationViewItem item || item.Tag is not string tag)
+                return;
+
+            ButtonsSection.Visibility = tag == "Buttons" ? Visibility.Visible : Visibility.Collapsed;
+            AppearanceSection.Visibility = tag == "Appearance" ? Visibility.Visible : Visibility.Collapsed;
+            ProfilesSection.Visibility = tag == "Profiles" ? Visibility.Visible : Visibility.Collapsed;
         }
 
         #region Icon picker

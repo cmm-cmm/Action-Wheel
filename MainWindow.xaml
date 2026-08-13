@@ -31,94 +31,84 @@
         </Grid>
 
         <ScrollViewer x:Name="RootScroller" Grid.Row="1" VerticalScrollBarVisibility="Auto">
-        <Grid Padding="24,40,24,32">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" MaxWidth="560">
-                <TextBlock
-                    Text="Action Wheel"
-                    FontSize="32"
-                    FontWeight="Bold"
-                    HorizontalAlignment="Center"/>
+        <Grid Padding="32,24,32,28">
+            <StackPanel HorizontalAlignment="Center" Spacing="18" MaxWidth="600">
 
-                <TextBlock
-                    Text="Global Radial Menu Launcher"
-                    FontSize="18"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    HorizontalAlignment="Center"/>
+                <!-- Brand header: icon badge beside title/tagline, instead of three stacked
+                     centred lines - reads as an app, not a readme. -->
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                <TextBlock
-                    Text="{Binding VersionText, Mode=OneWay}"
-                    FontSize="12"
-                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                    HorizontalAlignment="Center"/>
+                    <Border Grid.Column="0" Width="64" Height="64" CornerRadius="20"
+                            Background="{ThemeResource AccentFillColorSecondaryBrush}">
+                        <Image Source="/icon.ico" Width="36" Height="36"/>
+                    </Border>
 
-                <Border
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="24"
-                    Margin="0,16,0,0">
-                    <StackPanel Spacing="12">
-                        <TextBlock
-                            Text="How to Use"
-                            FontSize="20"
-                            FontWeight="SemiBold"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Text="Action Wheel" FontSize="26" FontWeight="Bold"/>
+                        <TextBlock Text="Global Radial Menu Launcher" FontSize="14"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="{Binding VersionText, Mode=OneWay}" FontSize="11"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                    </StackPanel>
+                </Grid>
 
-                        <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                <!-- Status first: the whole app is one global hook away from doing nothing at
+                     all, so that has to be seen before anything else, not after a long scroll. -->
+                <StackPanel Spacing="8">
+                    <InfoBar
+                        IsOpen="True"
+                        IsClosable="False"
+                        Severity="{Binding HookSeverity, Converter={StaticResource StatusLevelConverter}}"
+                        Title="{Binding HookTitle}"
+                        Message="{Binding HookMessage}"/>
+
+                    <InfoBar
+                        IsOpen="True"
+                        IsClosable="False"
+                        Severity="Warning"
+                        Title="actions.json could not be used"
+                        Message="{Binding ConfigProblemMessage}"
+                        Visibility="{Binding ConfigProblemVisibility}">
+                        <InfoBar.ActionButton>
+                            <Button
+                                Content="Restore the backup"
+                                Command="{Binding RestoreBackupCommand}"
+                                Visibility="{Binding RestoreBackupVisibility}"/>
+                        </InfoBar.ActionButton>
+                    </InfoBar>
+
+                    <InfoBar
+                        IsOpen="{Binding HasActionError, Mode=OneWay}"
+                        IsClosable="True"
+                        Severity="Warning"
+                        Title="Something did not work"
+                        Message="{Binding ActionError}"/>
+                </StackPanel>
+
+                <!-- Quick actions: how to open the ring, then the two things most people come to
+                     this window to do, as a clear control row rather than embedded mid-paragraph. -->
+                <Border Style="{StaticResource CardBorderStyle}" Padding="20">
+                    <StackPanel Spacing="14">
+                        <TextBlock TextWrapping="Wrap">
                             <Run Text="Use your configured "/>
                             <Run Text="mouse trigger" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
                             <Run Text=" anywhere on your screen to open the radial menu. The default is the middle mouse button; Settings also offers right+left and left+right mouse chords."/>
                         </TextBlock>
 
-                        <TextBlock Text="Features:" FontWeight="SemiBold" Margin="0,8,0,0"/>
-
-                        <StackPanel Spacing="8">
-                            <TextBlock>
-                                <Run Text="•" FontSize="16"/>
-                                <Run Text="  Works in every app and every window"/>
-                            </TextBlock>
-                            <TextBlock>
-                                <Run Text="•" FontSize="16"/>
-                                <Run Text="  Opens exactly at the cursor"/>
-                            </TextBlock>
-                            <TextBlock>
-                                <Run Text="•" FontSize="16"/>
-                                <Run Text="  Press Esc or click outside to dismiss"/>
-                            </TextBlock>
-                            <TextBlock>
-                                <Run Text="•" FontSize="16"/>
-                                <Run Text="  Stays out of Alt+Tab and the taskbar"/>
-                            </TextBlock>
-                            <TextBlock>
-                                <Run Text="•" FontSize="16"/>
-                                <Run Text="  9 configurable buttons: send a shortcut, or open an app, file or URL"/>
-                            </TextBlock>
-                            <TextBlock>
-                                <Run Text="•" FontSize="16"/>
-                                <Run Text="  Configurable mouse trigger, including two-button chords"/>
-                            </TextBlock>
-                        </StackPanel>
-
-                        <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,8,0,0">
-                            <Run Text="Closing this window only hides it — the app keeps running in the notification area. Right-click the tray icon to bring it back, open"/>
-                            <Run Text=" Settings" FontWeight="SemiBold"/>
-                            <Run Text=", or quit."/>
-                        </TextBlock>
+                        <Button Content="Button Settings"
+                                HorizontalAlignment="Stretch"
+                                Style="{StaticResource AccentButtonStyle}"
+                                Command="{Binding OpenSettingsCommand}"/>
 
                         <ToggleSwitch
                             Header="Start with Windows"
                             OnContent="On"
                             OffContent="Off"
-                            Margin="0,8,0,0"
                             IsOn="{Binding StartWithWindows, Mode=TwoWay}"/>
-
-                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
-                            <Button Content="Button Settings"
-                                    Style="{StaticResource AccentButtonStyle}"
-                                    Command="{Binding OpenSettingsCommand}"/>
-                        </StackPanel>
-                        <TextBlock Text="{Binding ActiveProfileText, Mode=OneWay}" FontSize="12" FontWeight="SemiBold"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
                         <InfoBar
                             IsOpen="{Binding HasStartupError, Mode=OneWay}"
@@ -129,39 +119,104 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Hook status. The whole app is one global hook away from doing nothing at all. -->
-                <InfoBar
-                    IsOpen="True"
-                    IsClosable="False"
-                    Severity="{Binding HookSeverity, Converter={StaticResource StatusLevelConverter}}"
-                    Title="{Binding HookTitle}"
-                    Message="{Binding HookMessage}"
-                    Margin="0,16,0,0"/>
+                <!-- Features: a scannable two-column grid instead of a vertical bullet stack. -->
+                <Border Style="{StaticResource CardBorderStyle}" Padding="20">
+                    <StackPanel Spacing="14">
+                        <TextBlock Text="Features" Style="{StaticResource SectionHeaderTextStyle}" FontSize="16"/>
 
-                <InfoBar
-                    IsOpen="True"
-                    IsClosable="False"
-                    Severity="Warning"
-                    Title="actions.json could not be used"
-                    Message="{Binding ConfigProblemMessage}"
-                    Visibility="{Binding ConfigProblemVisibility}">
-                    <InfoBar.ActionButton>
-                        <Button
-                            Content="Restore the backup"
-                            Command="{Binding RestoreBackupCommand}"
-                            Visibility="{Binding RestoreBackupVisibility}"/>
-                    </InfoBar.ActionButton>
-                </InfoBar>
+                        <Grid ColumnSpacing="20" RowSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-                <InfoBar
-                    IsOpen="{Binding HasActionError, Mode=OneWay}"
-                    IsClosable="True"
-                    Severity="Warning"
-                    Title="Something did not work"
-                    Message="{Binding ActionError}"/>
+                            <!-- Grid, not a horizontal StackPanel: a StackPanel measures its
+                                 children at infinite width along its own orientation axis, so
+                                 TextWrapping never had anything to wrap against and the longer
+                                 lines here ran straight off the card instead. A Grid's Star column
+                                 constrains the text's measure width, so wrapping actually engages. -->
+                            <Grid Grid.Row="0" Grid.Column="0" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <FontIcon Grid.Column="0" FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF00C;" FontSize="14"
+                                          Foreground="#FF4CAF50" VerticalAlignment="Top" Margin="0,3,0,0"/>
+                                <TextBlock Grid.Column="1" Text="Works in every app and every window" TextWrapping="Wrap"/>
+                            </Grid>
 
-                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
-                    <Button Content="Copy diagnostics" Command="{Binding CopyDiagnosticsCommand}"/>
+                            <Grid Grid.Row="0" Grid.Column="1" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <FontIcon Grid.Column="0" FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF00C;" FontSize="14"
+                                          Foreground="#FF4CAF50" VerticalAlignment="Top" Margin="0,3,0,0"/>
+                                <TextBlock Grid.Column="1" Text="Opens exactly at the cursor" TextWrapping="Wrap"/>
+                            </Grid>
+
+                            <Grid Grid.Row="1" Grid.Column="0" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <FontIcon Grid.Column="0" FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF00C;" FontSize="14"
+                                          Foreground="#FF4CAF50" VerticalAlignment="Top" Margin="0,3,0,0"/>
+                                <TextBlock Grid.Column="1" Text="Press Esc or click outside to dismiss" TextWrapping="Wrap"/>
+                            </Grid>
+
+                            <Grid Grid.Row="1" Grid.Column="1" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <FontIcon Grid.Column="0" FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF00C;" FontSize="14"
+                                          Foreground="#FF4CAF50" VerticalAlignment="Top" Margin="0,3,0,0"/>
+                                <TextBlock Grid.Column="1" Text="Stays out of Alt+Tab and the taskbar" TextWrapping="Wrap"/>
+                            </Grid>
+
+                            <Grid Grid.Row="2" Grid.Column="0" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <FontIcon Grid.Column="0" FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF00C;" FontSize="14"
+                                          Foreground="#FF4CAF50" VerticalAlignment="Top" Margin="0,3,0,0"/>
+                                <TextBlock Grid.Column="1" Text="9 configurable buttons: shortcut, app, file or URL" TextWrapping="Wrap"/>
+                            </Grid>
+
+                            <Grid Grid.Row="2" Grid.Column="1" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <FontIcon Grid.Column="0" FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF00C;" FontSize="14"
+                                          Foreground="#FF4CAF50" VerticalAlignment="Top" Margin="0,3,0,0"/>
+                                <TextBlock Grid.Column="1" Text="Configurable trigger, including two-button chords" TextWrapping="Wrap"/>
+                            </Grid>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Footer -->
+                <StackPanel Spacing="10">
+                    <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        <Run Text="Closing this window only hides it — the app keeps running in the notification area. Right-click the tray icon to bring it back, open"/>
+                        <Run Text=" Settings" FontWeight="SemiBold"/>
+                        <Run Text=", or quit."/>
+                    </TextBlock>
+
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Button Content="Copy diagnostics" Command="{Binding CopyDiagnosticsCommand}"/>
+                        <TextBlock Text="{Binding ActiveProfileText, Mode=OneWay}" FontSize="12" FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
                 </StackPanel>
             </StackPanel>
         </Grid>

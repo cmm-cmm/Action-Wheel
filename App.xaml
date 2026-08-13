@@ -34,6 +34,26 @@
             <settings:ColorToBrushConverter x:Key="ColorToBrushConverter"/>
             <settings:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
             <settings:IconPreviewConverter x:Key="IconPreviewConverter"/>
+
+            <!--
+                The one card look both windows use: a themed border around a themed fill, rounded
+                corners. Centralised so every card agrees automatically instead of nine copies of the
+                same four properties quietly drifting apart. Padding is deliberately not set here -
+                every card in practice wants a different one, and a local Padding on the Border
+                overrides this Style's Setter with no extra ceremony.
+            -->
+            <Style x:Key="CardBorderStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="8"/>
+            </Style>
+
+            <!-- A section heading inside a card: an icon from the shipped font plus bold text. -->
+            <Style x:Key="SectionHeaderTextStyle" TargetType="TextBlock">
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="FontSize" Value="14"/>
+            </Style>
             <!-- Other app resources here -->
         </ResourceDictionary>
     </Application.Resources>

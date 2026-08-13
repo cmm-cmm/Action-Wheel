@@ -13,8 +13,8 @@
     Restore         - restore NuGet packages only
     Debug           - build the Debug configuration (the default)
     Release         - build the Release configuration
-    Publish         - self-contained build (folder, not single-file - see the csproj's Publish-only
-                      PropertyGroup for why) in bin\Publish\win-<platform>
+    Publish         - self-contained single-file executable in bin\Publish\win-<platform>
+    Package         - Publish, ZIP the output without renaming the exe, then run a launch smoke test
     Installer       - Publish, then build the Inno Setup installer from ActionWheel-Setup.iss
     VerifyBindings  - check every classic {Binding} path against the type behind it
     Clean           - delete bin\ and obj\
@@ -31,7 +31,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('Restore', 'Debug', 'Release', 'Publish', 'Installer', 'VerifyBindings', 'Clean', 'All')]
+    [ValidateSet('Restore', 'Debug', 'Release', 'Publish', 'Package', 'Installer', 'VerifyBindings', 'Clean', 'All')]
     [string]$Task = 'Debug',
 
     [ValidateSet('x64', 'x86', 'ARM64')]
@@ -100,29 +100,92 @@ function Invoke-Publish {
 
     # PublishTrimmed stays false on purpose: the settings window's row templates use classic
     # {Binding}, which resolves properties by reflection. Trimming would leave the rows blank.
-    #
-    # No -p:PublishSingleFile here - see the csproj's Publish-only PropertyGroup. This has to stay
-    # a folder, not a single exe.
     Invoke-Dotnet @(
         'publish', $project,
         '-c', 'Release',
         '-r', $rid,
         "-p:Platform=$Platform",
         '--self-contained', 'true',
+        '-p:PublishSingleFile=true',
         '-p:PublishReadyToRun=true',
         '-p:PublishTrimmed=false',
+        '-p:IncludeNativeLibrariesForSelfExtract=true',
         '-o', $Output,
         '--nologo'
     )
 
     $exe = Join-Path $Output 'Action Wheel.exe'
     if (Test-Path $exe) {
-        $size = [math]::Round(
-            ((Get-ChildItem -LiteralPath $Output -Recurse -File | Measure-Object -Property Length -Sum).Sum) / 1MB, 1)
+        $size = [math]::Round((Get-Item $exe).Length / 1MB, 1)
         Write-Host ''
-        Write-Host "Action Wheel.exe + dependencies  $size MB total" -ForegroundColor Green
+        Write-Host "Action Wheel.exe  $size MB" -ForegroundColor Green
         Write-Host $Output -ForegroundColor Green
     }
+}
+
+function Invoke-Package {
+    Invoke-Publish
+
+    Write-Step "Packaging Release | $rid"
+
+    $exe = Join-Path $Output 'Action Wheel.exe'
+    if (-not (Test-Path -LiteralPath $exe)) {
+        throw "Published executable was not found: $exe"
+    }
+
+    $version = (Get-Item -LiteralPath $exe).VersionInfo.ProductVersion
+    if ([string]::IsNullOrWhiteSpace($version)) {
+        throw 'The published executable has no ProductVersion.'
+    }
+
+    $packageDirectory = Join-Path $root 'bin\Packages'
+    New-Item -ItemType Directory -Path $packageDirectory -Force | Out-Null
+    $zip = Join-Path $packageDirectory "ActionWheel-v$version-$rid.zip"
+    $checksum = $zip + '.sha256'
+
+    if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
+    if (Test-Path -LiteralPath $checksum) { Remove-Item -LiteralPath $checksum -Force }
+
+    # WinUI's embedded resource index is tied to the published executable name. Renaming
+    # "Action Wheel.exe" after publish makes Microsoft.UI.Xaml fail during startup, so the
+    # version belongs on the archive and never on the executable inside it.
+    $packageFiles = Get-ChildItem -LiteralPath $Output -File | Select-Object -ExpandProperty FullName
+    Compress-Archive -LiteralPath $packageFiles -DestinationPath $zip -CompressionLevel Optimal
+
+    $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
+    Set-Content -LiteralPath $checksum -Value "$hash  $(Split-Path $zip -Leaf)" -Encoding ascii
+
+    # Verify the distributable rather than the build folder: extract the ZIP, start the exact EXE
+    # a user receives, and require it to stay alive long enough to have initialised WinUI and the
+    # tray. This is what actually catches a single-file publish that builds fine but crashes on
+    # launch (Microsoft.UI.Xaml.dll, 0xc000027b) - a build succeeding is not the same claim as the
+    # exe running, and nothing before this step in the whole pipeline ever launches the result.
+    $smokeDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ("ActionWheelSmoke-" + [Guid]::NewGuid().ToString('N'))
+    try {
+        Expand-Archive -LiteralPath $zip -DestinationPath $smokeDirectory
+        $smokeExe = Join-Path $smokeDirectory 'Action Wheel.exe'
+        if (-not (Test-Path -LiteralPath $smokeExe)) {
+            throw 'Package changed or omitted the required executable name Action Wheel.exe.'
+        }
+
+        $process = Start-Process -FilePath $smokeExe -PassThru -WindowStyle Hidden
+        Start-Sleep -Seconds 6
+        if ($process.HasExited) {
+            throw "Packaged executable exited during smoke test (exit code $($process.ExitCode))."
+        }
+
+        Stop-Process -Id $process.Id -Force
+        $process.WaitForExit()
+    }
+    finally {
+        if (Test-Path -LiteralPath $smokeDirectory) {
+            Remove-Item -LiteralPath $smokeDirectory -Recurse -Force
+        }
+    }
+
+    Write-Host ''
+    Write-Host $zip -ForegroundColor Green
+    Write-Host "SHA-256 $hash" -ForegroundColor Green
 }
 
 function Invoke-Installer {
@@ -168,6 +231,7 @@ switch ($Task) {
     'Debug' { Invoke-Build 'Debug' }
     'Release' { Invoke-Build 'Release' }
     'Publish' { Invoke-Publish }
+    'Package' { Invoke-Package }
     'Installer' { Invoke-Installer }
     'VerifyBindings' { Invoke-VerifyBindings }
     'Clean' { Invoke-Clean }

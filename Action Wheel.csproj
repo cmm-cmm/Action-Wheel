@@ -105,8 +105,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7175" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.251106002" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2526" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.3.1" />
   </ItemGroup>
 
   <!-- Publish-only properties for Release. These must stay scoped to an actual publish
@@ -115,20 +115,21 @@
        (EnableMsixTooling=false for a normal build, see doc/FIX-DEBUG-DEPLOYMENT.md) - so
        EnableMsixTooling is switched on above, but only while $(_IsPublishing).
 
-       PublishSingleFile is deliberately false. It was true until the 2.4.0 release, whose
-       published exe turned out to crash on launch on every machine it was tried on - Faulting
-       module Microsoft.UI.Xaml.dll, exception code 0xc000027b, reproduced both from a fresh
-       local build and from the file downloaded off GitHub, so it was not a corrupt download.
-       WinUI 3's native XAML engine does not survive being bundled into the single-file host and
-       self-extracted to a temp folder at first run; the same publish with only this flag
-       flipped to false launches cleanly. Windows App SDK does not officially support single-file
-       publish for this reason - don't turn it back on without verifying the exe actually runs,
-       not just that it builds. -->
+       PublishSingleFile is true again as of Windows App SDK 2.3.1 (was 1.8.251106002). Below
+       that version the published exe crashed on launch on every machine it was tried on -
+       Faulting module Microsoft.UI.Xaml.dll, exception code 0xc000027b - because WinUI 3's
+       native XAML engine did not survive being bundled into the single-file host and
+       self-extracted to a temp folder at first run. 2.3.1 does not have that problem: verified
+       with Build.ps1 -Task Package, which extracts the exact zip a user would download and runs
+       it for real before calling the build a success. Don't drop back to an older
+       Microsoft.WindowsAppSDK without rerunning that task - a build succeeding is not the same
+       claim as the exe running. -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release' AND '$(_IsPublishing)' == 'true'">
     <PublishReadyToRun>True</PublishReadyToRun>
     <PublishTrimmed>False</PublishTrimmed>
     <SelfContained>true</SelfContained>
-    <PublishSingleFile>false</PublishSingleFile>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
   <!-- Debug Properties -->

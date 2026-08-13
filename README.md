@@ -70,7 +70,8 @@ A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor wheneve
 ```powershell
 .\Build.ps1                       # Debug build (the default)
 .\Build.ps1 -Task Release
-.\Build.ps1 -Task Publish         # self-contained build (exe + dependencies) in bin\Publish\win-x64
+.\Build.ps1 -Task Publish         # self-contained single-file exe in bin\Publish\win-x64
+.\Build.ps1 -Task Package         # Publish, ZIP it, then launch the ZIP's exe as a smoke test
 .\Build.ps1 -Task Installer       # Publish, then the Inno Setup installer
 .\Build.ps1 -Task Clean
 .\Build.ps1 -Task Publish -Platform ARM64
@@ -82,7 +83,7 @@ Plain `dotnet build` also works: the project defaults `Platform` to `x64` and de
 
 In Visual Studio, press F5 — there is one launch profile, **"Action Wheel (Unpackaged)"**.
 
-Self-contained publishes are large (roughly 250–300 MB across the exe and its dependencies). That is normal for a self-contained WinUI 3 / .NET 10 app. They are not bundled into a single exe: WinUI 3's native XAML engine does not survive being packed into .NET's single-file host and self-extracted at first run - it crashes on launch with exception code `0xc000027b` in `Microsoft.UI.Xaml.dll`. Don't add `-p:PublishSingleFile=true` back without actually launching the result, not just building it.
+Self-contained publishes are large (roughly 250–300 MB). That is normal for a self-contained WinUI 3 / .NET 10 app, not a bug. `-Task Package` exists because a single-file publish that *builds* is not proof it *runs* - Windows App SDK below 2.3.1 produced an exe that crashed on launch (`0xc000027b` in `Microsoft.UI.Xaml.dll`) despite building cleanly, so this task extracts the exact ZIP a user would download and launches it for real before calling the build a success.
 
 ## Using it
 

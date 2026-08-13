@@ -48,9 +48,12 @@ namespace Action_Wheel.Core
     /// </summary>
     /// <remarks>
     /// Two locations are searched, in order: next to the executable (portable installs, where the
-    /// file is read-only and hand-edited), then %LOCALAPPDATA%\ActionWheel. If neither exists the
-    /// defaults are written to the LOCALAPPDATA copy, because the install directory is often
-    /// Program Files and not writable.
+    /// file is read-only and hand-edited), then %LOCALAPPDATA%\ActionWheel. The first one that
+    /// exists shadows the other completely - if it is invalid the app falls back to the built-in
+    /// defaults for the session rather than reading the lower-priority file, because that is the
+    /// same file <see cref="ActiveConfigPath"/> resolves to and the one Save would overwrite. If
+    /// neither exists the defaults are written to the LOCALAPPDATA copy, because the install
+    /// directory is often Program Files and not writable.
     ///
     /// Parsing goes through JsonDocument rather than JsonSerializer&lt;T&gt; on purpose: it needs no
     /// reflection, so enabling PublishTrimmed later can't silently break the config at runtime.
@@ -93,19 +96,22 @@ namespace Action_Wheel.Core
         /// </summary>
         public static ConfigLoadResult LoadDetailed()
         {
-            string firstBadPath = string.Empty;
-            string firstError = string.Empty;
-
             foreach (var path in new[] { PortableConfigPath, UserConfigPath })
             {
                 if (!File.Exists(path))
                     continue;
 
-                string error;
+                // The first existing path decides the outcome outright, valid or not - it never
+                // falls through to a lower-priority path from here. That has to match
+                // ActiveConfigPath, which resolves to this same first-existing path regardless of
+                // whether it is valid. Falling through past a bad file here used to let the app run
+                // happily off a good LOCALAPPDATA file while Save and "Open config file" kept
+                // targeting the broken portable one beside the exe - the running config and the one
+                // any edit would actually land in were two different files, silently.
                 try
                 {
                     var parsed = Parse(File.ReadAllText(path));
-                    if (TryValidate(parsed, out error))
+                    if (TryValidate(parsed, out string error))
                     {
                         return new ConfigLoadResult
                         {
@@ -114,34 +120,29 @@ namespace Action_Wheel.Core
                             Path = path,
                         };
                     }
+
+                    // Deliberately not overwritten with the defaults. The file is the user's work,
+                    // and a typo on one line should not cost them the other eight buttons.
+                    return new ConfigLoadResult
+                    {
+                        Actions = Defaults(),
+                        Status = ConfigStatus.Rejected,
+                        Path = path,
+                        Error = error,
+                        BackupAvailable = File.Exists(BackupPathFor(path)),
+                    };
                 }
                 catch (Exception ex)
                 {
-                    error = ex.Message;
+                    return new ConfigLoadResult
+                    {
+                        Actions = Defaults(),
+                        Status = ConfigStatus.Rejected,
+                        Path = path,
+                        Error = ex.Message,
+                        BackupAvailable = File.Exists(BackupPathFor(path)),
+                    };
                 }
-
-
-                // Remember the first file that failed, not the last: it is the one that shadows the
-                // others, so it is the one the user has to fix.
-                if (firstBadPath.Length == 0)
-                {
-                    firstBadPath = path;
-                    firstError = error;
-                }
-            }
-
-            if (firstBadPath.Length > 0)
-            {
-                // Deliberately not overwritten with the defaults. The file is the user's work, and a
-                // typo on one line should not cost them the other eight buttons.
-                return new ConfigLoadResult
-                {
-                    Actions = Defaults(),
-                    Status = ConfigStatus.Rejected,
-                    Path = firstBadPath,
-                    Error = firstError,
-                    BackupAvailable = File.Exists(BackupPathFor(firstBadPath)),
-                };
             }
 
             TryWriteDefaults();

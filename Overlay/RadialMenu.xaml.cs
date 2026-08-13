@@ -462,7 +462,25 @@ namespace Action_Wheel.Overlay
             _highlightedTag = tag;
 
             if (tag is int current)
+            {
                 _buttonPainters[current]?.Hover();
+                ExpandGroupOnHover(current);
+            }
+        }
+
+        /// <summary>
+        /// Opens <paramref name="tag"/>'s satellite ring the moment it is hovered, whether that hover
+        /// came from a direct pointer entering the button (<see cref="OnButtonHover"/>) or the
+        /// flick/drag gesture highlighting a direction (<see cref="HighlightTag"/>, driven by
+        /// <c>LauncherService</c>). Nothing here decides when a group closes again - only ever
+        /// which one is open - so hovering back over the parent, or into the satellites it just
+        /// revealed, is never mistaken for "leaving" the group.
+        /// </summary>
+        private void ExpandGroupOnHover(int tag)
+        {
+            var action = tag is >= 0 and <= 8 ? ActionsByTag[tag] : null;
+            if (action?.Kind == ActionKind.Group)
+                ExpandGroup(tag, action);
         }
 
         /// <summary>
@@ -724,11 +742,22 @@ namespace Action_Wheel.Overlay
         }
 
         /// <summary>
-        /// Creates and positions a group's satellite buttons, evenly spaced around the full circle
-        /// at <see cref="GroupOrbitRadius"/> - centred on the same point as the main ring, per this
-        /// feature's whole premise, rather than fanned out near the parent button. Added to
-        /// <see cref="ButtonsCanvas"/> collapsed; <see cref="ExpandGroup"/> is what shows them.
+        /// Creates and positions a group's satellite buttons on <see cref="GroupOrbitRadius"/>, each
+        /// at the same angular slot one of the main ring's own 8 positions occupies - so a satellite
+        /// sits directly outside the main-ring button its slot lines up with, concentric with and
+        /// fanning out from the parent's own position rather than starting fresh at the top of the
+        /// circle. Added to <see cref="ButtonsCanvas"/> collapsed; <see cref="ExpandGroup"/> shows
+        /// them.
         /// </summary>
+        /// <remarks>
+        /// The fan order is 0, +1, -1, +2, -2, ... slots away from the parent's own tag - child 1
+        /// starts at the parent's own position, child 2 one slot clockwise, child 3 one slot
+        /// anticlockwise, and so on outward on alternating sides. For a parent at tag 1 (Top) that
+        /// is tags 1, 2, 8, 3, 7 - Top, Top right, Top left, Right, Left - which is the order this
+        /// was specified in, not a coincidence of the maths. <see cref="ActionItem.MaxGroupChildren"/>
+        /// caps the fan at offsets -2..+2, five distinct slots out of the ring's 8 with no risk of
+        /// two children landing on the same one.
+        /// </remarks>
         private Button[] BuildGroupButtons(int parentTag, IReadOnlyList<ActionItem> children)
         {
             double radius = GroupOrbitRadius;
@@ -740,7 +769,12 @@ namespace Action_Wheel.Overlay
             for (int i = 0; i < count; i++)
             {
                 var child = children[i];
-                double angle = (2.0 * Math.PI / count) * i - Math.PI / 2.0;
+
+                // 0, +1, -1, +2, -2, ... - see the remarks above.
+                int fanOffset = i % 2 == 0 ? -(i / 2) : i / 2 + 1;
+                int slotTag = ((parentTag - 1 + fanOffset) % 8 + 8) % 8 + 1;
+
+                double angle = (Math.PI / 4.0) * (slotTag - 1) - Math.PI / 2.0;
                 double x = centre + Math.Cos(angle) * radius;
                 double y = centre + Math.Sin(angle) * radius;
 
@@ -1003,6 +1037,8 @@ namespace Action_Wheel.Overlay
             // after it, but that path clears _heldAction itself before this ever runs).
             DisarmHold();
             PainterFor(sender)?.Hover();
+            if (TagOf(sender) is int tag)
+                ExpandGroupOnHover(tag);
         }
 
         private void OnButtonPressed(object sender, PointerRoutedEventArgs e)

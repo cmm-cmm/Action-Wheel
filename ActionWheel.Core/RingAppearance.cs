@@ -48,8 +48,8 @@ namespace Action_Wheel.Core
 
         /// <summary>
         /// How long the opening animation takes, as a percentage of its tuned timings: 100 is every
-        /// begin/duration value exactly as <see cref="RingOpenAnimation"/> defines it, below that
-        /// plays faster, above that slower.
+        /// begin/duration value exactly as <see cref="RingOpenAnimation"/> defines it - the fastest
+        /// setting available - and anything above that plays slower.
         /// </summary>
         /// <remarks>
         /// A percentage of the existing begin/duration values rather than a free millisecond figure,
@@ -60,11 +60,15 @@ namespace Action_Wheel.Core
         /// </remarks>
         public double AnimationDurationPercent { get; init; } = 100.0;
 
-        /// <summary>How much faster than tuned the user is allowed to make the opening animation.</summary>
-        public const double MinAnimationDurationPercent = 50.0;
+        /// <summary>
+        /// The floor is the tuned speed itself, not a way to play it faster - the presets are tuned
+        /// to fit inside <see cref="RingOpenAnimation.BudgetMs"/> already, so there is no faster
+        /// setting to offer.
+        /// </summary>
+        public const double MinAnimationDurationPercent = 100.0;
 
         /// <summary>How much slower than tuned the user is allowed to make the opening animation.</summary>
-        public const double MaxAnimationDurationPercent = 200.0;
+        public const double MaxAnimationDurationPercent = 500.0;
 
         /// <summary>Diameter of one of the eight outer buttons, in DIPs.</summary>
         public double ButtonSize { get; init; } = RingGeometry.OuterButtonSizeDip;

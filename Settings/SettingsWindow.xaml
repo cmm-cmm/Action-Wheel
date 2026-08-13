@@ -662,7 +662,7 @@
                                    SmallChange="10"
                                    Value="{Binding AnimationDurationPercent, Mode=TwoWay}"
                                    SpinButtonPlacementMode="Compact"
-                                   ToolTipService.ToolTip="How long the opening animation takes, as a percentage of its tuned speed. 100 is the default; lower plays faster, higher plays slower."/>
+                                   ToolTipService.ToolTip="How long the opening animation takes, as a percentage of its tuned speed. 100 is the default and fastest setting; higher plays slower."/>
                     </StackPanel>
                 </Border>
             </StackPanel>

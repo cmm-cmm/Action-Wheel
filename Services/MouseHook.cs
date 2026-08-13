@@ -1,5 +1,5 @@
 using System;
-using System.Diagnostics;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Windows.Graphics;
 
@@ -37,7 +37,7 @@ namespace Action_Wheel.Services
         private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern IntPtr GetModuleHandle(string lpModuleName);
+        private static extern IntPtr GetModuleHandle(string? lpModuleName);
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -122,17 +122,21 @@ namespace Action_Wheel.Services
             if (_hookID != IntPtr.Zero)
                 return; // Already hooked
 
-            using var curProcess = Process.GetCurrentProcess();
-            using var curModule = curProcess.MainModule;
+            // The current process's own module, asked for directly rather than looked up again by
+            // name via Process.MainModule.ModuleName - that lookup can fail for a self-contained
+            // single-file publish even though the module is already loaded, since the running exe
+            // is a temporary extraction rather than a normally-loaded module on disk.
+            IntPtr module = GetModuleHandle(null);
+            int moduleError = module == IntPtr.Zero ? Marshal.GetLastWin32Error() : 0;
 
-            if (curModule?.ModuleName != null)
-            {
-                _hookID = SetWindowsHookEx(WH_MOUSE_LL, _proc, GetModuleHandle(curModule.ModuleName), 0);
-            }
+            _hookID = SetWindowsHookEx(WH_MOUSE_LL, _proc, module, 0);
 
             if (_hookID == IntPtr.Zero)
             {
-                throw new InvalidOperationException("Failed to set mouse hook.");
+                int error = Marshal.GetLastWin32Error();
+                if (error == 0)
+                    error = moduleError;
+                throw new Win32Exception(error, "Windows could not install the mouse hook");
             }
 
             LastCallbackTick = Environment.TickCount64;

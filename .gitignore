@@ -24,7 +24,8 @@ Installer/
 *.tlog
 *.binlog
 
-# Claude Code
+# Local AI assistant instructions and settings
+AGENTS.md
 CLAUDE.md
 CLAUDE.local.md
 .claude/

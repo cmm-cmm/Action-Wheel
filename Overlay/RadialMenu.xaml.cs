@@ -748,21 +748,24 @@ namespace Action_Wheel.Overlay
         }
 
         /// <summary>
-        /// Creates and positions a group's satellite buttons on <see cref="GroupOrbitRadius"/>, each
-        /// at the same angular slot one of the main ring's own 8 positions occupies - so a satellite
-        /// sits directly outside the main-ring button its slot lines up with, concentric with and
+        /// Creates and positions a group's satellite buttons on <see cref="GroupOrbitRadius"/>,
         /// fanning out from the parent's own position rather than starting fresh at the top of the
         /// circle. Added to <see cref="ButtonsCanvas"/> collapsed; <see cref="ExpandGroup"/> shows
         /// them.
         /// </summary>
         /// <remarks>
-        /// The fan order is 0, +1, -1, +2, -2, ... slots away from the parent's own tag - child 1
-        /// starts at the parent's own position, child 2 one slot clockwise, child 3 one slot
-        /// anticlockwise, and so on outward on alternating sides. For a parent at tag 1 (Top) that
-        /// is tags 1, 2, 8, 3, 7 - Top, Top right, Top left, Right, Left - which is the order this
-        /// was specified in, not a coincidence of the maths. <see cref="ActionItem.MaxGroupChildren"/>
-        /// caps the fan at offsets -2..+2, five distinct slots out of the ring's 8 with no risk of
-        /// two children landing on the same one.
+        /// The fan order is 0, +1, -1, +2, -2, ... steps away from the parent's own direction - child
+        /// 1 starts exactly on the parent's own direction, child 2 one step clockwise, child 3 one
+        /// step anticlockwise, and so on outward on alternating sides. <see cref="ActionItem.MaxGroupChildren"/>
+        /// caps the fan at offsets -2..+2.
+        ///
+        /// The step is an angle computed from <see cref="GroupOrbitRadius"/> and
+        /// <see cref="GroupButtonSize"/>, not the main ring's 45-degree slots: reusing the main
+        /// ring's own slot angles read as neighbouring satellites being spaced far apart, because
+        /// GroupOrbitRadius sits well outside the main orbit and arc length between two points 45
+        /// degrees apart grows with the radius they're on. This packs neighbours as close as they
+        /// can be without their edges overlapping instead, which is independent of the parent's
+        /// distance from the ring's centre - moving one does not move the other.
         ///
         /// Every satellite is painted in <paramref name="parentAction"/>'s own background, foreground
         /// and shadow - not its own slot's default colour, and not anything a child itself carries -
@@ -783,15 +786,24 @@ namespace Action_Wheel.Overlay
             var foreground = IconFactory.ColorOr(parentAction.Foreground, IconFactory.DefaultForeground(parentTag));
             var shadowColor = IconFactory.ColorOr(parentAction.Shadow, Colors.Black);
 
+            // The parent's own direction, using the same formula the main ring's 8 slots are laid
+            // out with - so child 0 (fan offset 0) still starts exactly there.
+            double parentAngle = (Math.PI / 4.0) * (parentTag - 1) - Math.PI / 2.0;
+
+            // A small, fixed gap between neighbours' edges, converted to the angle that gives it at
+            // this particular radius - a chord, not an arc, but the two agree closely at the small
+            // angles this produces in practice.
+            const double DesiredEdgeGap = 6.0;
+            double angularStep = 2.0 * Math.Asin(Math.Clamp((size + DesiredEdgeGap) / (2.0 * radius), -1.0, 1.0));
+
             for (int i = 0; i < count; i++)
             {
                 var child = children[i];
 
                 // 0, +1, -1, +2, -2, ... - see the remarks above.
                 int fanOffset = i % 2 == 0 ? -(i / 2) : i / 2 + 1;
-                int slotTag = ((parentTag - 1 + fanOffset) % 8 + 8) % 8 + 1;
 
-                double angle = (Math.PI / 4.0) * (slotTag - 1) - Math.PI / 2.0;
+                double angle = parentAngle + fanOffset * angularStep;
                 double x = centre + Math.Cos(angle) * radius;
                 double y = centre + Math.Sin(angle) * radius;
 

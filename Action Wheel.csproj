@@ -110,17 +110,25 @@
   </ItemGroup>
 
   <!-- Publish-only properties for Release. These must stay scoped to an actual publish
-       (not a plain "dotnet build -c Release"): PublishSingleFile requires MSIX tooling to
-       generate resources.pri unless it's a publish, and this project intentionally runs
-       unpackaged (EnableMsixTooling=false, see doc/FIX-DEBUG-DEPLOYMENT.md). Build-Publish.ps1
-       and Build-Quick.bat already pass the single-file/self-contained flags explicitly via
-       "dotnet publish -p:...", so they don't depend on this PropertyGroup. -->
+       (not a plain "dotnet build -c Release"): the resources.pri this app needs at runtime is
+       only generated when MSIX tooling is on, and this project intentionally runs unpackaged
+       (EnableMsixTooling=false for a normal build, see doc/FIX-DEBUG-DEPLOYMENT.md) - so
+       EnableMsixTooling is switched on above, but only while $(_IsPublishing).
+
+       PublishSingleFile is deliberately false. It was true until the 2.4.0 release, whose
+       published exe turned out to crash on launch on every machine it was tried on - Faulting
+       module Microsoft.UI.Xaml.dll, exception code 0xc000027b, reproduced both from a fresh
+       local build and from the file downloaded off GitHub, so it was not a corrupt download.
+       WinUI 3's native XAML engine does not survive being bundled into the single-file host and
+       self-extracted to a temp folder at first run; the same publish with only this flag
+       flipped to false launches cleanly. Windows App SDK does not officially support single-file
+       publish for this reason - don't turn it back on without verifying the exe actually runs,
+       not just that it builds. -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release' AND '$(_IsPublishing)' == 'true'">
     <PublishReadyToRun>True</PublishReadyToRun>
     <PublishTrimmed>False</PublishTrimmed>
     <SelfContained>true</SelfContained>
-    <PublishSingleFile>true</PublishSingleFile>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <PublishSingleFile>false</PublishSingleFile>
   </PropertyGroup>
 
   <!-- Debug Properties -->

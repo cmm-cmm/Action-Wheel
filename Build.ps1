@@ -13,7 +13,8 @@
     Restore         - restore NuGet packages only
     Debug           - build the Debug configuration (the default)
     Release         - build the Release configuration
-    Publish         - self-contained single-file executable in bin\Publish\win-<platform>
+    Publish         - self-contained build (folder, not single-file - see the csproj's Publish-only
+                      PropertyGroup for why) in bin\Publish\win-<platform>
     Installer       - Publish, then build the Inno Setup installer from ActionWheel-Setup.iss
     VerifyBindings  - check every classic {Binding} path against the type behind it
     Clean           - delete bin\ and obj\
@@ -99,25 +100,27 @@ function Invoke-Publish {
 
     # PublishTrimmed stays false on purpose: the settings window's row templates use classic
     # {Binding}, which resolves properties by reflection. Trimming would leave the rows blank.
+    #
+    # No -p:PublishSingleFile here - see the csproj's Publish-only PropertyGroup. This has to stay
+    # a folder, not a single exe.
     Invoke-Dotnet @(
         'publish', $project,
         '-c', 'Release',
         '-r', $rid,
         "-p:Platform=$Platform",
         '--self-contained', 'true',
-        '-p:PublishSingleFile=true',
         '-p:PublishReadyToRun=true',
         '-p:PublishTrimmed=false',
-        '-p:IncludeNativeLibrariesForSelfExtract=true',
         '-o', $Output,
         '--nologo'
     )
 
     $exe = Join-Path $Output 'Action Wheel.exe'
     if (Test-Path $exe) {
-        $size = [math]::Round((Get-Item $exe).Length / 1MB, 1)
+        $size = [math]::Round(
+            ((Get-ChildItem -LiteralPath $Output -Recurse -File | Measure-Object -Property Length -Sum).Sum) / 1MB, 1)
         Write-Host ''
-        Write-Host "Action Wheel.exe  $size MB" -ForegroundColor Green
+        Write-Host "Action Wheel.exe + dependencies  $size MB total" -ForegroundColor Green
         Write-Host $Output -ForegroundColor Green
     }
 }

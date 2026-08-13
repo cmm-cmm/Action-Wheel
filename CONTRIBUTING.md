@@ -32,7 +32,7 @@ commands run locally and in CI:
 ```powershell
 .\Build.ps1                       # Debug build
 .\Build.ps1 -Task Release
-.\Build.ps1 -Task Publish         # self-contained single-file exe -> bin\Publish\win-x64
+.\Build.ps1 -Task Publish         # self-contained build (exe + dependencies) -> bin\Publish\win-x64
 .\Build.ps1 -Task Installer       # Publish, then the Inno Setup installer
 .\Build.ps1 -Task VerifyBindings  # checks every classic {Binding} path against its type
 .\Build.ps1 -Task Clean

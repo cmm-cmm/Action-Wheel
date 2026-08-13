@@ -431,11 +431,16 @@ namespace Action_Wheel.Settings
                 };
                 ToolTipService.SetToolTip(iconButton, "Choose an icon");
 
+                // The parent Group button's own colours, not rowModel's - every child renders in
+                // them on the real ring (see RadialMenu.BuildGroupButtons), so the preview here has
+                // to match rather than falling back to a colour keyed by the child's own list
+                // position, which was the "first child is red" report: index 0 happened to be
+                // IconFactory.DefaultBackground's red.
                 void RefreshIcon()
                 {
-                    iconButton.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(rowModel.BackgroundColor);
+                    iconButton.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(model.BackgroundColor);
                     iconButton.Content = IconFactory.CreateIcon(rowModel.ToActionItem(), 22,
-                        new Microsoft.UI.Xaml.Media.SolidColorBrush(rowModel.ForegroundColor));
+                        new Microsoft.UI.Xaml.Media.SolidColorBrush(model.ForegroundColor));
                 }
                 RefreshIcon();
                 iconButton.Click += PickGlyph_Click;

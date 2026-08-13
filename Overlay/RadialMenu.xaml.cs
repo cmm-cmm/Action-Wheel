@@ -939,7 +939,67 @@ namespace Action_Wheel.Overlay
 
                 if (!string.IsNullOrWhiteSpace(action.Label))
                     ToolTipService.SetToolTip(button, action.Label);
+
+                ApplyGroupBadge(button, tag, action, background);
             }
+        }
+
+        /// <summary>One small corner badge per main-ring button, built the first time it is needed.</summary>
+        private readonly Dictionary<int, Border> _groupBadges = new();
+
+        /// <summary>
+        /// Marks a Group button with the same small badge <see cref="Settings.RingPreview"/> draws in
+        /// the settings preview, so a group reads as one before it is ever hovered - on the real ring,
+        /// not only in Settings. Runs after <see cref="UpdateButtonPositions"/>, so the button's own
+        /// <see cref="Canvas"/> position is already final and the badge can be pinned to its corner.
+        /// </summary>
+        private void ApplyGroupBadge(Button button, int tag, ActionItem action, Color parentBackground)
+        {
+            bool isGroup = action.Kind == ActionKind.Group && action.GroupChildren.Count > 0;
+
+            if (!_groupBadges.TryGetValue(tag, out var badge))
+            {
+                if (!isGroup)
+                    return;
+
+                badge = new Border
+                {
+                    Background = new SolidColorBrush(Colors.White),
+                    BorderThickness = new Thickness(1.5),
+                    Child = new FontIcon
+                    {
+                        FontFamily = IconFont.Family,
+                        Glyph = "",
+                        Foreground = new SolidColorBrush(Colors.Black),
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center,
+                    },
+                };
+                ButtonsCanvas.Children.Add(badge);
+                _groupBadges[tag] = badge;
+            }
+
+            if (!isGroup)
+            {
+                badge.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            double diameter = tag == 0 ? _appearance.CenterButtonSize : _appearance.ButtonSize;
+            double badgeSize = Math.Max(14, diameter * 0.32);
+
+            badge.Width = badgeSize;
+            badge.Height = badgeSize;
+            badge.CornerRadius = new CornerRadius(badgeSize / 2.0);
+            badge.BorderBrush = new SolidColorBrush(parentBackground);
+            ((FontIcon)badge.Child).FontSize = badgeSize * 0.55;
+            ToolTipService.SetToolTip(badge, $"Group of {action.GroupChildren.Count} button(s)");
+
+            // Bottom-right corner of the button, the same placement RingPreview uses.
+            Canvas.SetLeft(badge, Canvas.GetLeft(button) + diameter - badgeSize * 0.75);
+            Canvas.SetTop(badge, Canvas.GetTop(button) + diameter - badgeSize * 0.75);
+            Canvas.SetZIndex(badge, 10);
+            badge.Visibility = Visibility.Visible;
         }
 
         /// <summary>

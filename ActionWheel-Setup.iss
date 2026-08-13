@@ -6,8 +6,8 @@
 
 #define MyAppName "Action Wheel"
 #define MyAppVersion "2.5.0"
-#define MyAppPublisher "Your Company"
-#define MyAppURL "https://yourwebsite.com"
+#define MyAppPublisher "KoneForge"
+#define MyAppURL "https://konexforge.com/"
 #define MyAppExeName "Action Wheel.exe"
 #define MyAppSourcePath "bin\Publish\win-x64"
 

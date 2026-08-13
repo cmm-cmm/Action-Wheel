@@ -31,6 +31,18 @@ namespace Action_Wheel.Overlay
         private static readonly ConditionalWeakTable<Compositor, Dictionary<float, CompositionBrush>> Masks = new();
 
         /// <summary>
+        /// Comfortably more than the handful of diameters one ring uses at once. The overlay's own
+        /// compositor is short-lived - one per menu open, cleared with the window - so this never
+        /// matters there. RingPreview's compositor is not: it lives for the whole Settings session,
+        /// and diameter is <c>appearance.ButtonSize * scale</c> with <c>scale</c> a continuous ratio
+        /// that moves with the Button size/Distance from centre NumberBoxes, so dragging either one
+        /// passes a different float diameter - and a brand new GPU-backed mask - through here on
+        /// nearly every redraw. Nothing here is worth keeping across that; the cap and clear mirror
+        /// IconFactory.MaxCachedImages for the same reason.
+        /// </summary>
+        private const int MaxCachedMasks = 32;
+
+        /// <summary>
         /// Attaches the shadow to <paramref name="host"/> - an empty element sitting behind the
         /// button's filled border, so the shadow is drawn underneath it.
         /// </summary>
@@ -68,6 +80,9 @@ namespace Action_Wheel.Overlay
             var masks = Masks.GetOrCreateValue(compositor);
             if (masks.TryGetValue(size, out var cached))
                 return cached;
+
+            if (masks.Count >= MaxCachedMasks)
+                masks.Clear();
 
             var circle = compositor.CreateEllipseGeometry();
             circle.Center = new Vector2(size / 2f);

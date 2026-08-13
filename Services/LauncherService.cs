@@ -485,12 +485,12 @@ namespace Action_Wheel.Services
         /// Closes the currently open menu if one exists.
         /// </summary>
         /// <remarks>
-        /// The field is cleared before the Close() call, not after. If Close() throws - WinUI window
-        /// teardown races, or a COMException on a window whose HWND is already gone - clearing it
-        /// afterwards would leave _currentMenu pointing at a dead window forever. That is not a
-        /// cosmetic leak: OnEscapePressed would then answer "yes, I dismissed a menu" to every
-        /// Escape from then on, and the keyboard hook would swallow Escape in every application on
-        /// the machine.
+        /// The field is cleared before the CloseMenu() call, not after. If CloseMenu() throws - WinUI
+        /// window teardown races, or a COMException on a window whose HWND is already gone -
+        /// clearing it afterwards would leave _currentMenu pointing at a dead window forever. That
+        /// is not a cosmetic leak: OnEscapePressed would then answer "yes, I dismissed a menu" to
+        /// every Escape from then on, and the keyboard hook would swallow Escape in every
+        /// application on the machine.
         /// </remarks>
         private void CloseCurrentMenu()
         {
@@ -502,7 +502,7 @@ namespace Action_Wheel.Services
 
             try
             {
-                menu.Close();
+                menu.CloseMenu();
             }
             catch (Exception ex)
             {

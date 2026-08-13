@@ -52,6 +52,10 @@ namespace Action_Wheel.Overlay
         [DllImport("user32.dll")]
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        private const int SW_HIDE = 0;
+
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attribute, ref int value, int size);
         private const int DWMWA_BORDER_COLOR = 34;
@@ -108,6 +112,10 @@ namespace Action_Wheel.Overlay
 
         [DllImport("user32.dll")]
         private static extern uint GetDpiForWindow(IntPtr hWnd);
+
+        [DllImport("Shcore.dll")]
+        private static extern int GetDpiForMonitor(IntPtr hmonitor, int dpiType, out uint dpiX, out uint dpiY);
+        private const int MDT_EFFECTIVE_DPI = 0;
 
         private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
         private const uint SWP_NOMOVE = 0x0002;
@@ -191,6 +199,32 @@ namespace Action_Wheel.Overlay
         /// a visual tree that is no longer attached to anything.
         /// </summary>
         private bool _closed;
+
+        /// <summary>
+        /// The one path that ever closes this window - a button click, a click elsewhere on the
+        /// menu, or <see cref="LauncherService"/> dismissing it (Esc, a click off the menu
+        /// entirely, or a new menu replacing this one).
+        /// </summary>
+        /// <remarks>
+        /// Hides the native window first and hands off to WinUI's own <see cref="Close"/> second,
+        /// deliberately in that order. <see cref="TransparentSystemBackdrop.OnTargetDisconnected"/>
+        /// sets SystemBackdrop back to null as part of that teardown, and for at least one frame
+        /// before the HWND is actually destroyed the swap chain reverts to its opaque default -
+        /// black, since RootGrid/MenuContainer are XAML "Transparent" with no backdrop behind them
+        /// at that instant - stretched across the full 400x400 window. That is the flash: sharply
+        /// visible against a light desktop, easy to miss against a dark one, and it landed on every
+        /// close, which for most users is every single click of a button. ShowWindow(SW_HIDE) is
+        /// synchronous at the OS level, so the window is off-screen before Close() ever starts
+        /// tearing the backdrop down, and the repaint - if it still happens - happens on nothing
+        /// anyone can see.
+        /// </remarks>
+        public void CloseMenu()
+        {
+            if (_windowHandle != IntPtr.Zero)
+                ShowWindow(_windowHandle, SW_HIDE);
+
+            Close();
+        }
 
         private void RadialMenu_Closed(object sender, WindowEventArgs args)
         {
@@ -402,7 +436,7 @@ namespace Action_Wheel.Overlay
 
             // Close first: the action synthesises keystrokes for whatever is underneath, and the
             // overlay must be out of the way before they land.
-            Close();
+            CloseMenu();
 
             if (action != null)
                 ActionInvoked?.Invoke(this, action);
@@ -797,9 +831,48 @@ namespace Action_Wheel.Overlay
             return new RECT { left = 0, top = 0, right = GetSystemMetrics(0), bottom = GetSystemMetrics(1) };
         }
 
+        /// <summary>
+        /// Re-reads the DPI of whichever monitor <paramref name="point"/> is actually on, and
+        /// resizes the physical window if that turns out to differ from the scale
+        /// <see cref="InitializeWindow"/> cached when the HWND was first created.
+        /// </summary>
+        /// <remarks>
+        /// The window is always constructed (and its size set from
+        /// <c>GetDpiForWindow</c>) before <see cref="ShowAtPosition"/> ever runs - see
+        /// <c>LauncherService.OpenMenuAt</c>, which builds the <c>RadialMenu</c> first and moves it
+        /// to the cursor second. On a single-monitor or same-DPI setup that first read is already
+        /// correct and this is a no-op. On a mixed-DPI multi-monitor setup it can belong to the
+        /// wrong monitor entirely: a new top-level window is placed by Windows before anyone has
+        /// told it where it is going, so opening the ring on a secondary display sized differently
+        /// from the primary one would otherwise leave the native HWND sized for the wrong scale
+        /// while XAML - which WinUI keeps in sync with whatever monitor the window is really on -
+        /// lays the ring out at the correct one, clipping the ring or leaving dead transparent space
+        /// around it.
+        /// </remarks>
+        private void RefreshDpiForTarget(PointInt32 point)
+        {
+            var pt = new POINT(point.X, point.Y);
+            var hMonitor = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
+            if (hMonitor == IntPtr.Zero
+                || GetDpiForMonitor(hMonitor, MDT_EFFECTIVE_DPI, out uint dpiX, out _) != 0
+                || dpiX == 0)
+            {
+                return;
+            }
+
+            double scale = RingGeometry.ScaleFromDpi(dpiX);
+            if (scale == _rasterizationScale)
+                return;
+
+            _rasterizationScale = scale;
+            _appWindow?.Resize(new SizeInt32(PhysicalMenuSize, PhysicalMenuSize));
+        }
+
         public void ShowAtPosition(PointInt32 position)
         {
             if (_appWindow == null) return;
+
+            RefreshDpiForTarget(position);
 
             // Place center button at cursor position.
             // Center button is at (MenuSize/2, MenuSize/2) in window coordinates, so the window's
@@ -890,7 +963,7 @@ namespace Action_Wheel.Overlay
                 return;
 
             // Clicked inside the window but not on a button -> close menu
-            Close();
+            CloseMenu();
         }
 
         private static bool IsWithinButton(DependencyObject? source)

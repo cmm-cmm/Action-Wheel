@@ -292,11 +292,22 @@ namespace Action_Wheel.Settings
             }
         }
 
-        public bool ShadowEnabled { get => _shadowEnabled; set { if (Set(ref _shadowEnabled, value)) RaiseIconChanged(); } }
-        public double ShadowOpacity { get => _shadowOpacity; set { if (SetNormalised(ref _shadowOpacity, value, 0, 1, 2)) RaiseIconChanged(); } }
-        public double ShadowBlur { get => _shadowBlur; set { if (SetNormalised(ref _shadowBlur, value, 0, 64, 1)) RaiseIconChanged(); } }
-        public double ShadowOffsetX { get => _shadowOffsetX; set { if (SetNormalised(ref _shadowOffsetX, value, -50, 50, 1)) RaiseIconChanged(); } }
-        public double ShadowOffsetY { get => _shadowOffsetY; set { if (SetNormalised(ref _shadowOffsetY, value, -50, 50, 1)) RaiseIconChanged(); } }
+        // ShadowEnabled toggles whether a shadow is drawn at all in the big canvas preview, which
+        // SettingsViewModel.PreviewProperties already listens for directly by property name - but it
+        // does not change what IconFactory.CreateIcon draws for this row's own small icon swatch, so
+        // unlike the properties above it must not call RaiseIconChanged.
+        public bool ShadowEnabled { get => _shadowEnabled; set => Set(ref _shadowEnabled, value); }
+
+        // None of the four below feed IconFactory.CreateIcon (only ShadowColor - driven by the
+        // Shadow hex string, not these - would), so RaiseIconChanged has nothing to do here. It used
+        // to be called anyway, which meant every tick of these NumberBoxes rebuilt this row's icon
+        // element - a disk stat (File.GetLastWriteTimeUtc) on every tick for a file-based icon - for
+        // an update whose result was always identical to what was already on screen. Plain Set still
+        // raises the property itself, which is all PreviewProperties needs for the big canvas redraw.
+        public double ShadowOpacity { get => _shadowOpacity; set => SetNormalised(ref _shadowOpacity, value, 0, 1, 2); }
+        public double ShadowBlur { get => _shadowBlur; set => SetNormalised(ref _shadowBlur, value, 0, 64, 1); }
+        public double ShadowOffsetX { get => _shadowOffsetX; set => SetNormalised(ref _shadowOffsetX, value, -50, 50, 1); }
+        public double ShadowOffsetY { get => _shadowOffsetY; set => SetNormalised(ref _shadowOffsetY, value, -50, 50, 1); }
 
         /// <summary>Stores a rounded, in-range value and keeps the editor showing what was stored.</summary>
         /// <remarks>

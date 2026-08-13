@@ -12,7 +12,7 @@ A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor wheneve
 [![Latest tag](https://img.shields.io/github/v/tag/cmm-cmm/Action-Wheel?label=version&color=success)](https://github.com/cmm-cmm/Action-Wheel/tags)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-0078D6?logo=windows&logoColor=white)](#requirements)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](#requirements)
-[![Windows App SDK](https://img.shields.io/badge/Windows%20App%20SDK-1.8-0078D6?logo=windowsxp&logoColor=white)](#requirements)
+[![Windows App SDK](https://img.shields.io/badge/Windows%20App%20SDK-2.3.1-0078D6?logo=windowsxp&logoColor=white)](#requirements)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 </div>
@@ -35,17 +35,27 @@ A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor wheneve
 
 ### 🖱️ Interaction
 
-- **Global trigger** — a low-level `WH_MOUSE_LL` hook watches for the middle mouse button system-wide. The click is *swallowed*, so the app underneath doesn't also get it (no stray browser tabs or autoscroll).
+- **Global trigger** — a low-level `WH_MOUSE_LL` hook watches for the trigger system-wide. The click is *swallowed*, so the app underneath doesn't also get it (no stray browser tabs or autoscroll).
+- **Configurable trigger** — the middle mouse button by default, but Settings can bind it to a two-button chord instead (hold right, press left, or the reverse — each with its own timeout and movement tolerance) or to side buttons 4/5. Ctrl+Alt+Space always remains available as an emergency trigger.
 - **Opens at the cursor** — the menu centres itself on the pointer and is clamped to the current monitor's work area.
-- **Pick by gesture** — keep the middle button held, flick towards a button and let go. Faster than aiming, and it is what a radial menu is for. Release without moving and the menu simply stays open to be clicked.
+- **Pick by gesture** — keep the trigger held, flick towards a button and let go. Faster than aiming, and it is what a radial menu is for. Release without moving and the menu simply stays open to be clicked.
+- **Hold for a second action** — press and hold a button for about half a second instead of clicking it, and it runs a separate, optional action. Configured per button, right below its main one.
 - **Dismiss any way you like** — click a button, click anywhere off the buttons, click elsewhere on screen, or press <kbd>Esc</kbd>.
 
 ### 🎨 Customization
 
-- **Configurable buttons** — 8 outer buttons plus a centre button. Each can send a keyboard shortcut or launch a program/file/URL. Edit them in the built-in settings window, or by hand in `actions.json`.
+- **Configurable buttons** — 8 outer buttons plus a centre button. Each can send a keyboard shortcut, launch a program/file/URL, run a built-in Windows function (lock, sleep, snap, show desktop, switch profile, ...), or reveal a group. Edit them in the built-in settings window, or by hand in `actions.json`.
+- **Group buttons** — turn any outer button into a small satellite ring of up to 5 more buttons. They fan out on hover from that button's own position, sized and coloured to match it, so a group reads as one control rather than a separate menu.
+- **Ring size, distance and animation are all adjustable** — button size and orbit radius have a live preview, and there are 7 opening animations to choose from (fade and scale, pop, radiate from centre, converge from outside, clockwise/counter-clockwise sweep, or none), each with its own effect duration.
 - **Truly transparent** — per-pixel alpha, so only the buttons are drawn; the desktop shows through everywhere else.
 - **Buttons carry a drop shadow** — they stay readable over a white window underneath, which matters because the overlay is genuinely transparent.
 - **Picks up edits to `actions.json` on its own** — the file is watched in both locations it can live in.
+
+### 📁 Profiles & backup
+
+- **Named profiles** — save the current 9 buttons under a name, and load any saved profile back onto the ring later. A button can itself switch or open a profile via the built-in "switch profile" Windows function, and the tray icon's menu lists recent profiles for one-click switching.
+- **Import and export** — a profile is a self-contained XML file, so it can be shared or version-controlled independently of `actions.json`.
+- **One-file backup and restore** — every profile, the trigger, the ring appearance and extracted icons, saved to or restored from a single file.
 
 ### 🔒 Reliability & privacy
 
@@ -60,7 +70,7 @@ A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor wheneve
 
 - Windows 10 version 1809 (build 17763) or later
 - .NET 10.0
-- Windows App SDK 1.8
+- Windows App SDK 2.3.1
 - Visual Studio 2022 with the "Windows application development" workload (for building)
 
 ## Build & run
@@ -96,22 +106,30 @@ Self-contained publishes are large (roughly 250–300 MB). That is normal for a 
 
 ### Settings window
 
-**Open button settings** — from the main window, or **Settings…** in the tray icon's right-click menu. It shows all nine slots (centre plus the eight ring positions), each with:
+**Open button settings** — from the main window, or **Settings…** in the tray icon's right-click menu. It is organised the way Windows' own Settings app is: a left-hand rail with three sections.
 
-- **Label**, **action type** and **value**
+**Buttons** (the default section) is master-detail: a compact, one-line-per-button list on the left — drag a row to move that button around the ring, the first row is the centre button and the rest go clockwise from the top — and a detail panel on the right for whichever button is selected (click a row, or click a button in the live preview above the panel), with:
+
+- **Label**, **action type** and **value**. Action type is one of **Do nothing**, **Send shortcut**, **Open app / file**, **Windows function** (a built-in: lock, sleep, restart, shut down, show desktop, snap, open Task Manager, reload the config, switch or open a profile, and more), or **Group**.
 - a **record button** (keyboard icon) that captures a key press instead of making you type the shortcut — Ctrl, Alt and Shift combinations are captured; the Windows key never reaches the app because the shell takes it first, so `Win+…` has to be typed by hand. <kbd>Esc</kbd> cancels recording.
 - a **file browser** for launch targets, and an **arguments** box for the parameters to pass them
-- an **icon**. The preview button on the left opens a picker offering all three sources: any glyph in the bundled icon font (searchable by name or code, and read from the font itself so the list matches what the app can draw), your own **`.svg`, `.png` or `.ico` file**, and **the icon of the program the button launches**. Browsing for a launch target takes that program's icon automatically.
-- **icon colour**, **button colour** and an icon **scale** from 0.25× to 3×; the preview button on the left shows exactly what the ring will draw
+- an **icon**. The preview button opens a picker offering all three sources: any glyph in the bundled icon font (searchable by name or code, and read from the font itself so the list matches what the app can draw), your own **`.svg`, `.png` or `.ico` file**, and **the icon of the program the button launches**. Browsing for a launch target takes that program's icon automatically.
+- **icon colour**, **button colour**, **shadow colour** and shadow opacity/blur/offset, and an icon **scale** from 0.25× to 3× with its own horizontal/vertical offset
 - a **tint** switch for file icons: on, an `.svg` is recoloured to the icon colour; off, it keeps the colours it was drawn with. A `.png` or `.ico` always keeps its own colours.
-- a **reset** button that restores just that one button to its default
+- a **hold action** — a second, optional action for the same button, with its own type, value and arguments
+- an **Edit group…** button when the type is Group, opening a dialog to pick up to 5 child buttons, each with its own icon, name and type (everything except Group itself)
+- **reset** and **test** buttons — test runs the action immediately, without saving or opening the ring
 - a **live status marker** next to the value: green when a launch target was found (on disk, on PATH, or a well-formed URL), amber when it was not or when another button uses the same shortcut, red when the shortcut contains a key that cannot be sent
 
-**Drag a row** to move that button around the ring — the first row is the centre button and the rest go clockwise from the top. A **live preview** on the right shows the ring as your unsaved edits will leave it, and **undo/redo** step through those edits (typing is coalesced, so undo does not go one keystroke at a time).
+**Appearance & trigger** holds the mouse trigger (which gesture opens the ring, and the chord timing/movement limits) and the ring's own size, orbit distance and opening animation, each with a live preview.
+
+**Profiles & backup** holds saving/loading/renaming/deleting named profiles, the active profile indicator, the "Recognised key names" reference, and the one-file backup/restore.
+
+A **live preview** in the Buttons section shows the ring as your unsaved edits will leave it, and **undo/redo** in the bottom bar step through those edits (typing is coalesced, so undo does not go one keystroke at a time). The bottom bar and its Save button are reachable from every section.
 
 **Save** writes `actions.json` and tells the running service to reload, so the next menu that opens uses the new configuration; a menu that is already on screen keeps the one it was opened with.
 
-Saving is refused — with the reason shown in the bar above the buttons — if a shortcut contains an unrecognised key name, an action has no value, or an icon code is not a usable code point. Those are exactly the mistakes that would otherwise produce a button that silently does nothing.
+Saving is refused — with the reason shown in the bar at the bottom — if a shortcut contains an unrecognised key name, an action has no value, or an icon code is not a usable code point. Those are exactly the mistakes that would otherwise produce a button that silently does nothing.
 
 Duplicate shortcuts and launch targets that were not found are reported *after* saving rather than instead of it: both are legal. A program may be installed only on another machine, and two buttons may deliberately send the same keys.
 
@@ -137,7 +155,16 @@ A file that cannot be read is reported directly in the main window. The built-in
   {
     "tag": 2, "label": "Open notes", "type": "launch",
     "value": "notepad.exe", "arguments": "\"C:\\Notes\\today.txt\"",
-    "iconPath": "C:\\icons\\notes.svg", "foreground": "#FFFFFFFF", "background": "#FF1B6FD4"
+    "iconPath": "C:\\icons\\notes.svg", "foreground": "#FFFFFFFF", "background": "#FF1B6FD4",
+    "holdType": "function", "holdValue": "action-wheel.profile:Work"
+  },
+  { "tag": 3, "label": "Lock", "type": "function", "value": "windows.lock", "glyph": "F023" },
+  {
+    "tag": 4, "label": "More", "type": "group", "glyph": "F0EA",
+    "group": [
+      { "tag": 0, "label": "Task View", "type": "function", "value": "windows.task-view", "glyph": "F009" },
+      { "tag": 1, "label": "File Explorer", "type": "function", "value": "windows.file-explorer", "glyph": "F114" }
+    ]
   }
 ]
 ```
@@ -145,17 +172,23 @@ A file that cannot be read is reported directly in the main window. The built-in
 | Field | Meaning |
 |---|---|
 | `tag` | `0` = centre button, `1`–`8` = outer buttons clockwise from the top |
-| `type` | `keys` (send a shortcut), `launch` (run a program / open a path or URL), `none` (just close) |
-| `value` | the shortcut (e.g. `Ctrl+Shift+S`, `Win+D`) or the target to launch |
+| `type` | `keys` (send a shortcut), `launch` (run a program / open a path or URL), `function` (a built-in Windows function), `group` (reveal a satellite ring instead of dispatching anything), `none` (just close) |
+| `value` | the shortcut, the target to launch, or the built-in function's id; unused (and may be omitted) for `none` and `group` |
 | `arguments` | command-line arguments for a `launch` target; quote paths that contain spaces |
 | `label` | tooltip text |
 | `glyph` | Icon code point in hex, from the bundled [CaskaydiaCove Nerd Font](https://www.nerdfonts.com/). Five digits are allowed — two thirds of the font's icons sit above U+FFFF |
 | `iconPath` | path to an `.svg`, `.png` or `.ico` file to draw instead of the glyph |
 | `iconTint` | `true` (default) recolours an `.svg` to `foreground`; `false` keeps the colours in the file |
+| `iconScale`, `iconOffsetX`, `iconOffsetY` | icon size (0.25–3×, default 1) and its offset in DIPs from the button's centre (default 0) |
 | `foreground` | icon colour, `#RRGGBB` or `#AARRGGBB` |
 | `background` | button colour, same format |
+| `shadow`, `shadowEnabled`, `shadowOpacity`, `shadowBlur`, `shadowOffsetX`, `shadowOffsetY` | the button's own drop shadow — colour, on/off, and the same shadow parameters any design tool exposes |
+| `holdType`, `holdValue`, `holdArguments` | a second action for the same button, run on press-and-hold instead of click; same vocabulary as `type`/`value`/`arguments`, and a button needs none of them to skip having a hold action |
+| `group` | for `type: "group"` only — an array of up to 5 child actions (same shape as a top-level action, minus `tag`'s ring meaning: a child's `tag` is just its position among its siblings). A child cannot itself be a group. |
 
 Every field after `value` is optional; leaving one out uses the built-in default — a config written before `iconTint` existed therefore gets tinting, which is what a single-colour pictogram wants. Only a vector icon can be recoloured: a `.png` or `.ico` is drawn as-is whatever `iconTint` says, and `background` applies either way.
+
+The centre button (`tag: 0`) cannot be `"type": "group"` — there is nowhere for a satellite ring to fan out from a button that has no direction of its own.
 
 Icons copied from an application are written to `%LOCALAPPDATA%\ActionWheel\Icons` as PNGs, so a button keeps its picture after that application is updated, moved or uninstalled. On a later startup, generated PNGs no longer referenced by `actions.json` or any readable saved profile are removed automatically; user-selected files elsewhere are never touched.
 
@@ -167,6 +200,16 @@ Use the **Propo** cut, not the plain one. In the plain cut an icon keeps the mon
 
 Recognised key names: `Ctrl`, `Alt`, `Shift`, `Win`, `A`–`Z`, `0`–`9`, `F1`–`F24`, `Esc`, `Tab`, `Enter`, `Space`, `Backspace`, `Delete`, `Insert`, `Home`, `End`, `PageUp`, `PageDown`, arrow keys, `PrintScreen`, and the media keys (`PlayPause`, `MediaNext`, `MediaPrev`, `MediaStop`, `VolumeUp`, `VolumeDown`, `Mute`).
 
+### Profiles
+
+A **profile** is a named, saved copy of all nine buttons, stored as its own file at `%LOCALAPPDATA%\ActionWheel\Profiles\<name>.xml` — `actions.json` remains the one file the running ring actually reads; **Load** copies a profile's contents into it. Manage profiles from the **Profiles & backup** section: save the current buttons under a name, load, rename or delete a saved one, or **Import XML** / **Export XML** a profile file directly from the bottom command bar (independent of the active configuration, so a profile can be shared or checked into version control on its own).
+
+A button's **Windows function** type can switch or open a profile by name (`action-wheel.profile:<name>`), and the tray icon's right-click menu lists recently-used profiles for switching without opening Settings at all.
+
+### Backup and restore
+
+**Backup all…**, in the Profiles & backup section, saves everything into one `.zip`: `actions.json`, `preferences.json` (the trigger and ring appearance), every saved profile, and the icons extracted from applications. **Restore backup…** shows what a backup file contains — when it was made, which app version, how many profiles and icons — before touching anything, then replaces the matching files on this machine. The running ring and an open Settings window both pick up a restore immediately.
+
 ## How it works
 
 The code is in two assemblies. **`ActionWheel.Core`** is the business logic and references nothing but the base class library — no WinUI, no `user32`. **`Action Wheel`** is the app: windows, view models, hooks, and the Win32 work the overlay needs. The split is a compiler-enforced version of the layering, so logic cannot quietly grow a dependency on a XAML type.
@@ -175,15 +218,23 @@ The code is in two assemblies. **`ActionWheel.Core`** is the business logic and 
 
 | File | Role |
 |---|---|
-| `ActionItem.cs` | The immutable action model |
+| `ActionItem.cs` | The immutable action model — including a button's hold action and, for a Group, its child actions |
 | `ActionConfig.cs` | Reads, validates and writes `actions.json`; the atomic save, the backup, and `ConfigLoadResult` |
+| `ActionValueCodec.cs` | `ActionKind` ↔ the settings UI's index and ↔ the `type`/`holdType` string; glyph hex ↔ character |
+| `ActionsValidator.cs` | Validates a set of actions, recursively into a Group's children |
 | `ConfigWatcher.cs` | `FileSystemWatcher` over both config locations, debounced |
+| `ConfigBackup.cs` | The one-file backup: zips `actions.json`, `preferences.json`, every profile and extracted icon; previews and restores one |
+| `ProfileXml.cs` | Serialises the nine actions to/from a named profile's `<ActionWheelProfile>` XML file |
+| `WindowsFunctions.cs` | The catalog of built-in Windows functions (lock, sleep, snap, switch profile, ...), each with an id, name, description and glyph |
+| `RingAppearance.cs` | Button size, orbit radius, opening animation and its duration — the user's own ring preference, normalised to a legal range |
 | `ShortcutKeys.cs` | Turns "Ctrl+Shift+S" into virtual-key codes; reports the key it did not recognise |
 | `RingGeometry.cs` | Menu size for a DPI, position clamped to a monitor's work area, and the gesture direction → tag |
 | `ColorValue.cs` / `IconFile.cs` | Colour parsing and lighten/darken; which icon files are usable |
 | `SvgTint.cs` | Rewrites an SVG's fills and strokes to one colour — the only way to recolour one, since the renderer draws it exactly as authored |
 | `FontGlyphs.cs` | Reads a font file's character map, because GDI only sees installed fonts and cannot report anything above U+FFFF |
 | `StartupCommand.cs` | The command line stored under the Run key |
+| `AtomicFile.cs` | Generic atomic text-file writer (temp file → flush → `.bak` → rename) behind `preferences.json` and the active-profile marker |
+| `UndoHistory.cs` | The settings window's undo/redo stack |
 | `AppDataPaths.cs` | The shared `%LOCALAPPDATA%\ActionWheel` configuration location; it stores settings, not activity history |
 | `DiagnosticsReport.cs` | The text behind "Copy diagnostics" |
 
@@ -191,22 +242,31 @@ The code is in two assemblies. **`ActionWheel.Core`** is the business logic and 
 
 | File | Role |
 |---|---|
-| `Services/MouseHook.cs` | `WH_MOUSE_LL` hook: raises `MiddleClick`, swallows the middle button, and reports other clicks so the menu can be dismissed |
+| `Services/MouseHook.cs` | `WH_MOUSE_LL` hook: raises the configured trigger's events (including chord detection for the two-button triggers), swallows it, and reports other clicks so the menu can be dismissed |
 | `Services/KeyboardHook.cs` | `WH_KEYBOARD_LL` hook, only for <kbd>Esc</kbd> — the overlay never has keyboard focus |
-| `Services/LauncherService.cs` | Owns the hooks, the watcher and the menu's lifetime; guarantees one menu at a time; reports hook status |
+| `Services/LauncherService.cs` | Owns the hooks, the watcher and the menu's lifetime; guarantees one menu at a time; reports hook status; runs the drag gesture and the hold countdown |
 | `Services/ActionDispatcher.cs` | Synthesises shortcuts via `SendInput`, or starts a process; raises `ActionFailed` when either does not work |
-| `Services/TrayIcon.cs` | `Shell_NotifyIcon` tray icon with a right-click menu, on a message-only window |
+| `Services/TrayIcon.cs` | `Shell_NotifyIcon` tray icon with a right-click menu (including recent profiles), on a message-only window |
 | `Services/AppIcon.cs` | Reads `icon.ico` back out of the exe's own resources for the window title bars and the tray |
 | `Services/AppIconExtractor.cs` | Copies the icon Windows shows for a program into a 256px PNG, via the system image list |
+| `Services/IconFactory.cs` | Builds the actual icon element (glyph or SVG/raster image) for an action, shared by the ring and the settings preview |
 | `Services/IconFont.cs` | The bundled icon font: the family string for a `FontIcon`, and which glyphs it has |
 | `Services/StartupManager.cs` | The per-user Run key entry behind "Start with Windows" |
 | `Services/ShellCommands.cs` | Opening a folder in Explorer and putting text on the clipboard |
+| `Services/ProfileLibrary.cs` | Save/load/rename/delete a named profile; lists profiles by recency for the tray menu |
+| `Services/ActiveProfileSettings.cs` | Which profile's name is currently shown as active |
+| `Services/TriggerSettings.cs` | Loads/saves the trigger kind, chord timing and `RingAppearance` together in `preferences.json` |
+| `Services/WindowSizing.cs` | Sizes and centres a window on the display it opened on, in physical pixels |
 | `ViewModels/MainViewModel.cs` | Everything the main window shows and does |
-| `Overlay/ButtonShadow.cs` | The composition drop shadow behind each ring button |
-| `Overlay/RadialMenu.xaml(.cs)` | The 400×400 overlay window: transparency, positioning, layout, hit-testing |
-| `Settings/SettingsWindow.xaml(.cs)` | The settings window: edits the nine buttons, validates and saves |
-| `Settings/ActionEditModel.cs` | Mutable, observable counterpart of the immutable `ActionItem`, used only while that window is open |
+| `ViewModels/SettingsViewModel*.cs` | The settings window's rows, undo/redo, validation and saving (`.Appearance.cs` and `.Profiles.cs` are partials of the same class) |
+| `Overlay/ButtonShadow.cs` | The composition drop shadow behind each ring button, including a group's satellites |
+| `Overlay/RingOpenAnimation.cs` | The seven opening-animation presets, driving only `Opacity` and a `RenderTransform` |
+| `Overlay/RadialMenu.xaml(.cs)` | The overlay window: transparency, positioning, layout, hit-testing, and a Group button's satellite ring |
+| `Settings/SettingsWindow.xaml(.cs)` | The settings window: the `NavigationView` sections, drag-reorder retagging, dialogs, the file picker |
+| `Settings/ActionEditModel.cs` | Mutable, observable counterpart of the immutable `ActionItem`, used only while that window (or a group's child editor) is open |
+| `Settings/RingPreview.cs` | Draws the live ring preview and replays its opening animation |
 | `Settings/GlyphChoice.cs` | The icon picker's entries: a named, curated set plus every glyph the font reports |
+| `Settings/ShortcutRecorder.cs` | Turns a live keypress + modifier state into a `"Ctrl+Shift+S"`-style string |
 | `MainWindow.xaml(.cs)` | Status window; closing it hides to the tray |
 
 A few implementation details are easy to break and worth knowing about:
@@ -217,7 +277,9 @@ A few implementation details are easy to break and worth knowing about:
 - **The opening animation's timings are tuned.** The 0.012 s stagger and 0.09 s per button put the last one on screen 186 ms after the click; they were 0.03 s / 0.15 s, which meant 400 ms and was most of how slow the menu felt. Click-to-first-pixel is only ~15 ms, so the animation, not the code, is what the user is waiting for.
 - **Code reachable from a hook callback must never perform disk I/O.** The mouse hook reads the cursor position from `lParam` rather than calling `GetCursorPos`, which is both cheaper and more accurate during fast movement.
 - **Button styles use full `ControlTemplate`s** with every visual state written out. Setting `Background`/`Foreground` on a `Button` only styles the initial rest state, and the default template has nothing to restore it with, so hover colours would stick permanently once the pointer left.
-- **The settings window's row templates use classic `{Binding}`**, not `{x:Bind}`, which means they resolve properties by reflection. That is fine while `PublishTrimmed` is `False`; turning trimming on later means converting those bindings to `x:Bind` first.
+- **The settings window's row and detail-panel templates use classic `{Binding}`**, not `{x:Bind}`, which means they resolve properties by reflection. That is fine while `PublishTrimmed` is `False`; turning trimming on later means converting those bindings to `x:Bind` first. The Buttons section's detail panel is itself one such template, applied via a `ContentControl` bound to the row list's `SelectedItem` — `Verify-Bindings.ps1` (the script behind `Build.ps1 -Task VerifyBindings`) knows to skip `ElementName` bindings like that one, since they read a named element's own property rather than the region's `DataContext`.
+- **A group's satellites are positioned by angle, not by reusing the main ring's own 8 slots.** They still fan out starting from the parent's own direction, but the angular step between neighbours is computed from the current orbit radius and button size so their edges sit a fixed distance apart regardless of how far the group itself is from the ring's centre - reusing the main ring's 45° slot spacing put satellites much further apart from each other than from the ring, since arc length between two points a fixed angle apart grows with the radius they're on.
+- **Every satellite in a group is painted in its parent's own background, foreground and shadow**, not its own - only the icon is per-child. A group reads as one control fanning out from its parent, not several independently-styled buttons.
 
 ## Troubleshooting
 

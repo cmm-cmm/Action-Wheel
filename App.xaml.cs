@@ -99,6 +99,7 @@ namespace Action_Wheel
             _trayIcon.ReloadRequested += (s, e) => _launcherService?.ReloadActions();
             _trayIcon.StartupChanged += (s, e) => _window?.ViewModel.RefreshStartup();
             _trayIcon.ExitRequested += (s, e) => ExitApp();
+            _trayIcon.ProfileSelected += (s, name) => _launcherService?.RequestProfileSwitch(name);
 
             if (!_trayIcon.Create("Action Wheel - press the middle mouse button to open the menu"))
             {

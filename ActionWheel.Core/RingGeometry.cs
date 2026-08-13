@@ -136,6 +136,16 @@ namespace Action_Wheel.Core
         /// </summary>
         public const double GestureDeadZone = 28.0;
 
+        /// <summary>
+        /// How long a button must stay pressed - or stay the flick gesture's chosen direction -
+        /// before its hold action fires instead of its click action. Shared by the direct-click path
+        /// (<c>RadialMenu</c>) and the drag/flick path (<c>LauncherService</c>) so holding feels the
+        /// same regardless of which gesture opened the ring. Comfortably clears a quick click or a
+        /// decisive flick - this app is tuned around a ~15 ms click-to-first-pixel and even a
+        /// deliberate flick rarely takes this long - while still firing promptly once crossed.
+        /// </summary>
+        public const int HoldThresholdMs = 450;
+
         /// <summary>Scale factor for a monitor's DPI. 96 DPI is 100%.</summary>
         /// <remarks>Takes a double so GetDpiForWindow's uint passes straight in.</remarks>
         public static double ScaleFromDpi(double dpi) => dpi > 0 ? dpi / 96.0 : 1.0;

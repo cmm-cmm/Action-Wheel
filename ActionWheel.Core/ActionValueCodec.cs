@@ -10,12 +10,14 @@ namespace Action_Wheel.Core
         public const int KeysIndex = 1;
         public const int LaunchIndex = 2;
         public const int FunctionIndex = 3;
+        public const int GroupIndex = 4;
 
         public static int KindToIndex(ActionKind kind) => kind switch
         {
             ActionKind.Keys => KeysIndex,
             ActionKind.Launch => LaunchIndex,
             ActionKind.Function => FunctionIndex,
+            ActionKind.Group => GroupIndex,
             _ => NoneIndex,
         };
 
@@ -24,6 +26,7 @@ namespace Action_Wheel.Core
             KeysIndex => ActionKind.Keys,
             LaunchIndex => ActionKind.Launch,
             FunctionIndex => ActionKind.Function,
+            GroupIndex => ActionKind.Group,
             _ => ActionKind.None,
         };
 
@@ -32,6 +35,7 @@ namespace Action_Wheel.Core
             ActionKind.Keys => "keys",
             ActionKind.Launch => "launch",
             ActionKind.Function => "function",
+            ActionKind.Group => "group",
             _ => "none",
         };
 
@@ -43,6 +47,7 @@ namespace Action_Wheel.Core
                 "keys" => ActionKind.Keys,
                 "launch" => ActionKind.Launch,
                 "function" => ActionKind.Function,
+                "group" => ActionKind.Group,
                 _ => (ActionKind)(-1),
             };
             return kind != (ActionKind)(-1);

@@ -5,11 +5,13 @@ using System.Runtime.InteropServices;
 using Action_Wheel.Services;
 using Microsoft.UI;
 using Microsoft.UI.Composition;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using Windows.Graphics;
 using WinRT.Interop;
 // Alias rather than "using Windows.UI": both Microsoft.UI and Windows.UI declare a Colors class,
@@ -146,7 +148,31 @@ namespace Action_Wheel.Overlay
         /// orbit needs a wider window, and the XAML's 400 is only the default that ApplySizes
         /// overwrites on MenuContainer and ButtonsCanvas when this differs.
         /// </summary>
-        private int MenuSize => _appearance.MenuSize;
+        /// <remarks>
+        /// When any button is a <see cref="ActionKind.Group"/> with children, the window has to be
+        /// sized for <see cref="GroupOrbitRadius"/> - the outer, concentric ring those children
+        /// appear on - from construction, not resized later when a group actually expands. Resizing
+        /// an already-shown, already-positioned overlay mid-gesture is the kind of thing this
+        /// project's own history (see RadialMenu's other remarks on window sizing) says to avoid;
+        /// sizing once for the largest possible content and leaving the satellite buttons collapsed
+        /// until needed costs nothing since <see cref="RingGeometry.MenuSizeFor"/> is only asked for
+        /// this once, at most, per action set - not per frame.
+        /// </remarks>
+        private int MenuSize => HasGroups
+            ? RingGeometry.MenuSizeFor(_appearance.ButtonSize, GroupOrbitRadius)
+            : _appearance.MenuSize;
+
+        /// <summary>True when at least one button reveals a satellite ring when selected.</summary>
+        private bool HasGroups => _actions.Any(a => a.Kind == ActionKind.Group && a.GroupChildren.Count > 0);
+
+        /// <summary>
+        /// Distance from the ring's centre to a group's satellite buttons - outside the main orbit by
+        /// a full button's width plus a gap, so the two rings never touch.
+        /// </summary>
+        private double GroupOrbitRadius => _appearance.OrbitRadius + _appearance.ButtonSize + 24.0;
+
+        /// <summary>Diameter of a satellite button - smaller than the main ring's, for visual hierarchy.</summary>
+        private double GroupButtonSize => Math.Round(_appearance.ButtonSize * 0.72);
 
         /// <summary>
         /// Button diameters, orbit radius and opening animation, all of them user settings.
@@ -189,6 +215,10 @@ namespace Action_Wheel.Overlay
             InitializeComponent();
             InitializeWindow();
 
+            _holdTimer = DispatcherQueue.GetForCurrentThread().CreateTimer();
+            _holdTimer.IsRepeating = false;
+            _holdTimer.Tick += (s, e) => FireHold();
+
             RootGrid.PointerPressed += RootGrid_PointerPressed;
             RootGrid.Loaded += RadialMenu_Loaded;
             Closed += RadialMenu_Closed;
@@ -229,6 +259,7 @@ namespace Action_Wheel.Overlay
         private void RadialMenu_Closed(object sender, WindowEventArgs args)
         {
             _closed = true;
+            _holdTimer.Stop();
 
             if (_windowHandle != IntPtr.Zero)
             {
@@ -408,6 +439,16 @@ namespace Action_Wheel.Overlay
         private int? _highlightedTag;
 
         /// <summary>
+        /// Fires <see cref="ActionItem.HoldKind"/> for whichever tag is currently pressed, once it
+        /// has been held past <see cref="RingGeometry.HoldThresholdMs"/>. One timer is enough - only
+        /// one button can be under a pointer press at a time.
+        /// </summary>
+        private readonly DispatcherQueueTimer _holdTimer;
+
+        /// <summary>The tag <see cref="_holdTimer"/> is currently counting down for, or null.</summary>
+        private int? _heldTag;
+
+        /// <summary>
         /// Highlights the button the drag gesture is pointing at, or clears the highlight when
         /// <paramref name="tag"/> is null. Separate from the pointer-over path: during a gesture the
         /// cursor is out in empty space, nowhere near the button being chosen.
@@ -427,12 +468,96 @@ namespace Action_Wheel.Overlay
         }
 
         /// <summary>
-        /// Runs the action for a tag as if its button had been clicked. Used to complete a drag
-        /// gesture, where there is no click to route through the button itself.
+        /// Starts (or restarts) the hold countdown for <paramref name="tag"/>, or does nothing if
+        /// that button has no hold action configured - the common case, and the one that must cost
+        /// nothing: no timer ever runs for a button nobody set one up on.
         /// </summary>
-        public void InvokeTag(int tag)
+        private void ArmHold(int tag)
         {
+            DisarmHold();
+
             var action = tag is >= 0 and <= 8 ? ActionsByTag[tag] : null;
+            if (action == null || action.HoldKind == ActionKind.None)
+                return;
+
+            _heldTag = tag;
+            _holdTimer.Interval = TimeSpan.FromMilliseconds(RingGeometry.HoldThresholdMs);
+            _holdTimer.Start();
+        }
+
+        /// <summary>
+        /// Cancels the hold countdown. Called on every release/exit/cancel a button can report, not
+        /// only the one that mattered - stopping an already-stopped timer is a no-op, and that is
+        /// cheaper than working out in advance which of those four events is the "real" one.
+        /// </summary>
+        private void DisarmHold()
+        {
+            _heldTag = null;
+            _holdTimer.Stop();
+        }
+
+        /// <summary>
+        /// The hold countdown elapsed while still pressed. Fires now, preemptively, rather than
+        /// waiting for release: WinUI's Button raises Click on release regardless of how long the
+        /// press lasted, so waiting would still need Click suppressed afterwards, which is not
+        /// reliably possible from a handler that only sees the event after ButtonBase's own Click
+        /// decision is already made. Firing here instead means the button - and the window - are
+        /// gone by the time the user actually lifts the mouse, so there is nothing left for Click to
+        /// fire on. See InvokeTag's own <c>_closed</c> guard for the belt-and-braces version of the
+        /// same reasoning.
+        /// </summary>
+        private void FireHold()
+        {
+            if (_closed || _heldTag is not int tag)
+                return;
+
+            _heldTag = null;
+            InvokeTag(tag, hold: true);
+        }
+
+        /// <summary>
+        /// Runs the action for a tag as if its button had been clicked or held. Used to complete a
+        /// drag gesture, where there is no click to route through the button itself.
+        /// </summary>
+        /// <param name="hold">
+        /// True when the tag was chosen by holding past <see cref="RingGeometry.HoldThresholdMs"/>
+        /// rather than a quick click or flick. Runs the button's <see cref="ActionItem.HoldKind"/>
+        /// action instead of its primary one - substituted onto a copy of the same
+        /// <see cref="ActionItem"/> so <see cref="ActionInvoked"/> and everything downstream of it
+        /// (ActionDispatcher, the log line on failure) still only ever has one shape of thing to
+        /// dispatch. A tag with no hold action configured does nothing rather than falling back to
+        /// the primary one - see <see cref="ActionItem.HoldKind"/>'s remarks.
+        /// </param>
+        public void InvokeTag(int tag, bool hold = false)
+        {
+            // A hold firing preemptively (see FireHold) already closed the menu once; guards a
+            // native Click that still lands afterwards, when the user physically releases the mouse
+            // some time after the hold already ran, from invoking the primary action a second time
+            // on top of it.
+            if (_closed)
+                return;
+
+            DisarmHold();
+            var action = tag is >= 0 and <= 8 ? ActionsByTag[tag] : null;
+
+            // A group reveals its children instead of dispatching anything; it never closes the
+            // menu, whether it was reached by a click, a flick-release, or (see the hold branch
+            // below, which never substitutes a Group action) neither. Checked before the hold
+            // substitution because holding a group button - with no hold action of its own
+            // configured - would otherwise fall through to "no action" below and silently do
+            // nothing, which reads as broken rather than as the button working normally.
+            if (action?.Kind == ActionKind.Group && (!hold || action.HoldKind == ActionKind.None))
+            {
+                ExpandGroup(tag, action);
+                return;
+            }
+
+            if (hold)
+            {
+                action = action != null && action.HoldKind != ActionKind.None
+                    ? action with { Kind = action.HoldKind, Value = action.HoldValue, Arguments = action.HoldArguments }
+                    : null;
+            }
 
             // Close first: the action synthesises keystrokes for whatever is underneath, and the
             // overlay must be out of the way before they land.
@@ -440,6 +565,138 @@ namespace Action_Wheel.Overlay
 
             if (action != null)
                 ActionInvoked?.Invoke(this, action);
+        }
+
+        /// <summary>Satellite buttons built so far, keyed by the group's own tag, kept collapsed until expanded.</summary>
+        private readonly Dictionary<int, Button[]> _groupButtons = new();
+
+        /// <summary>The one group currently showing its children, or null.</summary>
+        private int? _expandedGroupTag;
+
+        /// <summary>
+        /// Reveals <paramref name="parentAction"/>'s children on the outer, concentric ring -
+        /// building them the first time this group is opened, reusing them after. Only one group is
+        /// ever expanded at a time; opening a second collapses the first rather than stacking both,
+        /// which would put two sets of buttons at the same radius on top of each other.
+        /// </summary>
+        private void ExpandGroup(int parentTag, ActionItem parentAction)
+        {
+            if (_expandedGroupTag == parentTag)
+                return;
+
+            CollapseGroup();
+
+            if (parentAction.GroupChildren.Count == 0)
+                return;
+
+            var buttons = _groupButtons.TryGetValue(parentTag, out var cached)
+                ? cached : BuildGroupButtons(parentTag, parentAction.GroupChildren);
+            _expandedGroupTag = parentTag;
+
+            foreach (var button in buttons)
+            {
+                button.Visibility = Visibility.Visible;
+                button.Opacity = 0;
+
+                var fade = new DoubleAnimation
+                {
+                    From = 0,
+                    To = 1,
+                    Duration = new Duration(TimeSpan.FromMilliseconds(140)),
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
+                };
+                Storyboard.SetTarget(fade, button);
+                Storyboard.SetTargetProperty(fade, "Opacity");
+
+                var storyboard = new Storyboard();
+                storyboard.Children.Add(fade);
+                storyboard.Begin();
+            }
+        }
+
+        private void CollapseGroup()
+        {
+            if (_expandedGroupTag is int tag && _groupButtons.TryGetValue(tag, out var buttons))
+            {
+                foreach (var button in buttons)
+                    button.Visibility = Visibility.Collapsed;
+            }
+
+            _expandedGroupTag = null;
+        }
+
+        /// <summary>
+        /// Creates and positions a group's satellite buttons, evenly spaced around the full circle
+        /// at <see cref="GroupOrbitRadius"/> - centred on the same point as the main ring, per this
+        /// feature's whole premise, rather than fanned out near the parent button. Added to
+        /// <see cref="ButtonsCanvas"/> collapsed; <see cref="ExpandGroup"/> is what shows them.
+        /// </summary>
+        private Button[] BuildGroupButtons(int parentTag, IReadOnlyList<ActionItem> children)
+        {
+            double radius = GroupOrbitRadius;
+            double size = GroupButtonSize;
+            double centre = MenuSize / 2.0;
+            int count = children.Count;
+            var buttons = new Button[count];
+
+            for (int i = 0; i < count; i++)
+            {
+                var child = children[i];
+                double angle = (2.0 * Math.PI / count) * i - Math.PI / 2.0;
+                double x = centre + Math.Cos(angle) * radius;
+                double y = centre + Math.Sin(angle) * radius;
+
+                var background = IconFactory.ColorOr(child.Background, IconFactory.DefaultBackground(i + 1));
+                var foreground = IconFactory.ColorOr(child.Foreground, IconFactory.DefaultForeground(i + 1));
+
+                var button = new Button
+                {
+                    Style = (Style)RootGrid.Resources["RadialButtonStyle"],
+                    Width = size,
+                    Height = size,
+                    CornerRadius = new CornerRadius(size / 2.0),
+                    Background = new SolidColorBrush(background),
+                    Foreground = new SolidColorBrush(foreground),
+                    Content = IconFactory.CreateIcon(child, size * RingGeometry.IconSizeRatio, new SolidColorBrush(foreground)),
+                    Tag = $"{parentTag}:{i}",
+                    Opacity = 0,
+                    Visibility = Visibility.Collapsed,
+                };
+
+                if (!string.IsNullOrWhiteSpace(child.Label))
+                    ToolTipService.SetToolTip(button, child.Label);
+
+                button.Click += GroupChildButton_Click;
+
+                Canvas.SetLeft(button, x - size / 2.0);
+                Canvas.SetTop(button, y - size / 2.0);
+                ButtonsCanvas.Children.Add(button);
+
+                buttons[i] = button;
+            }
+
+            _groupButtons[parentTag] = buttons;
+            return buttons;
+        }
+
+        /// <summary>Runs a group child's action. Mirrors InvokeTag's own close-then-dispatch order.</summary>
+        private void GroupChildButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_closed || sender is not Button button || button.Tag is not string tag)
+                return;
+
+            var parts = tag.Split(':');
+            if (parts.Length != 2 || !int.TryParse(parts[0], out int parentTag) || !int.TryParse(parts[1], out int childIndex))
+                return;
+
+            var parent = parentTag is >= 0 and <= 8 ? ActionsByTag[parentTag] : null;
+            if (parent == null || childIndex < 0 || childIndex >= parent.GroupChildren.Count)
+                return;
+
+            var action = parent.GroupChildren[childIndex];
+
+            CloseMenu();
+            ActionInvoked?.Invoke(this, action);
         }
 
         /// <summary>
@@ -567,17 +824,35 @@ namespace Action_Wheel.Overlay
             button.AddHandler(UIElement.PointerCaptureLostEvent, new PointerEventHandler(OnButtonRest), true);
         }
 
-        private ButtonPainter? PainterFor(object sender)
+        private static int? TagOf(object sender) =>
+            sender is Button button && button.Tag is string text
+                && int.TryParse(text, out int tag) && tag is >= 0 and <= 8
+                ? tag : null;
+
+        private ButtonPainter? PainterFor(object sender) => TagOf(sender) is int tag ? _buttonPainters[tag] : null;
+
+        private void OnButtonHover(object sender, PointerRoutedEventArgs e)
         {
-            if (sender is not Button button || button.Tag is not string text
-                || !int.TryParse(text, out int tag) || tag is < 0 or > 8)
-                return null;
-            return _buttonPainters[tag];
+            // Also reached on release (see ApplyPointerStates), which is exactly when a held-past-
+            // threshold press needs its countdown cancelled - the button is either about to raise a
+            // normal Click (release before the threshold) or already handled by FireHold (release
+            // after it, but that path clears _heldTag itself before this ever runs).
+            DisarmHold();
+            PainterFor(sender)?.Hover();
         }
 
-        private void OnButtonHover(object sender, PointerRoutedEventArgs e) => PainterFor(sender)?.Hover();
-        private void OnButtonPressed(object sender, PointerRoutedEventArgs e) => PainterFor(sender)?.Pressed();
-        private void OnButtonRest(object sender, PointerRoutedEventArgs e) => PainterFor(sender)?.Rest();
+        private void OnButtonPressed(object sender, PointerRoutedEventArgs e)
+        {
+            PainterFor(sender)?.Pressed();
+            if (TagOf(sender) is int tag)
+                ArmHold(tag);
+        }
+
+        private void OnButtonRest(object sender, PointerRoutedEventArgs e)
+        {
+            DisarmHold();
+            PainterFor(sender)?.Rest();
+        }
 
         private void InitializeWindow()
         {

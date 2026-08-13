@@ -40,6 +40,10 @@ namespace Action_Wheel.Settings
         private double _shadowOffsetX;
         private double _shadowOffsetY;
         private int _kindIndex;
+        private int _holdKindIndex;
+        private string _holdValue = string.Empty;
+        private string _holdArguments = string.Empty;
+        private IReadOnlyList<ActionItem> _groupChildren = Array.Empty<ActionItem>();
         private bool _isDuplicateShortcut;
         private string _functionQuery = string.Empty;
         private LaunchTargetStatus _status;
@@ -70,6 +74,10 @@ namespace Action_Wheel.Settings
             _shadowOffsetX = Math.Round(source.ShadowOffsetX, 1, MidpointRounding.AwayFromZero);
             _shadowOffsetY = Math.Round(source.ShadowOffsetY, 1, MidpointRounding.AwayFromZero);
             _kindIndex = ActionValueCodec.KindToIndex(source.Kind);
+            _holdKindIndex = ActionValueCodec.KindToIndex(source.HoldKind);
+            _holdValue = source.HoldValue;
+            _holdArguments = source.HoldArguments;
+            _groupChildren = source.GroupChildren;
             _status = ComputeStatus();
         }
 
@@ -97,6 +105,7 @@ namespace Action_Wheel.Settings
             _functionQuery = _functionChoices.FirstOrDefault(item =>
                 string.Equals(item.Id, _value, StringComparison.OrdinalIgnoreCase))?.Name ?? _functionQuery;
             Raise(nameof(FunctionQuery));
+            Raise(nameof(HoldFunctionChoices));
         }
 
         public void ShowAllFunctionChoices()
@@ -353,12 +362,13 @@ namespace Action_Wheel.Settings
                 Raise(nameof(CanRecord));
                 Raise(nameof(ValuePlaceholder));
                 Raise(nameof(IsFunction));
+                Raise(nameof(IsGroup));
                 RefreshStatus();
             }
         }
 
-        /// <summary>"Do nothing" needs no value, so the box is greyed out rather than misleading.</summary>
-        public bool IsValueEnabled => _kindIndex != 0;
+        /// <summary>"Do nothing" and "Group" both need no value, so the box is greyed out rather than misleading.</summary>
+        public bool IsValueEnabled => _kindIndex != ActionValueCodec.NoneIndex && _kindIndex != ActionValueCodec.GroupIndex;
 
         /// <summary>Only a launch target can be picked from disk, and take arguments.</summary>
         public bool CanBrowse => _kindIndex == 2;
@@ -367,6 +377,67 @@ namespace Action_Wheel.Settings
         public bool CanRecord => _kindIndex == 1;
 
         public bool IsFunction => _kindIndex == 3;
+
+        /// <summary>Whether this button reveals a satellite ring instead of dispatching anything.</summary>
+        public bool IsGroup => _kindIndex == ActionValueCodec.GroupIndex;
+
+        /// <summary>
+        /// The buttons a Group action reveals. A plain settable list rather than an
+        /// ObservableCollection: nothing binds to its individual entries live - the whole thing is
+        /// replaced at once when "Edit group…" is saved (see SettingsWindow.xaml.cs's
+        /// EditGroup_Click), the same all-at-once approach <see cref="CopyFrom"/> already uses for
+        /// every other field.
+        /// </summary>
+        public IReadOnlyList<ActionItem> GroupChildren
+        {
+            get => _groupChildren;
+            set
+            {
+                if (Set(ref _groupChildren, value))
+                    Raise(nameof(EditGroupText));
+            }
+        }
+
+        public string EditGroupText => $"Edit group ({_groupChildren.Count}/{ActionItem.MaxGroupChildren})…";
+
+        /// <summary>Index into the hold-action combo box. 0 (no hold action) is the default.</summary>
+        public int HoldKindIndex
+        {
+            get => _holdKindIndex;
+            set
+            {
+                if (!Set(ref _holdKindIndex, value))
+                    return;
+
+                Raise(nameof(IsHoldValueEnabled));
+                Raise(nameof(CanBrowseHold));
+                Raise(nameof(HoldValuePlaceholder));
+                Raise(nameof(IsHoldFunction));
+            }
+        }
+
+        public bool IsHoldValueEnabled => _holdKindIndex != 0;
+        public bool CanBrowseHold => _holdKindIndex == 2;
+        public bool IsHoldFunction => _holdKindIndex == 3;
+
+        public string HoldValuePlaceholder => _holdKindIndex switch
+        {
+            1 => "For example: Ctrl+Shift+S",
+            2 => "For example: notepad.exe or https://…",
+            3 => "Choose a built-in function",
+            _ => "No hold action",
+        };
+
+        public string HoldValue { get => _holdValue; set => Set(ref _holdValue, value); }
+        public string HoldArguments { get => _holdArguments; set => Set(ref _holdArguments, value); }
+
+        /// <summary>
+        /// The complete function list (built-ins plus profiles), for the hold action's own picker.
+        /// Deliberately not <see cref="FunctionSuggestions"/> - that collection is filtered live by
+        /// the primary action's search box, and sharing it would make the hold picker's contents
+        /// depend on what someone happened to be typing in an unrelated box.
+        /// </summary>
+        public IReadOnlyList<WindowsFunction> HoldFunctionChoices => _functionChoices;
 
         public string FunctionQuery
         {
@@ -395,6 +466,7 @@ namespace Action_Wheel.Settings
             1 => "For example: Ctrl+Shift+S",
             2 => "For example: notepad.exe or https://…",
             3 => "Choose a built-in function",
+            4 => "Use \"Edit group\" below to configure",
             _ => "This button only closes the menu",
         };
 
@@ -492,6 +564,10 @@ namespace Action_Wheel.Settings
             ShadowBlur = _shadowBlur,
             ShadowOffsetX = _shadowOffsetX,
             ShadowOffsetY = _shadowOffsetY,
+            HoldKind = ActionValueCodec.IndexToKind(_holdKindIndex),
+            HoldValue = (_holdValue ?? string.Empty).Trim(),
+            HoldArguments = (_holdArguments ?? string.Empty).Trim(),
+            GroupChildren = _groupChildren,
         };
 
         /// <summary>
@@ -519,6 +595,10 @@ namespace Action_Wheel.Settings
             _shadowOffsetX = Math.Round(source.ShadowOffsetX, 1, MidpointRounding.AwayFromZero);
             _shadowOffsetY = Math.Round(source.ShadowOffsetY, 1, MidpointRounding.AwayFromZero);
             _kindIndex = ActionValueCodec.KindToIndex(source.Kind);
+            _holdKindIndex = ActionValueCodec.KindToIndex(source.HoldKind);
+            _holdValue = source.HoldValue;
+            _holdArguments = source.HoldArguments;
+            _groupChildren = source.GroupChildren;
             _status = ComputeStatus();
 
             // Everything at once: individual setters were bypassed to avoid nine separate change
@@ -538,6 +618,9 @@ namespace Action_Wheel.Settings
             nameof(ShadowEnabled), nameof(ShadowOpacity), nameof(ShadowBlur), nameof(ShadowOffsetX), nameof(ShadowOffsetY),
             nameof(CanBrowse), nameof(CanRecord), nameof(ValuePlaceholder),
             nameof(IsFunction),
+            nameof(HoldKindIndex), nameof(HoldValue), nameof(HoldArguments), nameof(IsHoldValueEnabled),
+            nameof(CanBrowseHold), nameof(HoldValuePlaceholder), nameof(IsHoldFunction), nameof(HoldFunctionChoices),
+            nameof(IsGroup), nameof(GroupChildren), nameof(EditGroupText),
             nameof(FunctionQuery), nameof(FunctionSuggestions),
             nameof(IconSource), nameof(ForegroundColor), nameof(BackgroundColor), nameof(ShadowColor),
             nameof(HasStatus), nameof(StatusGlyph), nameof(StatusTooltip), nameof(StatusColor),

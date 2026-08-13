@@ -202,42 +202,66 @@ namespace Action_Wheel.Core
                 throw new FormatException("The configuration root must be an array.");
 
             foreach (var element in doc.RootElement.EnumerateArray())
-            {
-                if (element.ValueKind != JsonValueKind.Object)
-                    throw new FormatException("Every configuration entry must be an object.");
-
-                if (!element.TryGetProperty("tag", out var tagProp) || !tagProp.TryGetInt32(out int tag))
-                    throw new FormatException("Every configuration entry must have an integer tag.");
-
-                var type = ReadString(element, "type");
-                if (!ActionValueCodec.TryParseKind(type, out var kind))
-                    throw new FormatException($"Tag {tag} has unknown action type '{type}'.");
-
-                items.Add(new ActionItem
-                {
-                    Tag = tag,
-                    Label = ReadString(element, "label"),
-                    Kind = kind,
-                    Value = ReadString(element, "value"),
-                    Arguments = ReadString(element, "arguments"),
-                    Glyph = ReadString(element, "glyph"),
-                    IconPath = ReadString(element, "iconPath"),
-                    IconScale = ReadDouble(element, "iconScale", ActionItem.DefaultIconScale),
-                    IconOffsetX = ReadDouble(element, "iconOffsetX", 0),
-                    IconOffsetY = ReadDouble(element, "iconOffsetY", 0),
-                    IconTint = ReadBool(element, "iconTint", ActionItem.DefaultIconTint),
-                    Foreground = ReadString(element, "foreground"),
-                    Background = ReadString(element, "background"),
-                    Shadow = ReadString(element, "shadow"),
-                    ShadowEnabled = ReadBool(element, "shadowEnabled", ActionItem.DefaultShadowEnabled),
-                    ShadowOpacity = ReadDouble(element, "shadowOpacity", ActionItem.DefaultShadowOpacity),
-                    ShadowBlur = ReadDouble(element, "shadowBlur", ActionItem.DefaultShadowBlur),
-                    ShadowOffsetX = ReadDouble(element, "shadowOffsetX", ActionItem.DefaultShadowOffsetX),
-                    ShadowOffsetY = ReadDouble(element, "shadowOffsetY", ActionItem.DefaultShadowOffsetY),
-                });
-            }
+                items.Add(ParseAction(element));
 
             return items;
+        }
+
+        /// <summary>
+        /// Parses one action object - a top-level button or a group child, which share every field
+        /// except that only a child's own "group" array (if any - children cannot nest, but nothing
+        /// stops a malformed file from having one) is ignored rather than recursed into further.
+        /// </summary>
+        private static ActionItem ParseAction(JsonElement element)
+        {
+            if (element.ValueKind != JsonValueKind.Object)
+                throw new FormatException("Every configuration entry must be an object.");
+
+            if (!element.TryGetProperty("tag", out var tagProp) || !tagProp.TryGetInt32(out int tag))
+                throw new FormatException("Every configuration entry must have an integer tag.");
+
+            var type = ReadString(element, "type");
+            if (!ActionValueCodec.TryParseKind(type, out var kind))
+                throw new FormatException($"Tag {tag} has unknown action type '{type}'.");
+
+            var children = new List<ActionItem>();
+            if (kind == ActionKind.Group && element.TryGetProperty("group", out var groupProp)
+                && groupProp.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var childElement in groupProp.EnumerateArray())
+                    children.Add(ParseAction(childElement));
+            }
+
+            return new ActionItem
+            {
+                Tag = tag,
+                Label = ReadString(element, "label"),
+                Kind = kind,
+                Value = ReadString(element, "value"),
+                Arguments = ReadString(element, "arguments"),
+                Glyph = ReadString(element, "glyph"),
+                IconPath = ReadString(element, "iconPath"),
+                IconScale = ReadDouble(element, "iconScale", ActionItem.DefaultIconScale),
+                IconOffsetX = ReadDouble(element, "iconOffsetX", 0),
+                IconOffsetY = ReadDouble(element, "iconOffsetY", 0),
+                IconTint = ReadBool(element, "iconTint", ActionItem.DefaultIconTint),
+                Foreground = ReadString(element, "foreground"),
+                Background = ReadString(element, "background"),
+                Shadow = ReadString(element, "shadow"),
+                ShadowEnabled = ReadBool(element, "shadowEnabled", ActionItem.DefaultShadowEnabled),
+                ShadowOpacity = ReadDouble(element, "shadowOpacity", ActionItem.DefaultShadowOpacity),
+                ShadowBlur = ReadDouble(element, "shadowBlur", ActionItem.DefaultShadowBlur),
+                ShadowOffsetX = ReadDouble(element, "shadowOffsetX", ActionItem.DefaultShadowOffsetX),
+                ShadowOffsetY = ReadDouble(element, "shadowOffsetY", ActionItem.DefaultShadowOffsetY),
+                // Absent entirely on a config with no hold action configured, so an empty
+                // "holdType" is not an error the way an empty "type" is for the primary action - it
+                // just means TryParseKind fails and this button has none.
+                HoldKind = ActionValueCodec.TryParseKind(ReadString(element, "holdType"), out var holdKind)
+                    ? holdKind : ActionKind.None,
+                HoldValue = ReadString(element, "holdValue"),
+                HoldArguments = ReadString(element, "holdArguments"),
+                GroupChildren = children,
+            };
         }
 
         private static string ReadString(JsonElement element, string name) =>
@@ -358,35 +382,54 @@ namespace Action_Wheel.Core
 
             writer.WriteStartArray();
             foreach (var action in actions)
-            {
-                writer.WriteStartObject();
-                writer.WriteNumber("tag", action.Tag);
-                writer.WriteString("label", action.Label);
-                writer.WriteString("type", ActionValueCodec.KindToString(action.Kind));
-                writer.WriteString("value", action.Value);
-
-                // Optional fields are only written when set, so a hand-edited file stays as short
-                // as what the user actually configured.
-                WriteIfSet(writer, "arguments", action.Arguments);
-                writer.WriteString("glyph", action.Glyph);
-                WriteIfSet(writer, "iconPath", action.IconPath);
-                if (action.IconScale != ActionItem.DefaultIconScale) writer.WriteNumber("iconScale", action.IconScale);
-                if (action.IconOffsetX != 0) writer.WriteNumber("iconOffsetX", action.IconOffsetX);
-                if (action.IconOffsetY != 0) writer.WriteNumber("iconOffsetY", action.IconOffsetY);
-                if (action.IconTint != ActionItem.DefaultIconTint) writer.WriteBoolean("iconTint", action.IconTint);
-                WriteIfSet(writer, "foreground", action.Foreground);
-                WriteIfSet(writer, "background", action.Background);
-                WriteIfSet(writer, "shadow", action.Shadow);
-                if (action.ShadowEnabled != ActionItem.DefaultShadowEnabled) writer.WriteBoolean("shadowEnabled", action.ShadowEnabled);
-                if (action.ShadowOpacity != ActionItem.DefaultShadowOpacity) writer.WriteNumber("shadowOpacity", action.ShadowOpacity);
-                if (action.ShadowBlur != ActionItem.DefaultShadowBlur) writer.WriteNumber("shadowBlur", action.ShadowBlur);
-                if (action.ShadowOffsetX != ActionItem.DefaultShadowOffsetX) writer.WriteNumber("shadowOffsetX", action.ShadowOffsetX);
-                if (action.ShadowOffsetY != ActionItem.DefaultShadowOffsetY) writer.WriteNumber("shadowOffsetY", action.ShadowOffsetY);
-
-                writer.WriteEndObject();
-            }
+                WriteAction(writer, action);
             writer.WriteEndArray();
             writer.Flush();
+        }
+
+        /// <summary>Writes one action object - shared between a top-level button and a group child.</summary>
+        private static void WriteAction(Utf8JsonWriter writer, ActionItem action)
+        {
+            writer.WriteStartObject();
+            writer.WriteNumber("tag", action.Tag);
+            writer.WriteString("label", action.Label);
+            writer.WriteString("type", ActionValueCodec.KindToString(action.Kind));
+            writer.WriteString("value", action.Value);
+
+            // Optional fields are only written when set, so a hand-edited file stays as short
+            // as what the user actually configured.
+            WriteIfSet(writer, "arguments", action.Arguments);
+            writer.WriteString("glyph", action.Glyph);
+            WriteIfSet(writer, "iconPath", action.IconPath);
+            if (action.IconScale != ActionItem.DefaultIconScale) writer.WriteNumber("iconScale", action.IconScale);
+            if (action.IconOffsetX != 0) writer.WriteNumber("iconOffsetX", action.IconOffsetX);
+            if (action.IconOffsetY != 0) writer.WriteNumber("iconOffsetY", action.IconOffsetY);
+            if (action.IconTint != ActionItem.DefaultIconTint) writer.WriteBoolean("iconTint", action.IconTint);
+            WriteIfSet(writer, "foreground", action.Foreground);
+            WriteIfSet(writer, "background", action.Background);
+            WriteIfSet(writer, "shadow", action.Shadow);
+            if (action.ShadowEnabled != ActionItem.DefaultShadowEnabled) writer.WriteBoolean("shadowEnabled", action.ShadowEnabled);
+            if (action.ShadowOpacity != ActionItem.DefaultShadowOpacity) writer.WriteNumber("shadowOpacity", action.ShadowOpacity);
+            if (action.ShadowBlur != ActionItem.DefaultShadowBlur) writer.WriteNumber("shadowBlur", action.ShadowBlur);
+            if (action.ShadowOffsetX != ActionItem.DefaultShadowOffsetX) writer.WriteNumber("shadowOffsetX", action.ShadowOffsetX);
+            if (action.ShadowOffsetY != ActionItem.DefaultShadowOffsetY) writer.WriteNumber("shadowOffsetY", action.ShadowOffsetY);
+
+            if (action.HoldKind != ActionKind.None)
+            {
+                writer.WriteString("holdType", ActionValueCodec.KindToString(action.HoldKind));
+                writer.WriteString("holdValue", action.HoldValue);
+                WriteIfSet(writer, "holdArguments", action.HoldArguments);
+            }
+
+            if (action.Kind == ActionKind.Group && action.GroupChildren.Count > 0)
+            {
+                writer.WriteStartArray("group");
+                foreach (var child in action.GroupChildren)
+                    WriteAction(writer, child);
+                writer.WriteEndArray();
+            }
+
+            writer.WriteEndObject();
         }
 
         private static void WriteIfSet(Utf8JsonWriter writer, string name, string value)

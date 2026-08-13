@@ -71,6 +71,7 @@ namespace Action_Wheel.ViewModels
             nameof(ActionEditModel.Shadow),
             nameof(ActionEditModel.ShadowEnabled), nameof(ActionEditModel.ShadowOpacity),
             nameof(ActionEditModel.ShadowBlur), nameof(ActionEditModel.ShadowOffsetX), nameof(ActionEditModel.ShadowOffsetY),
+            nameof(ActionEditModel.HoldKindIndex), nameof(ActionEditModel.HoldValue), nameof(ActionEditModel.HoldArguments),
         };
 
         private readonly DispatcherQueue _dispatcher;

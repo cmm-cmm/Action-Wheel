@@ -29,26 +29,7 @@ namespace Action_Wheel.Core
                     new XDeclaration("1.0", "utf-8", null),
                     new XElement(RootName,
                         new XAttribute("version", CurrentVersion),
-                        actionList.Select(action => new XElement("Action",
-                            new XAttribute("tag", action.Tag),
-                            new XAttribute("type", ActionValueCodec.KindToString(action.Kind)),
-                            new XElement("Label", action.Label),
-                            new XElement("Value", action.Value),
-                            new XElement("Arguments", action.Arguments),
-                            new XElement("Glyph", action.Glyph),
-                            new XElement("IconPath", action.IconPath),
-                            new XElement("IconScale", action.IconScale),
-                            new XElement("IconOffsetX", action.IconOffsetX),
-                            new XElement("IconOffsetY", action.IconOffsetY),
-                            new XElement("IconTint", action.IconTint),
-                            new XElement("Foreground", action.Foreground),
-                            new XElement("Background", action.Background),
-                            new XElement("Shadow", action.Shadow),
-                            new XElement("ShadowEnabled", action.ShadowEnabled),
-                            new XElement("ShadowOpacity", action.ShadowOpacity),
-                            new XElement("ShadowBlur", action.ShadowBlur),
-                            new XElement("ShadowOffsetX", action.ShadowOffsetX),
-                            new XElement("ShadowOffsetY", action.ShadowOffsetY)))));
+                        actionList.Select(BuildActionElement)));
 
                 string fullPath = Path.GetFullPath(path);
                 Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
@@ -79,6 +60,39 @@ namespace Action_Wheel.Core
                     try { File.Delete(temporaryPath); } catch { }
                 }
             }
+        }
+
+        /// <summary>Builds one &lt;Action&gt; element - shared between a top-level button and a group child.</summary>
+        private static XElement BuildActionElement(ActionItem action)
+        {
+            var element = new XElement("Action",
+                new XAttribute("tag", action.Tag),
+                new XAttribute("type", ActionValueCodec.KindToString(action.Kind)),
+                new XElement("Label", action.Label),
+                new XElement("Value", action.Value),
+                new XElement("Arguments", action.Arguments),
+                new XElement("Glyph", action.Glyph),
+                new XElement("IconPath", action.IconPath),
+                new XElement("IconScale", action.IconScale),
+                new XElement("IconOffsetX", action.IconOffsetX),
+                new XElement("IconOffsetY", action.IconOffsetY),
+                new XElement("IconTint", action.IconTint),
+                new XElement("Foreground", action.Foreground),
+                new XElement("Background", action.Background),
+                new XElement("Shadow", action.Shadow),
+                new XElement("ShadowEnabled", action.ShadowEnabled),
+                new XElement("ShadowOpacity", action.ShadowOpacity),
+                new XElement("ShadowBlur", action.ShadowBlur),
+                new XElement("ShadowOffsetX", action.ShadowOffsetX),
+                new XElement("ShadowOffsetY", action.ShadowOffsetY),
+                new XElement("HoldType", ActionValueCodec.KindToString(action.HoldKind)),
+                new XElement("HoldValue", action.HoldValue),
+                new XElement("HoldArguments", action.HoldArguments));
+
+            if (action.Kind == ActionKind.Group && action.GroupChildren.Count > 0)
+                element.Add(new XElement("Group", action.GroupChildren.Select(BuildActionElement)));
+
+            return element;
         }
 
         public static bool TryLoad(string path, out IReadOnlyList<ActionItem> actions, out string error)
@@ -115,40 +129,9 @@ namespace Action_Wheel.Core
                 var parsed = new List<ActionItem>();
                 foreach (var element in root.Elements("Action"))
                 {
-                    if (!int.TryParse((string?)element.Attribute("tag"), out int tag))
-                    {
-                        error = "An <Action> has a missing or invalid tag attribute.";
+                    if (!TryParseAction(element, out var action, out error))
                         return false;
-                    }
-
-                    if (!ActionValueCodec.TryParseKind((string?)element.Attribute("type"), out ActionKind kind))
-                    {
-                        error = $"Action {tag} has an unsupported type.";
-                        return false;
-                    }
-
-                    parsed.Add(new ActionItem
-                    {
-                        Tag = tag,
-                        Kind = kind,
-                        Label = ValueOf(element, "Label"),
-                        Value = ValueOf(element, "Value"),
-                        Arguments = ValueOf(element, "Arguments"),
-                        Glyph = ValueOf(element, "Glyph"),
-                        IconPath = ValueOf(element, "IconPath"),
-                        IconScale = DoubleValueOf(element, "IconScale", ActionItem.DefaultIconScale),
-                        IconOffsetX = DoubleValueOf(element, "IconOffsetX", 0),
-                        IconOffsetY = DoubleValueOf(element, "IconOffsetY", 0),
-                        IconTint = BoolValueOf(element, "IconTint", ActionItem.DefaultIconTint),
-                        Foreground = ValueOf(element, "Foreground"),
-                        Background = ValueOf(element, "Background"),
-                        Shadow = ValueOf(element, "Shadow"),
-                        ShadowEnabled = BoolValueOf(element, "ShadowEnabled", ActionItem.DefaultShadowEnabled),
-                        ShadowOpacity = DoubleValueOf(element, "ShadowOpacity", ActionItem.DefaultShadowOpacity),
-                        ShadowBlur = DoubleValueOf(element, "ShadowBlur", ActionItem.DefaultShadowBlur),
-                        ShadowOffsetX = DoubleValueOf(element, "ShadowOffsetX", ActionItem.DefaultShadowOffsetX),
-                        ShadowOffsetY = DoubleValueOf(element, "ShadowOffsetY", ActionItem.DefaultShadowOffsetY),
-                    });
+                    parsed.Add(action);
                 }
 
                 if (!ActionConfig.TryValidate(parsed, out error))
@@ -162,6 +145,70 @@ namespace Action_Wheel.Core
                 error = ex.Message;
                 return false;
             }
+        }
+
+        /// <summary>Parses one &lt;Action&gt; element - shared between a top-level button and a group child.</summary>
+        private static bool TryParseAction(XElement element, out ActionItem action, out string error)
+        {
+            action = new ActionItem();
+            error = string.Empty;
+
+            if (!int.TryParse((string?)element.Attribute("tag"), out int tag))
+            {
+                error = "An <Action> has a missing or invalid tag attribute.";
+                return false;
+            }
+
+            if (!ActionValueCodec.TryParseKind((string?)element.Attribute("type"), out ActionKind kind))
+            {
+                error = $"Action {tag} has an unsupported type.";
+                return false;
+            }
+
+            var children = new List<ActionItem>();
+            var groupElement = kind == ActionKind.Group ? element.Element("Group") : null;
+            if (groupElement != null)
+            {
+                foreach (var childElement in groupElement.Elements("Action"))
+                {
+                    if (!TryParseAction(childElement, out var child, out error))
+                        return false;
+                    children.Add(child);
+                }
+            }
+
+            action = new ActionItem
+            {
+                Tag = tag,
+                Kind = kind,
+                Label = ValueOf(element, "Label"),
+                Value = ValueOf(element, "Value"),
+                Arguments = ValueOf(element, "Arguments"),
+                Glyph = ValueOf(element, "Glyph"),
+                IconPath = ValueOf(element, "IconPath"),
+                IconScale = DoubleValueOf(element, "IconScale", ActionItem.DefaultIconScale),
+                IconOffsetX = DoubleValueOf(element, "IconOffsetX", 0),
+                IconOffsetY = DoubleValueOf(element, "IconOffsetY", 0),
+                IconTint = BoolValueOf(element, "IconTint", ActionItem.DefaultIconTint),
+                Foreground = ValueOf(element, "Foreground"),
+                Background = ValueOf(element, "Background"),
+                Shadow = ValueOf(element, "Shadow"),
+                ShadowEnabled = BoolValueOf(element, "ShadowEnabled", ActionItem.DefaultShadowEnabled),
+                ShadowOpacity = DoubleValueOf(element, "ShadowOpacity", ActionItem.DefaultShadowOpacity),
+                ShadowBlur = DoubleValueOf(element, "ShadowBlur", ActionItem.DefaultShadowBlur),
+                ShadowOffsetX = DoubleValueOf(element, "ShadowOffsetX", ActionItem.DefaultShadowOffsetX),
+                ShadowOffsetY = DoubleValueOf(element, "ShadowOffsetY", ActionItem.DefaultShadowOffsetY),
+                // Absent in a profile written before hold actions existed, which ValueOf and
+                // a failed TryParseKind both already treat as "no hold action" - no version
+                // bump needed for an addition every old and new reader already tolerates.
+                HoldKind = ActionValueCodec.TryParseKind(
+                    element.Element("HoldType")?.Value, out ActionKind holdKind)
+                    ? holdKind : ActionKind.None,
+                HoldValue = ValueOf(element, "HoldValue"),
+                HoldArguments = ValueOf(element, "HoldArguments"),
+                GroupChildren = children,
+            };
+            return true;
         }
 
         private static string ValueOf(XElement parent, string name) =>

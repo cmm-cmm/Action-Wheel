@@ -33,6 +33,44 @@ namespace Action_Wheel.Services
 
         public string PathFor(string name) => Path.Combine(DirectoryPath, SafeName(name) + ".xml");
 
+        /// <summary>
+        /// Profile names ordered most-recently-activated first, for the tray icon's quick-switch
+        /// submenu - "recent" without a separate history file, since <see cref="TryTouch"/> already
+        /// bumps a profile's own write time to now every time it becomes the active one.
+        /// </summary>
+        public bool TryListByRecency(int max, out IReadOnlyList<string> names, out string error)
+        {
+            try
+            {
+                Directory.CreateDirectory(DirectoryPath);
+                names = new DirectoryInfo(DirectoryPath).EnumerateFiles("*.xml")
+                    .OrderByDescending(file => file.LastWriteTimeUtc)
+                    .Take(max)
+                    .Select(file => Path.GetFileNameWithoutExtension(file.Name))
+                    .Where(name => name.Length > 0)
+                    .ToArray();
+                error = string.Empty;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                names = Array.Empty<string>();
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Marks a profile as just activated by bumping its write time to now, without touching its
+        /// content. Best-effort and silent: this is metadata for a menu ordering, not something
+        /// worth failing a profile switch over.
+        /// </summary>
+        public void TryTouch(string name)
+        {
+            try { File.SetLastWriteTimeUtc(PathFor(name), DateTime.UtcNow); }
+            catch (Exception) { }
+        }
+
         public bool TryLoad(string name, out IReadOnlyList<ActionItem> actions, out string error) =>
             ProfileXml.TryLoad(PathFor(name), out actions, out error);
 

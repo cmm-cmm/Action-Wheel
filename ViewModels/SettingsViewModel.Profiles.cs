@@ -95,6 +95,7 @@ namespace Action_Wheel.ViewModels
                 return;
             }
 
+            _profileLibrary.TryTouch(profileName);
             SetActiveProfile(profileName);
             CaptureUndoPoint();
             ActionsSaved?.Invoke(this, EventArgs.Empty);

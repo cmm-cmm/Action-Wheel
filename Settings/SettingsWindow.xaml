@@ -117,6 +117,7 @@
                                 <ComboBoxItem Content="Send shortcut"/>
                                 <ComboBoxItem Content="Open app / file"/>
                                 <ComboBoxItem Content="Windows function"/>
+                                <ComboBoxItem Content="Group (up to 5 buttons)"/>
                             </ComboBox>
 
                             <TextBox Grid.Column="4"
@@ -155,6 +156,7 @@
                                               Checked="Record_Checked"
                                               Unchecked="Record_Unchecked"
                                               IsEnabled="{Binding CanRecord, Mode=OneWay}"
+                                              Visibility="{Binding IsGroup, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"
                                               ToolTipService.ToolTip="Record a key press">
                                     <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF11C;" FontSize="14"/>
                                 </ToggleButton>
@@ -163,8 +165,19 @@
                                         Tag="{Binding}"
                                         Click="Browse_Click"
                                         IsEnabled="{Binding CanBrowse, Mode=OneWay}"
+                                        Visibility="{Binding IsGroup, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"
                                         ToolTipService.ToolTip="Browse for a file">
                                     <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF115;" FontSize="14"/>
+                                </Button>
+                                <Button Padding="8,0" Height="34"
+                                        Tag="{Binding}"
+                                        Click="EditGroup_Click"
+                                        Visibility="{Binding IsGroup, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                        ToolTipService.ToolTip="Choose this group's up to 5 buttons">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF045;" FontSize="13"/>
+                                        <TextBlock Text="{Binding EditGroupText, Mode=OneWay}" FontSize="12" VerticalAlignment="Center"/>
+                                    </StackPanel>
                                 </Button>
                                 <Button Width="40" Height="34"
                                         Padding="0"
@@ -366,6 +379,37 @@
                                 </Border>
                             </StackPanel>
                         </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="126,0,0,0">
+                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF017;" FontSize="13"
+                                      VerticalAlignment="Center"
+                                      Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                      ToolTipService.ToolTip="What this button does when pressed and held (about half a second), instead of clicked. Optional - most buttons need only the action above."/>
+                            <ComboBox Width="150" VerticalAlignment="Center"
+                                      SelectedIndex="{Binding HoldKindIndex, Mode=TwoWay}"
+                                      ToolTipService.ToolTip="Hold action">
+                                <ComboBoxItem Content="No hold action"/>
+                                <ComboBoxItem Content="Send shortcut"/>
+                                <ComboBoxItem Content="Open app / file"/>
+                                <ComboBoxItem Content="Windows function"/>
+                            </ComboBox>
+                            <TextBox Width="220" VerticalAlignment="Center"
+                                     IsEnabled="{Binding IsHoldValueEnabled, Mode=OneWay}"
+                                     Visibility="{Binding IsHoldFunction, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"
+                                     PlaceholderText="{Binding HoldValuePlaceholder, Mode=OneWay}"
+                                     Text="{Binding HoldValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <ComboBox Width="220" VerticalAlignment="Center"
+                                      Visibility="{Binding IsHoldFunction, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                      ItemsSource="{Binding HoldFunctionChoices, Mode=OneWay}"
+                                      DisplayMemberPath="Name"
+                                      SelectedValuePath="Id"
+                                      SelectedValue="{Binding HoldValue, Mode=TwoWay}"
+                                      PlaceholderText="Choose a function"/>
+                            <TextBox Width="150" VerticalAlignment="Center"
+                                     IsEnabled="{Binding CanBrowseHold, Mode=OneWay}"
+                                     PlaceholderText="arguments"
+                                     ToolTipService.ToolTip="Command-line arguments, only for Open app / file"
+                                     Text="{Binding HoldArguments, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
             </DataTemplate>
@@ -455,6 +499,22 @@
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF11C;" FontSize="14"/>
                         <TextBlock Text="Key names" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                <TextBlock Text="Everything (profiles, trigger, appearance, icons):" VerticalAlignment="Center"
+                           FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                <Button Click="BackupAll_Click" ToolTipService.ToolTip="Save every profile, the trigger, the ring appearance, and extracted icons into one file">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF019;" FontSize="13"/>
+                        <TextBlock Text="Backup all…" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button Click="RestoreAll_Click" ToolTipService.ToolTip="Restore everything from a backup file, after showing what it contains">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF0ED;" FontSize="13"/>
+                        <TextBlock Text="Restore backup…" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
             </StackPanel>

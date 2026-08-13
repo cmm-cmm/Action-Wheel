@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace Action_Wheel.Services
@@ -31,7 +32,9 @@ namespace Action_Wheel.Services
         private const int NIF_TIP = 0x0004;
 
         private const int MF_STRING = 0x0000;
+        private const int MF_GRAYED = 0x0001;
         private const int MF_CHECKED = 0x0008;
+        private const int MF_POPUP = 0x0010;
         private const int MF_SEPARATOR = 0x0800;
         private const uint TPM_RIGHTBUTTON = 0x0002;
         private const uint TPM_RETURNCMD = 0x0100;
@@ -129,11 +132,27 @@ namespace Action_Wheel.Services
         private const int MenuIdStartup = 5;
         private const int MenuIdExit = 6;
 
+        /// <summary>
+        /// First command ID handed to a profile row; the rest follow in <see cref="_menuProfiles"/>
+        /// order. Clear of every fixed MenuId* above with room to spare.
+        /// </summary>
+        private const int MenuIdProfileBase = 100;
+
+        /// <summary>Most profiles a tray click can pick from before "see all in Settings" applies.</summary>
+        private const int MaxProfilesInMenu = 10;
+
         // Held in a field so the GC cannot collect the delegate the window class points at.
         private readonly WndProcDelegate _wndProc;
         private IntPtr _hwnd;
         private IntPtr _icon;
         private bool _added;
+
+        /// <summary>
+        /// The profiles the currently-open menu offered, in the same order their command IDs
+        /// (MenuIdProfileBase + index) were assigned. Rebuilt on every ShowContextMenu call, read
+        /// back in HandleCommand once TrackPopupMenuEx returns which one was clicked.
+        /// </summary>
+        private IReadOnlyList<string> _menuProfiles = Array.Empty<string>();
 
         public event EventHandler? ShowRequested;
         public event EventHandler? SettingsRequested;
@@ -142,6 +161,9 @@ namespace Action_Wheel.Services
         /// <summary>Raised after the tray menu toggled the startup entry, so open windows can refresh.</summary>
         public event EventHandler? StartupChanged;
         public event EventHandler? ExitRequested;
+
+        /// <summary>Raised when the user picks a profile from the tray's Profiles submenu.</summary>
+        public event EventHandler<string>? ProfileSelected;
 
         public TrayIcon()
         {
@@ -232,11 +254,21 @@ namespace Action_Wheel.Services
             if (menu == IntPtr.Zero)
                 return;
 
+            // Owned by the popup menu DestroyMenu(menu) tears down below - a submenu attached with
+            // MF_POPUP is destroyed recursively along with its parent, so there is nothing extra to
+            // clean up here even if AppendProfilesSubmenu throws before that point.
+            IntPtr profilesMenu = IntPtr.Zero;
+
             try
             {
                 AppendMenu(menu, MF_STRING, MenuIdShow, "Open Action Wheel");
                 AppendMenu(menu, MF_STRING, MenuIdSettings, "Settings…");
                 AppendMenu(menu, MF_SEPARATOR, 0, null);
+
+                profilesMenu = BuildProfilesSubmenu();
+                AppendMenu(menu, MF_POPUP, (int)profilesMenu, "Profiles");
+                AppendMenu(menu, MF_SEPARATOR, 0, null);
+
                 AppendMenu(menu, MF_STRING, MenuIdEditActions, "Open actions.json");
                 AppendMenu(menu, MF_STRING, MenuIdReload, "Reload configuration");
                 AppendMenu(menu, MF_SEPARATOR, 0, null);
@@ -267,8 +299,50 @@ namespace Action_Wheel.Services
             }
         }
 
+        /// <summary>
+        /// Builds the Profiles submenu, ordered most-recently-activated first (see
+        /// <see cref="ProfileLibrary.TryTouch"/>), with the active one checked. Grayed out with a
+        /// single explanatory row when there is nothing to switch to yet, rather than omitted -
+        /// an absent submenu reads as "this build has no such feature" instead of "you have not
+        /// saved a profile yet".
+        /// </summary>
+        private IntPtr BuildProfilesSubmenu()
+        {
+            var submenu = CreatePopupMenu();
+            if (submenu == IntPtr.Zero)
+            {
+                _menuProfiles = Array.Empty<string>();
+                return submenu;
+            }
+
+            var library = new ProfileLibrary();
+            if (!library.TryListByRecency(MaxProfilesInMenu, out var names, out _) || names.Count == 0)
+            {
+                _menuProfiles = Array.Empty<string>();
+                AppendMenu(submenu, MF_STRING | MF_GRAYED, 0, "No saved profiles yet");
+                return submenu;
+            }
+
+            _menuProfiles = names;
+            string active = ActiveProfileSettings.Load();
+
+            for (int i = 0; i < names.Count; i++)
+            {
+                int flags = MF_STRING | (string.Equals(names[i], active, StringComparison.OrdinalIgnoreCase) ? MF_CHECKED : 0);
+                AppendMenu(submenu, flags, MenuIdProfileBase + i, names[i]);
+            }
+
+            return submenu;
+        }
+
         private void HandleCommand(int id)
         {
+            if (id >= MenuIdProfileBase && id - MenuIdProfileBase < _menuProfiles.Count)
+            {
+                ProfileSelected?.Invoke(this, _menuProfiles[id - MenuIdProfileBase]);
+                return;
+            }
+
             switch (id)
             {
                 case MenuIdShow:

@@ -385,6 +385,147 @@ namespace Action_Wheel.Settings
             }
         }
 
+        /// <summary>
+        /// Edits a Group button's up to <see cref="ActionItem.MaxGroupChildren"/> children: a plain
+        /// label/type/value/glyph row each, read straight off their controls when Save is pressed
+        /// rather than bound through a model of their own - this dialog is the only place that ever
+        /// looks at them, and it is short-lived, so there is nothing for a live-updating model to buy
+        /// here that direct reads do not already give for less code. Saving replaces
+        /// <see cref="ActionEditModel.GroupChildren"/> wholesale, the same all-at-once approach
+        /// <see cref="ActionEditModel.CopyFrom"/> uses for every other field.
+        /// </summary>
+        private async void EditGroup_Click(object sender, RoutedEventArgs e)
+        {
+            if (_dialogOpen || Content is not FrameworkElement root)
+                return;
+            if (sender is not Button button || button.Tag is not ActionEditModel model)
+                return;
+
+            var rowsPanel = new StackPanel { Spacing = 8 };
+            var rows = new List<(TextBox Label, ComboBox Kind, TextBox Value, TextBox Glyph, Grid Host)>();
+            Button? addButton = null;
+
+            void AddRow(ActionItem? existing)
+            {
+                var label = new TextBox { PlaceholderText = "Label", Width = 130, Text = existing?.Label ?? string.Empty };
+                var kind = new ComboBox
+                {
+                    Width = 140,
+                    SelectedIndex = ActionValueCodec.KindToIndex(existing?.Kind ?? ActionKind.None),
+                    ItemsSource = new[] { "Do nothing", "Send shortcut", "Open app / file", "Windows function" },
+                };
+                var value = new TextBox { PlaceholderText = "Value", Width = 170, Text = existing?.Value ?? string.Empty };
+                var glyph = new TextBox { PlaceholderText = "Glyph hex", Width = 70, Text = existing?.Glyph ?? string.Empty };
+                var remove = new Button
+                {
+                    Width = 32,
+                    Height = 32,
+                    Padding = new Thickness(0),
+                    Content = new FontIcon
+                    {
+                        FontFamily = (Microsoft.UI.Xaml.Media.FontFamily)root.Resources["IconFontFamily"],
+                        Glyph = "",
+                        FontSize = 12,
+                    },
+                };
+
+                var host = new Grid { ColumnSpacing = 6 };
+                foreach (var width in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto })
+                    host.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
+                Grid.SetColumn(label, 0);
+                Grid.SetColumn(kind, 1);
+                Grid.SetColumn(value, 2);
+                Grid.SetColumn(glyph, 3);
+                Grid.SetColumn(remove, 4);
+                host.Children.Add(label);
+                host.Children.Add(kind);
+                host.Children.Add(value);
+                host.Children.Add(glyph);
+                host.Children.Add(remove);
+
+                var entry = (label, kind, value, glyph, host);
+                rows.Add(entry);
+                rowsPanel.Children.Add(host);
+
+                remove.Click += (s2, e2) =>
+                {
+                    rowsPanel.Children.Remove(host);
+                    rows.Remove(entry);
+                    if (addButton != null)
+                        addButton.IsEnabled = rows.Count < ActionItem.MaxGroupChildren;
+                };
+            }
+
+            foreach (var child in model.GroupChildren)
+                AddRow(child);
+
+            addButton = new Button { Content = "Add a button", IsEnabled = rows.Count < ActionItem.MaxGroupChildren };
+            addButton.Click += (s2, e2) =>
+            {
+                AddRow(null);
+                addButton.IsEnabled = rows.Count < ActionItem.MaxGroupChildren;
+            };
+
+            var content = new StackPanel { Spacing = 12, Width = 560 };
+            content.Children.Add(new TextBlock
+            {
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+                Text = "These appear on a second ring around the main one when this button is selected. "
+                    + "Glyph is a hex code from the bundled icon font, the same as the main list - leave "
+                    + "it blank for no picture.",
+            });
+            content.Children.Add(rowsPanel);
+            content.Children.Add(addButton);
+
+            var dialog = new ContentDialog
+            {
+                XamlRoot = root.XamlRoot,
+                RequestedTheme = root.RequestedTheme,
+                Title = "Group buttons",
+                PrimaryButtonText = "Save",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                Content = new ScrollViewer
+                {
+                    MaxHeight = 420,
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    Content = content,
+                },
+            };
+
+            _dialogOpen = true;
+            try
+            {
+                if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+                    return;
+
+                var children = new List<ActionItem>();
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    var (label, kind, value, glyph, _) = rows[i];
+                    children.Add(new ActionItem
+                    {
+                        Tag = i,
+                        Label = label.Text.Trim(),
+                        Kind = ActionValueCodec.IndexToKind(kind.SelectedIndex),
+                        Value = value.Text.Trim(),
+                        Glyph = glyph.Text.Trim().ToUpperInvariant(),
+                    });
+                }
+
+                model.GroupChildren = children;
+            }
+            catch (Exception ex)
+            {
+                ViewModel.ShowStatus(InfoBarSeverity.Error, "Could not open the group editor", ex.Message);
+            }
+            finally
+            {
+                _dialogOpen = false;
+            }
+        }
+
         #region Closing
 
         /// <summary>
@@ -679,6 +820,109 @@ namespace Action_Wheel.Settings
             catch (Exception ex)
             {
                 ViewModel.ShowStatus(InfoBarSeverity.Error, "Could not open the file picker", ex.Message);
+            }
+        }
+
+        private async void BackupAll_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var picker = new FileSavePicker
+                {
+                    SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
+                    SuggestedFileName = $"ActionWheel-backup-{DateTime.Now:yyyy-MM-dd}",
+                };
+                picker.FileTypeChoices.Add("Action Wheel backup", new List<string> { ".zip" });
+
+                WinRT.Interop.InitializeWithWindow.Initialize(
+                    picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+
+                var file = await picker.PickSaveFileAsync();
+                if (file == null)
+                    return;
+
+                string appVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString()
+                    ?? string.Empty;
+
+                if (ConfigBackup.TryExport(file.Path, appVersion, out string error))
+                    ViewModel.ShowStatus(InfoBarSeverity.Success, "Backup saved", file.Path);
+                else
+                    ViewModel.ShowStatus(InfoBarSeverity.Error, "Could not create the backup", error);
+            }
+            catch (Exception ex)
+            {
+                ViewModel.ShowStatus(InfoBarSeverity.Error, "Could not create the backup", ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Restores everything from a backup, showing what it contains first - <see cref="ConfigBackup.TryPreview"/>
+        /// reads only the manifest, so this can describe a backup without touching the real files at
+        /// all if the user cancels.
+        /// </summary>
+        private async void RestoreAll_Click(object sender, RoutedEventArgs e)
+        {
+            if (_dialogOpen || Content is not FrameworkElement root)
+                return;
+
+            var path = await PickFileAsync(".zip");
+            if (path == null)
+                return;
+
+            if (!ConfigBackup.TryPreview(path, out var preview, out string previewError) || preview == null)
+            {
+                ViewModel.ShowStatus(InfoBarSeverity.Error, "Could not read the backup", previewError);
+                return;
+            }
+
+            var summary = new StackPanel { Spacing = 6 };
+            void AddLine(string text) => summary.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap });
+
+            AddLine(preview.ExportedAtUtc == DateTime.MinValue
+                ? "Made: unknown date"
+                : $"Made: {preview.ExportedAtUtc.ToLocalTime():g}"
+                    + (string.IsNullOrWhiteSpace(preview.AppVersion) ? string.Empty : $" (Action Wheel {preview.AppVersion})"));
+            AddLine(preview.HasActions ? "Includes the active button configuration" : "Does not include a button configuration");
+            AddLine(preview.HasPreferences ? "Includes the trigger and ring appearance settings" : "Does not include trigger/appearance settings");
+            AddLine($"{preview.ProfileCount} saved profile(s)");
+            AddLine($"{preview.IconCount} extracted icon(s)");
+            AddLine("Restoring replaces the matching files on this machine.");
+
+            var dialog = new ContentDialog
+            {
+                XamlRoot = root.XamlRoot,
+                RequestedTheme = root.RequestedTheme,
+                Title = "Restore this backup?",
+                Content = summary,
+                PrimaryButtonText = "Restore",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Close,
+            };
+
+            _dialogOpen = true;
+            try
+            {
+                if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+                    return;
+
+                if (ConfigBackup.TryImport(path, out string importError))
+                {
+                    ViewModel.ShowStatus(InfoBarSeverity.Success, "Backup restored",
+                        "Close and reopen Button Settings to see the restored profiles and appearance. "
+                        + "The ring itself already picked up the restored buttons.");
+                }
+                else
+                {
+                    ViewModel.ShowStatus(InfoBarSeverity.Error, "Could not restore the backup", importError);
+                }
+            }
+            catch (Exception ex)
+            {
+                ViewModel.ShowStatus(InfoBarSeverity.Error, "Could not restore the backup", ex.Message);
+            }
+            finally
+            {
+                _dialogOpen = false;
             }
         }
 

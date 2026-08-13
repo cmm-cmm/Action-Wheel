@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 namespace Action_Wheel.Core
 {
     /// <summary>What an <see cref="ActionItem"/> does when its button is clicked.</summary>
@@ -11,6 +14,11 @@ namespace Action_Wheel.Core
         Launch,
         /// <summary>Run one of Action Wheel's built-in Windows functions.</summary>
         Function,
+        /// <summary>
+        /// Reveals up to 5 child actions on a second ring, concentric with and outside the main one,
+        /// instead of dispatching anything itself. Selecting it never closes the menu.
+        /// </summary>
+        Group,
     }
 
     /// <summary>One button of the radial menu.</summary>
@@ -83,5 +91,39 @@ namespace Action_Wheel.Core
         public double ShadowBlur { get; init; } = DefaultShadowBlur;
         public double ShadowOffsetX { get; init; } = DefaultShadowOffsetX;
         public double ShadowOffsetY { get; init; } = DefaultShadowOffsetY;
+
+        /// <summary>
+        /// What this button does when pressed and held past the threshold instead of released
+        /// quickly. <see cref="ActionKind.None"/> - the default - means there is no hold action and
+        /// the button behaves exactly as it always has: click only, nothing armed or measured.
+        /// </summary>
+        /// <remarks>
+        /// Deliberately not a double-click. Disambiguating a click from a double-click needs holding
+        /// every ordinary click back for the system double-click interval before it counts as a
+        /// single one, and this app is tuned around a click landing in the ~15 ms
+        /// click-to-first-pixel it already takes - see RingOpenAnimation's remarks. A hold costs
+        /// nothing on the common path: it only ever fires while the button is still down, past the
+        /// threshold, which a quick click or flick never reaches.
+        /// </remarks>
+        public ActionKind HoldKind { get; init; } = ActionKind.None;
+
+        /// <summary>Shortcut, path/URI, or built-in function id for <see cref="HoldKind"/>.</summary>
+        public string HoldValue { get; init; } = string.Empty;
+
+        /// <summary>Command-line arguments for a <see cref="ActionKind.Launch"/> hold action.</summary>
+        public string HoldArguments { get; init; } = string.Empty;
+
+        /// <summary>Comfortably enough to fan out without crowding the outer ring.</summary>
+        public const int MaxGroupChildren = 5;
+
+        /// <summary>
+        /// The buttons a <see cref="ActionKind.Group"/> button reveals. Ignored for every other
+        /// <see cref="Kind"/>. Each child is a full <see cref="ActionItem"/> so the exact same
+        /// icon/dispatch code the main ring uses draws and runs it - only <see cref="Tag"/> means
+        /// something different here: it is the child's position among its siblings (0 first,
+        /// clockwise from the top), not a slot on the main ring, and a child's own
+        /// <see cref="Kind"/> may not be <see cref="ActionKind.Group"/> - groups do not nest.
+        /// </summary>
+        public IReadOnlyList<ActionItem> GroupChildren { get; init; } = Array.Empty<ActionItem>();
     }
 }

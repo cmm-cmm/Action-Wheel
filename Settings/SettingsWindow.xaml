@@ -117,7 +117,8 @@
                                 <ComboBoxItem Content="Send shortcut"/>
                                 <ComboBoxItem Content="Open app / file"/>
                                 <ComboBoxItem Content="Windows function"/>
-                                <ComboBoxItem Content="Group (up to 5 buttons)"/>
+                                <ComboBoxItem Content="Group (up to 5 buttons)" IsEnabled="{Binding CanBeGroup, Mode=OneWay}"
+                                              ToolTipService.ToolTip="The centre button cannot be a group."/>
                             </ComboBox>
 
                             <TextBox Grid.Column="4"

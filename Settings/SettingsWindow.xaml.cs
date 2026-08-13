@@ -430,7 +430,16 @@ namespace Action_Wheel.Settings
                     Padding = new Thickness(0),
                     Content = new FontIcon
                     {
-                        FontFamily = (Microsoft.UI.Xaml.Media.FontFamily)root.Resources["IconFontFamily"],
+                        // Application.Current.Resources, not root.Resources: IconFontFamily is
+                        // declared once in App.xaml's Application.Resources, not duplicated into
+                        // every window's own ResourceDictionary. {StaticResource} in XAML markup
+                        // walks up to Application resources automatically when a key is not found
+                        // locally; the plain C# indexer on one specific ResourceDictionary does not
+                        // - root.Resources["IconFontFamily"] (RootGrid's own dictionary, which does
+                        // not have this key) threw KeyNotFoundException here, unhandled, on the UI
+                        // thread - the actual crash, on top of the ComboBox one already fixed above,
+                        // triggered by the exact same "Add a button" click reported.
+                        FontFamily = (Microsoft.UI.Xaml.Media.FontFamily)Application.Current.Resources["IconFontFamily"],
                         Glyph = "",
                         FontSize = 12,
                     },

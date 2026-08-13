@@ -129,9 +129,25 @@ namespace Action_Wheel.Settings
 
                 Raise(nameof(PositionName));
                 Raise(nameof(TagCaption));
+                Raise(nameof(CanBeGroup));
                 RaiseIconChanged();
             }
         }
+
+        /// <summary>
+        /// Whether this row is allowed to be a <see cref="ActionKind.Group"/> button - every position
+        /// except the centre. Drives the "Group" combo box item's IsEnabled, so it reads as
+        /// unavailable there rather than silently doing nothing if picked.
+        /// </summary>
+        /// <remarks>
+        /// A dragged reorder that moves a group into position 0 demotes it back to "Do nothing" -
+        /// see SettingsViewModel.OnItemsCollectionChanged - and ActionsValidator rejects a tag-0
+        /// group outright for a file that set one up some other way (hand-edited, or a profile
+        /// imported from a version that allowed it). Three checks for the same rule because each
+        /// guards a different way the rule could otherwise be bypassed: a live pick in this window,
+        /// a live reorder in this window, and a file this window never touched at all.
+        /// </remarks>
+        public bool CanBeGroup => _tag != 0;
 
         /// <summary>Where this button sits on the ring, in the user's terms.</summary>
         public string PositionName => _tag switch
@@ -620,7 +636,7 @@ namespace Action_Wheel.Settings
             nameof(IsFunction),
             nameof(HoldKindIndex), nameof(HoldValue), nameof(HoldArguments), nameof(IsHoldValueEnabled),
             nameof(CanBrowseHold), nameof(HoldValuePlaceholder), nameof(IsHoldFunction), nameof(HoldFunctionChoices),
-            nameof(IsGroup), nameof(GroupChildren), nameof(EditGroupText),
+            nameof(IsGroup), nameof(GroupChildren), nameof(EditGroupText), nameof(CanBeGroup),
             nameof(FunctionQuery), nameof(FunctionSuggestions),
             nameof(IconSource), nameof(ForegroundColor), nameof(BackgroundColor), nameof(ShadowColor),
             nameof(HasStatus), nameof(StatusGlyph), nameof(StatusTooltip), nameof(StatusColor),

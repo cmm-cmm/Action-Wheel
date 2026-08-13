@@ -321,11 +321,22 @@ namespace Action_Wheel.ViewModels
 
                 for (int index = 0; index < Items.Count; index++)
                 {
-                    if (Items[index].Tag == index)
-                        continue;
+                    if (Items[index].Tag != index)
+                    {
+                        Items[index].Tag = index;
+                        changed = true;
+                    }
 
-                    Items[index].Tag = index;
-                    changed = true;
+                    // The centre button cannot be a group (see ActionEditModel.CanBeGroup's
+                    // remarks). A row dragged into position 0 while configured as one is demoted to
+                    // "Do nothing" here rather than left to fail validation only once Save is
+                    // pressed - by then the reorder that caused it is long past and the message
+                    // would have nothing on screen to point at.
+                    if (index == 0 && Items[index].KindIndex == ActionValueCodec.GroupIndex)
+                    {
+                        Items[index].KindIndex = ActionValueCodec.NoneIndex;
+                        changed = true;
+                    }
                 }
 
                 RefreshDerivedState();

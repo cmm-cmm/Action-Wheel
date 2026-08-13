@@ -40,6 +40,8 @@ namespace Action_Wheel.Core
                 issues.Add(new(action.Tag, $"{prefix} has an unsupported action type."));
             if (!isTopLevel && action.Kind == ActionKind.Group)
                 issues.Add(new(action.Tag, $"{prefix} is a group child and cannot itself be a group."));
+            if (isTopLevel && action.Tag == 0 && action.Kind == ActionKind.Group)
+                issues.Add(new(action.Tag, "The centre button cannot be a group."));
 
             bool needsValue = action.Kind != ActionKind.None && action.Kind != ActionKind.Group;
             if (needsValue && string.IsNullOrWhiteSpace(action.Value))

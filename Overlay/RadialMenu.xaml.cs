@@ -171,8 +171,8 @@ namespace Action_Wheel.Overlay
         /// </summary>
         private double GroupOrbitRadius => _appearance.OrbitRadius + _appearance.ButtonSize + 24.0;
 
-        /// <summary>Diameter of a satellite button - smaller than the main ring's, for visual hierarchy.</summary>
-        private double GroupButtonSize => Math.Round(_appearance.ButtonSize * 0.72);
+        /// <summary>Diameter of a satellite button - the same as the main ring's own buttons.</summary>
+        private double GroupButtonSize => _appearance.ButtonSize;
 
         /// <summary>
         /// Button diameters, orbit radius and opening animation, all of them user settings.
@@ -464,7 +464,7 @@ namespace Action_Wheel.Overlay
             if (tag is int current)
             {
                 _buttonPainters[current]?.Hover();
-                ExpandGroupOnHover(current);
+                OnMainRingHover(current);
             }
         }
 
@@ -472,12 +472,18 @@ namespace Action_Wheel.Overlay
         /// Opens <paramref name="tag"/>'s satellite ring the moment it is hovered, whether that hover
         /// came from a direct pointer entering the button (<see cref="OnButtonHover"/>) or the
         /// flick/drag gesture highlighting a direction (<see cref="HighlightTag"/>, driven by
-        /// <c>LauncherService</c>). Nothing here decides when a group closes again - only ever
-        /// which one is open - so hovering back over the parent, or into the satellites it just
-        /// revealed, is never mistaken for "leaving" the group.
+        /// <c>LauncherService</c>). Hovering back over the same parent, or into the satellites it
+        /// revealed, is a no-op (satellites carry a "parent:child" string <see cref="Tag"/>, not a
+        /// plain 0-8 int, so <see cref="TagOf"/> never resolves one of them to a main-ring tag and
+        /// this method is never even called for them). Hovering any *other* main-ring button - the
+        /// centre included - closes whatever group is currently open before possibly opening a new
+        /// one, since that is the one thing this method is always called for.
         /// </summary>
-        private void ExpandGroupOnHover(int tag)
+        private void OnMainRingHover(int tag)
         {
+            if (_expandedGroupTag is int expanded && expanded != tag)
+                CollapseGroup();
+
             var action = tag is >= 0 and <= 8 ? ActionsByTag[tag] : null;
             if (action?.Kind == ActionKind.Group)
                 ExpandGroup(tag, action);
@@ -706,7 +712,7 @@ namespace Action_Wheel.Overlay
                 return;
 
             var buttons = _groupButtons.TryGetValue(parentTag, out var cached)
-                ? cached : BuildGroupButtons(parentTag, parentAction.GroupChildren);
+                ? cached : BuildGroupButtons(parentTag, parentAction);
             _expandedGroupTag = parentTag;
 
             foreach (var button in buttons)
@@ -757,14 +763,25 @@ namespace Action_Wheel.Overlay
         /// was specified in, not a coincidence of the maths. <see cref="ActionItem.MaxGroupChildren"/>
         /// caps the fan at offsets -2..+2, five distinct slots out of the ring's 8 with no risk of
         /// two children landing on the same one.
+        ///
+        /// Every satellite is painted in <paramref name="parentAction"/>'s own background, foreground
+        /// and shadow - not its own slot's default colour, and not anything a child itself carries -
+        /// so a group reads as one cohesive control fanning out from its parent rather than five
+        /// independently-coloured buttons. Only the icon (glyph or SVG) stays per-child; that is the
+        /// one thing each button in the group actually needs to differ by.
         /// </remarks>
-        private Button[] BuildGroupButtons(int parentTag, IReadOnlyList<ActionItem> children)
+        private Button[] BuildGroupButtons(int parentTag, ActionItem parentAction)
         {
+            var children = parentAction.GroupChildren;
             double radius = GroupOrbitRadius;
             double size = GroupButtonSize;
             double centre = MenuSize / 2.0;
             int count = children.Count;
             var buttons = new Button[count];
+
+            var background = IconFactory.ColorOr(parentAction.Background, IconFactory.DefaultBackground(parentTag));
+            var foreground = IconFactory.ColorOr(parentAction.Foreground, IconFactory.DefaultForeground(parentTag));
+            var shadowColor = IconFactory.ColorOr(parentAction.Shadow, Colors.Black);
 
             for (int i = 0; i < count; i++)
             {
@@ -777,9 +794,6 @@ namespace Action_Wheel.Overlay
                 double angle = (Math.PI / 4.0) * (slotTag - 1) - Math.PI / 2.0;
                 double x = centre + Math.Cos(angle) * radius;
                 double y = centre + Math.Sin(angle) * radius;
-
-                var background = IconFactory.ColorOr(child.Background, IconFactory.DefaultBackground(i + 1));
-                var foreground = IconFactory.ColorOr(child.Foreground, IconFactory.DefaultForeground(i + 1));
 
                 var button = new Button
                 {
@@ -814,16 +828,16 @@ namespace Action_Wheel.Overlay
                 // for one built here happens asynchronously after ButtonsCanvas.Children.Add below -
                 // unlike the main ring's static XAML buttons, whose templates are already applied by
                 // the time RadialMenu_Loaded calls ApplyShadows.
-                if (child.ShadowEnabled)
+                if (parentAction.ShadowEnabled)
                 {
-                    var shadowColor = IconFactory.ColorOr(child.Shadow, Colors.Black);
                     button.Loaded += (s2, e2) =>
                     {
                         var host = ButtonShadow.FindTemplatePart(button, "ShadowHost");
                         if (host != null)
                         {
                             ButtonShadow.Apply(host, size, shadowColor,
-                                child.ShadowOpacity, child.ShadowBlur, child.ShadowOffsetX, child.ShadowOffsetY);
+                                parentAction.ShadowOpacity, parentAction.ShadowBlur,
+                                parentAction.ShadowOffsetX, parentAction.ShadowOffsetY);
                         }
                     };
                 }
@@ -1038,7 +1052,7 @@ namespace Action_Wheel.Overlay
             DisarmHold();
             PainterFor(sender)?.Hover();
             if (TagOf(sender) is int tag)
-                ExpandGroupOnHover(tag);
+                OnMainRingHover(tag);
         }
 
         private void OnButtonPressed(object sender, PointerRoutedEventArgs e)

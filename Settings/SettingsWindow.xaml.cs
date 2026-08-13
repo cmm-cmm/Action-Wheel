@@ -386,14 +386,22 @@ namespace Action_Wheel.Settings
         }
 
         /// <summary>
-        /// Edits a Group button's up to <see cref="ActionItem.MaxGroupChildren"/> children: a plain
-        /// label/type/value/glyph row each, read straight off their controls when Save is pressed
-        /// rather than bound through a model of their own - this dialog is the only place that ever
-        /// looks at them, and it is short-lived, so there is nothing for a live-updating model to buy
-        /// here that direct reads do not already give for less code. Saving replaces
-        /// <see cref="ActionEditModel.GroupChildren"/> wholesale, the same all-at-once approach
-        /// <see cref="ActionEditModel.CopyFrom"/> uses for every other field.
+        /// Builds and shows the "Group buttons" dialog for one row, letting the user pick up to
+        /// <see cref="ActionItem.MaxGroupChildren"/> children.
         /// </summary>
+        /// <remarks>
+        /// Each child is edited as a real <see cref="ActionEditModel"/> rather than a handful of bare
+        /// TextBoxes, precisely so this dialog can reuse the same icon-picker flyout
+        /// (<see cref="PickGlyph_Click"/>), shortcut recorder (<see cref="Record_Checked"/>/
+        /// <see cref="Record_Unchecked"/>), file browser (<see cref="Browse_Click"/>) and function
+        /// search (<see cref="FunctionSuggestion_Chosen"/>/<see cref="FunctionBox_OpenSuggestions"/>)
+        /// the main row list already uses - all four already operate generically on whatever
+        /// <see cref="ActionEditModel"/> is hung off the control's <c>Tag</c> or <c>DataContext</c>,
+        /// so nothing about them had to change for a model that never belongs to
+        /// <see cref="SettingsViewModel.Items"/>. That is also what fixed the earlier "glyph is
+        /// hidden" report: the old row was a bare 70px hex TextBox with no picture; this one shows
+        /// the icon exactly as it will actually be drawn, same as every row above it.
+        /// </remarks>
         private async void EditGroup_Click(object sender, RoutedEventArgs e)
         {
             if (_dialogOpen || Content is not FrameworkElement root)
@@ -401,95 +409,241 @@ namespace Action_Wheel.Settings
             if (sender is not Button button || button.Tag is not ActionEditModel model)
                 return;
 
-            var rowsPanel = new StackPanel { Spacing = 8 };
-            var rows = new List<(TextBox Label, ComboBox Kind, TextBox Value, TextBox Glyph, Grid Host)>();
+            var rowsPanel = new StackPanel { Spacing = 10 };
+            var rows = new List<(ActionEditModel Model, Border Card)>();
             Button? addButton = null;
 
-            void AddRow(ActionItem? existing)
+            void UpdateAddButtonState()
             {
-                var label = new TextBox { PlaceholderText = "Label", Width = 130, Text = existing?.Label ?? string.Empty };
+                if (addButton != null)
+                    addButton.IsEnabled = rows.Count < ActionItem.MaxGroupChildren;
+            }
+
+            Border BuildRow(ActionEditModel rowModel)
+            {
+                var iconButton = new Button
+                {
+                    Width = 48,
+                    Height = 48,
+                    Padding = new Thickness(0),
+                    CornerRadius = new CornerRadius(24),
+                    Tag = rowModel,
+                };
+                ToolTipService.SetToolTip(iconButton, "Choose an icon");
+
+                void RefreshIcon()
+                {
+                    iconButton.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(rowModel.BackgroundColor);
+                    iconButton.Content = IconFactory.CreateIcon(rowModel.ToActionItem(), 22,
+                        new Microsoft.UI.Xaml.Media.SolidColorBrush(rowModel.ForegroundColor));
+                }
+                RefreshIcon();
+                iconButton.Click += PickGlyph_Click;
+                rowModel.PropertyChanged += (s2, e2) =>
+                {
+                    if (e2.PropertyName == nameof(ActionEditModel.IconSource))
+                        RefreshIcon();
+                };
+
+                var label = new TextBox
+                {
+                    PlaceholderText = "Name",
+                    Width = 150,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Text = rowModel.Label,
+                };
+                label.TextChanged += (s2, e2) => rowModel.Label = label.Text;
+
                 var kind = new ComboBox
                 {
                     Width = 140,
-                    // ItemsSource before SelectedIndex, deliberately: object initializers run in the
-                    // order written, and a ComboBox with no items yet has Items.Count == 0 - setting
-                    // SelectedIndex to anything but -1 against that throws
-                    // "Value does not fall within the expected range", which is what crashed the
-                    // whole app the moment this dialog's Add button built a second row (the first
-                    // ever call to AddRow(null), since a brand-new group has no existing children to
-                    // have already hit the same bug when the dialog opened).
+                    VerticalAlignment = VerticalAlignment.Center,
+                    // Only the four dispatchable kinds - a group child can never itself be a Group
+                    // (ActionsValidator rejects that), so that fifth option is left off entirely
+                    // rather than offered and then invalidated.
                     ItemsSource = new[] { "Do nothing", "Send shortcut", "Open app / file", "Windows function" },
-                    SelectedIndex = ActionValueCodec.KindToIndex(existing?.Kind ?? ActionKind.None),
+                    SelectedIndex = rowModel.KindIndex,
                 };
-                var value = new TextBox { PlaceholderText = "Value", Width = 170, Text = existing?.Value ?? string.Empty };
-                var glyph = new TextBox { PlaceholderText = "Glyph hex", Width = 70, Text = existing?.Glyph ?? string.Empty };
+
                 var remove = new Button
                 {
                     Width = 32,
                     Height = 32,
                     Padding = new Thickness(0),
+                    VerticalAlignment = VerticalAlignment.Center,
                     Content = new FontIcon
                     {
-                        // Application.Current.Resources, not root.Resources: IconFontFamily is
-                        // declared once in App.xaml's Application.Resources, not duplicated into
-                        // every window's own ResourceDictionary. {StaticResource} in XAML markup
-                        // walks up to Application resources automatically when a key is not found
-                        // locally; the plain C# indexer on one specific ResourceDictionary does not
-                        // - root.Resources["IconFontFamily"] (RootGrid's own dictionary, which does
-                        // not have this key) threw KeyNotFoundException here, unhandled, on the UI
-                        // thread - the actual crash, on top of the ComboBox one already fixed above,
-                        // triggered by the exact same "Add a button" click reported.
+                        // Application.Current.Resources, not root.Resources - see the remark this
+                        // replaced above for why the local dictionary throws KeyNotFoundException here.
                         FontFamily = (Microsoft.UI.Xaml.Media.FontFamily)Application.Current.Resources["IconFontFamily"],
                         Glyph = "",
                         FontSize = 12,
                     },
                 };
+                ToolTipService.SetToolTip(remove, "Remove this button");
 
-                var host = new Grid { ColumnSpacing = 6 };
-                foreach (var width in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto })
-                    host.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
-                Grid.SetColumn(label, 0);
-                Grid.SetColumn(kind, 1);
-                Grid.SetColumn(value, 2);
-                Grid.SetColumn(glyph, 3);
-                Grid.SetColumn(remove, 4);
-                host.Children.Add(label);
-                host.Children.Add(kind);
-                host.Children.Add(value);
-                host.Children.Add(glyph);
-                host.Children.Add(remove);
+                var header = new Grid { ColumnSpacing = 8 };
+                header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                Grid.SetColumn(iconButton, 0);
+                Grid.SetColumn(label, 1);
+                Grid.SetColumn(kind, 2);
+                Grid.SetColumn(remove, 3);
+                header.Children.Add(iconButton);
+                header.Children.Add(label);
+                header.Children.Add(kind);
+                header.Children.Add(remove);
 
-                var entry = (label, kind, value, glyph, host);
-                rows.Add(entry);
-                rowsPanel.Children.Add(host);
+                var valueBox = new TextBox
+                {
+                    Width = 200,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Text = rowModel.Value,
+                };
+                valueBox.TextChanged += (s2, e2) => rowModel.Value = valueBox.Text;
+                // Browse/Record write model.Value directly rather than through this box, so the box
+                // has to be told back - guarded on an actual difference so the two don't loop.
+                rowModel.PropertyChanged += (s2, e2) =>
+                {
+                    if (e2.PropertyName == nameof(ActionEditModel.Value) && valueBox.Text != rowModel.Value)
+                        valueBox.Text = rowModel.Value;
+                };
+
+                var record = new ToggleButton
+                {
+                    Width = 40,
+                    Height = 34,
+                    Padding = new Thickness(0),
+                    Tag = rowModel,
+                    Content = new FontIcon
+                    {
+                        FontFamily = (Microsoft.UI.Xaml.Media.FontFamily)Application.Current.Resources["IconFontFamily"],
+                        Glyph = "",
+                        FontSize = 14,
+                    },
+                };
+                ToolTipService.SetToolTip(record, "Record a key press");
+                record.Checked += Record_Checked;
+                record.Unchecked += Record_Unchecked;
+
+                var browse = new Button
+                {
+                    Width = 40,
+                    Height = 34,
+                    Padding = new Thickness(0),
+                    Tag = rowModel,
+                    Content = new FontIcon
+                    {
+                        FontFamily = (Microsoft.UI.Xaml.Media.FontFamily)Application.Current.Resources["IconFontFamily"],
+                        Glyph = "",
+                        FontSize = 14,
+                    },
+                };
+                ToolTipService.SetToolTip(browse, "Browse for a file");
+                browse.Click += Browse_Click;
+
+                var functionBox = new AutoSuggestBox
+                {
+                    Width = 200,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    PlaceholderText = "Search Windows functions…",
+                    DataContext = rowModel,
+                    ItemsSource = rowModel.FunctionSuggestions,
+                    ItemTemplate = (DataTemplate)RootGrid.Resources["FunctionSuggestionTemplate"],
+                    Text = rowModel.FunctionQuery,
+                };
+                functionBox.SuggestionChosen += FunctionSuggestion_Chosen;
+                functionBox.GotFocus += FunctionBox_OpenSuggestions;
+                functionBox.Tapped += FunctionBox_OpenSuggestions;
+                functionBox.TextChanged += (s2, e2) =>
+                {
+                    if (e2.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
+                        rowModel.FunctionQuery = functionBox.Text;
+                };
+
+                void RefreshValueVisibility()
+                {
+                    valueBox.PlaceholderText = rowModel.ValuePlaceholder;
+                    valueBox.IsEnabled = rowModel.IsValueEnabled;
+                    valueBox.Visibility = rowModel.IsFunction ? Visibility.Collapsed : Visibility.Visible;
+                    functionBox.Visibility = rowModel.IsFunction ? Visibility.Visible : Visibility.Collapsed;
+                    record.IsEnabled = rowModel.CanRecord;
+                    browse.IsEnabled = rowModel.CanBrowse;
+                }
+                RefreshValueVisibility();
+
+                kind.SelectionChanged += (s2, e2) =>
+                {
+                    rowModel.KindIndex = kind.SelectedIndex;
+                    RefreshValueVisibility();
+                };
+
+                var valueRow = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 8,
+                    Margin = new Thickness(56, 0, 0, 0),
+                };
+                valueRow.Children.Add(valueBox);
+                valueRow.Children.Add(functionBox);
+                valueRow.Children.Add(record);
+                valueRow.Children.Add(browse);
+
+                var card = new Border
+                {
+                    BorderThickness = new Thickness(1),
+                    BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
+                    Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"],
+                    CornerRadius = new CornerRadius(8),
+                    Padding = new Thickness(10),
+                    Child = new StackPanel { Spacing = 8, Children = { header, valueRow } },
+                };
 
                 remove.Click += (s2, e2) =>
                 {
-                    rowsPanel.Children.Remove(host);
-                    rows.Remove(entry);
-                    if (addButton != null)
-                        addButton.IsEnabled = rows.Count < ActionItem.MaxGroupChildren;
+                    rowsPanel.Children.Remove(card);
+                    rows.RemoveAll(r => ReferenceEquals(r.Model, rowModel));
+                    UpdateAddButtonState();
                 };
+
+                return card;
+            }
+
+            void AddRow(ActionItem? existing)
+            {
+                var source = existing ?? new ActionItem { Tag = rows.Count };
+                var rowModel = new ActionEditModel(source);
+                var card = BuildRow(rowModel);
+                rows.Add((rowModel, card));
+                rowsPanel.Children.Add(card);
             }
 
             foreach (var child in model.GroupChildren)
                 AddRow(child);
 
-            addButton = new Button { Content = "Add a button", IsEnabled = rows.Count < ActionItem.MaxGroupChildren };
+            addButton = new Button { Content = "Add a button" };
+            UpdateAddButtonState();
             addButton.Click += (s2, e2) =>
             {
                 AddRow(null);
-                addButton.IsEnabled = rows.Count < ActionItem.MaxGroupChildren;
+                UpdateAddButtonState();
             };
 
-            var content = new StackPanel { Spacing = 12, Width = 560 };
+            // ContentDialog caps its own width well under 620 regardless of what the content asks
+            // for - a 620-wide StackPanel here does not make the dialog 620 wide, it just gets
+            // clipped by the dialog's own right edge, which is what "the type combo box is missing
+            // a piece" turned out to be: the box was never invisible, just cut off past the
+            // dialog's real, narrower boundary. 460 stays comfortably inside that cap.
+            var content = new StackPanel { Spacing = 12, Width = 460 };
             content.Children.Add(new TextBlock
             {
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
-                Text = "These appear on a second ring around the main one when this button is selected. "
-                    + "Glyph is a hex code from the bundled icon font, the same as the main list - leave "
-                    + "it blank for no picture.",
+                Text = "These appear on a second ring around the main one when this button is selected, "
+                    + "at the same size and following the same colours as the main ring. Pick an icon, "
+                    + "a name and a type for each, just like the buttons above.",
             });
             content.Children.Add(rowsPanel);
             content.Children.Add(addButton);
@@ -504,7 +658,7 @@ namespace Action_Wheel.Settings
                 DefaultButton = ContentDialogButton.Primary,
                 Content = new ScrollViewer
                 {
-                    MaxHeight = 420,
+                    MaxHeight = 480,
                     VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                     Content = content,
                 },
@@ -518,17 +672,7 @@ namespace Action_Wheel.Settings
 
                 var children = new List<ActionItem>();
                 for (int i = 0; i < rows.Count; i++)
-                {
-                    var (label, kind, value, glyph, _) = rows[i];
-                    children.Add(new ActionItem
-                    {
-                        Tag = i,
-                        Label = label.Text.Trim(),
-                        Kind = ActionValueCodec.IndexToKind(kind.SelectedIndex),
-                        Value = value.Text.Trim(),
-                        Glyph = glyph.Text.Trim().ToUpperInvariant(),
-                    });
-                }
+                    children.Add(rows[i].Model.ToActionItem() with { Tag = i });
 
                 model.GroupChildren = children;
             }
@@ -539,6 +683,7 @@ namespace Action_Wheel.Settings
             finally
             {
                 _dialogOpen = false;
+                StopRecording();
             }
         }
 

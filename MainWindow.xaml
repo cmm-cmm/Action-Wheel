@@ -42,10 +42,7 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <Border Grid.Column="0" Width="64" Height="64" CornerRadius="20"
-                            Background="{ThemeResource AccentFillColorSecondaryBrush}">
-                        <Image Source="/icon.ico" Width="36" Height="36"/>
-                    </Border>
+                    <Image Grid.Column="0" Source="/icon.ico" Width="72" Height="72"/>
 
                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                         <TextBlock Text="Action Wheel" FontSize="26" FontWeight="Bold"/>

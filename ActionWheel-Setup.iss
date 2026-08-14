@@ -1,4 +1,4 @@
-; ==============================================
+﻿; ==============================================
 ; Action Wheel - Installer Script for Inno Setup
 ; ==============================================
 ; Download Inno Setup: https://jrsoftware.org/isdl.php
@@ -35,11 +35,10 @@ SetupIconFile=icon.ico
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
-Name: "vietnamese"; MessagesFile: "compiler:Languages\Vietnamese.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "startup"; Description: "Ch?y khi kh?i ??ng Windows"; GroupDescription: "T?y ch?n kh?c:"; Flags: unchecked
+Name: "startup"; Description: "Run at Windows startup"; GroupDescription: "Other options:"; Flags: unchecked
 
 [Files]
 Source: "{#MyAppSourcePath}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
@@ -48,7 +47,7 @@ Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{group}\G? c?i ??t {#MyAppName}"; Filename: "{uninstallexe}"
+Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: startup
 
@@ -66,7 +65,7 @@ begin
   GetWindowsVersionEx(Version);
   if Version.Major < 10 then
   begin
-    MsgBox('Action Wheel y?u c?u Windows 10 tr? l?n.', mbError, MB_OK);
+    MsgBox('Action Wheel requires Windows 10 or later.', mbError, MB_OK);
     Result := False;
   end
   else

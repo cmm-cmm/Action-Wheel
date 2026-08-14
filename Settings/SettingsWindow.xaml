@@ -21,10 +21,10 @@
         bind straight to ActionEditModel properties (Label, KindIndex, ...) rather than reaching
         through the view model.
 
-        Các binding ở đây dùng {Binding} cổ điển chứ không phải {x:Bind}: tránh phụ thuộc vào việc
-        x:Bind hoạt động ra sao khi phần tử gốc là Window. Binding cổ điển dùng reflection - dự án
-        đang publish với PublishTrimmed=False nên an toàn; nếu sau này bật trimming thì phải chuyển
-        các binding này sang x:Bind.
+        The bindings here use classic {Binding} rather than {x:Bind}: this avoids depending on how
+        x:Bind behaves when the root element is a Window. Classic binding uses reflection - safe
+        while the project publishes with PublishTrimmed=False; if trimming is ever turned on, these
+        bindings need to move to x:Bind.
     -->
     <Grid x:Name="RootGrid">
         <Grid.Resources>
@@ -49,7 +49,7 @@
                 one font only, so the family is never left to default.
             -->
 
-            <!-- Ô icon trong bảng chọn biểu tượng -->
+            <!-- One icon cell in the glyph-picker grid -->
             <DataTemplate x:Key="GlyphChoiceTemplate">
                 <Border Width="44" Height="44" ToolTipService.ToolTip="{Binding Tooltip}">
                     <FontIcon FontFamily="{StaticResource IconFontFamily}"
@@ -60,8 +60,9 @@
                 </Border>
             </DataTemplate>
 
-            <!-- Một dòng gọn trong danh sách bên trái: chỉ đủ để nhận ra và chọn nút, phần chỉnh
-                 sửa đầy đủ nằm ở khung chi tiết bên phải (xem DataContext của DetailPanelBorder). -->
+            <!-- A compact row in the left-hand list: just enough to identify and select a button,
+                 with full editing living in the detail panel on the right (see DetailPanelBorder's
+                 DataContext). -->
             <DataTemplate x:Key="CompactActionRowTemplate">
                 <!-- AutomationProperties.Name is required here, not decorative: a Grid of
                      TextBlocks reports nothing to a screen reader by default, unlike the old

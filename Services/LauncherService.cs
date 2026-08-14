@@ -328,8 +328,8 @@ namespace Action_Wheel.Services
         {
             _targetWindow = ActionDispatcher.CaptureTargetWindow();
 
-            // Toàn bộ việc đóng/mở phải nằm trong cùng một lượt trên UI thread. Nếu đóng menu cũ
-            // ngay tại đây (trên callback của hook) thì thao tác chạm vào window từ ngoài UI thread.
+            // Closing and opening both have to happen in the same UI-thread turn. Closing the old
+            // menu right here (on the hook's callback) would touch the window from off the UI thread.
             _dispatcherQueue.TryEnqueue(() =>
             {
                 try
@@ -340,10 +340,10 @@ namespace Action_Wheel.Services
                     var menu = new RadialMenu(_actions, _appearance);
                     _currentMenu = menu;
 
-                    // Chỉ xoá tham chiếu nếu nó vẫn đang trỏ tới đúng menu này. Sự kiện Closed
-                    // của menu cũ đến sau khi menu mới đã được gán, nên một handler bắt cứng
-                    // "_currentMenu = null" sẽ xoá nhầm menu mới và làm nó không bao giờ đóng
-                    // được bằng lần middle-click kế tiếp.
+                    // Only clear the reference if it still points at this exact menu. The old menu's
+                    // Closed event arrives after the new one has already been assigned, so a
+                    // hardcoded "_currentMenu = null" here would wipe out the new menu and it would
+                    // never close on the next middle-click.
                     menu.Closed += (s, e) =>
                     {
                         if (ReferenceEquals(_currentMenu, menu))

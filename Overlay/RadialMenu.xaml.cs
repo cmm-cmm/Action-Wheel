@@ -144,7 +144,7 @@ namespace Action_Wheel.Overlay
         private IntPtr _windowHandle;
 
         /// <summary>
-        /// Kích thước menu tính bằng DIP. Derived from the ring rather than fixed at 400: a wide
+        /// Menu size in DIPs. Derived from the ring rather than fixed at 400: a wide
         /// orbit needs a wider window, and the XAML's 400 is only the default that ApplySizes
         /// overwrites on MenuContainer and ButtonsCanvas when this differs.
         /// </summary>
@@ -185,19 +185,19 @@ namespace Action_Wheel.Overlay
         private readonly RingAppearance _appearance;
 
         /// <summary>
-        /// Hệ số DPI của màn hình chứa menu. AppWindow.Resize/Move làm việc bằng pixel vật lý,
-        /// còn layout XAML (và toàn bộ phép tính hit-test bên dưới) làm việc bằng DIP. Ở mức
-        /// scale 100% hai đơn vị này trùng nhau, nhưng ở 125%/150% mà không nhân hệ số này thì
-        /// window vật lý sẽ nhỏ hơn nội dung XAML và menu bị cắt mất phần rìa.
+        /// The DPI scale of the monitor the menu is on. AppWindow.Resize/Move work in physical
+        /// pixels, while XAML layout (and every hit-test calculation below) works in DIPs. At 100%
+        /// scale the two units coincide, but at 125%/150% failing to multiply by this factor leaves
+        /// the physical window smaller than the XAML content, clipping the menu's edge.
         /// </summary>
         private double _rasterizationScale = 1.0;
 
-        /// <summary>Kích thước window tính bằng pixel vật lý.</summary>
+        /// <summary>Window size in physical pixels.</summary>
         private int PhysicalMenuSize => RingGeometry.PhysicalMenuSize(_rasterizationScale, MenuSize);
 
         private readonly IReadOnlyList<ActionItem> _actions;
 
-        /// <summary>Vị trí window trên màn hình, dùng để biết một cú click có rơi vào menu không.</summary>
+        /// <summary>The window's position on screen, used to tell whether a click landed on the menu.</summary>
         private PointInt32 _screenOrigin;
 
         /// <summary>
@@ -403,7 +403,7 @@ namespace Action_Wheel.Overlay
         }
 
         /// <summary>
-        /// Tất cả các nút, theo đúng thứ tự Tag 0-8 (0 là nút giữa). Cached: this used to be an
+        /// All the buttons, in Tag order 0-8 (0 is the centre button). Cached: this used to be an
         /// expression-bodied property, so every read - several per menu, and once per button inside
         /// ApplyShadows' own loop over it - allocated a fresh nine-element array.
         /// </summary>
@@ -429,13 +429,13 @@ namespace Action_Wheel.Overlay
             return index;
         }
 
-        /// <summary>Hàm vẽ trạng thái nghỉ/nổi bật của một nút.</summary>
+        /// <summary>Draws a button's rest/highlighted state.</summary>
         private sealed record ButtonPainter(Action Rest, Action Hover, Action Pressed);
 
-        /// <summary>Painter của từng nút, đánh chỉ số theo Tag.</summary>
+        /// <summary>Each button's painter, indexed by Tag.</summary>
         private readonly ButtonPainter?[] _buttonPainters = new ButtonPainter?[9];
 
-        /// <summary>Nút đang được cử chỉ kéo làm nổi bật, null nếu không có.</summary>
+        /// <summary>The button the drag gesture is currently highlighting, null if none.</summary>
         private int? _highlightedTag;
 
         /// <summary>
@@ -924,8 +924,8 @@ namespace Action_Wheel.Overlay
         }
 
         /// <summary>
-        /// Đưa icon, tooltip và màu từ cấu hình vào các nút. Nút nào không có mục tương ứng trong
-        /// actions.json thì giữ nguyên nội dung khai báo sẵn trong XAML.
+        /// Applies each button's icon, tooltip and colours from the configuration. A button with no
+        /// matching entry in actions.json keeps whatever is declared for it in XAML.
         /// </summary>
         private void ApplyActions()
         {
@@ -1188,9 +1188,9 @@ namespace Action_Wheel.Overlay
 
                 RemoveWindowFrame(hwnd);
 
-                // Force window to be topmost. Cố ý KHÔNG dùng SWP_SHOWWINDOW ở đây: lúc này
-                // window chưa biết vị trí con trỏ, hiện nó ra sẽ làm menu nháy lên ở vị trí mặc
-                // định của hệ thống trước khi ShowAtPosition kịp dời đi.
+                // Force window to be topmost. Deliberately NOT using SWP_SHOWWINDOW here: the window
+                // does not know the cursor position yet, so showing it now would flash the menu at
+                // the system's default position before ShowAtPosition gets a chance to move it.
                 SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 
             }
@@ -1437,8 +1437,8 @@ namespace Action_Wheel.Overlay
 
             // Place center button at cursor position.
             // Center button is at (MenuSize/2, MenuSize/2) in window coordinates, so the window's
-            // top-left goes at cursor - half the window size. Mọi phép tính ở đây dùng pixel vật
-            // lý vì AppWindow.Move/Resize và work area của monitor đều là pixel vật lý.
+            // top-left goes at cursor - half the window size. Every calculation here uses physical
+            // pixels because AppWindow.Move/Resize and the monitor's work area are both physical.
             int size = PhysicalMenuSize;
             var work = GetMonitorWorkArea(position);
 
@@ -1450,11 +1450,11 @@ namespace Action_Wheel.Overlay
             var target = new PointInt32(origin.X, origin.Y);
             _screenOrigin = target;
 
-            // Đặt vị trí TRƯỚC rồi mới Activate() để menu không nháy lên ở chỗ khác, nhưng phải
-            // đặt LẠI một lần nữa sau đó: lần Activate() đầu tiên là lúc window thực sự được
-            // show, và Win32 sẽ áp vị trí mặc định (CW_USEDEFAULT/cascade) đã dành sẵn cho
-            // window, ghi đè lệnh Move trước đó - đó là lý do menu hay mọc ra ở một góc màn hình
-            // thay vì ngay dưới con trỏ.
+            // Position is set BEFORE Activate() so the menu does not flash somewhere else, but it
+            // has to be set AGAIN afterwards: the first Activate() is when the window is actually
+            // shown, and Win32 applies the default position (CW_USEDEFAULT/cascade) reserved for
+            // the window, overwriting the earlier Move - which is why the menu used to pop up in a
+            // corner of the screen instead of right under the cursor.
             _appWindow.Move(target);
             Activate();
             _appWindow.Move(target);
@@ -1517,9 +1517,10 @@ namespace Action_Wheel.Overlay
 
         private void RootGrid_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            // Nếu cú click rơi trúng một Button thì Click handler của nút đó lo, không đóng ở đây.
-            // Trước đây chỗ này tự tính khoảng cách tới tâm từng nút, nhưng cách đó phải giữ đồng
-            // bộ thủ công với kích thước nút trong XAML và sẽ lệch ngay khi style đổi.
+            // If the click landed on a Button, that button's own Click handler deals with it - don't
+            // close here. This used to compute the distance to each button's centre by hand, but
+            // that had to be kept in sync manually with the button sizes in XAML and drifted the
+            // moment the style changed.
             if (IsWithinButton(e.OriginalSource as DependencyObject))
                 return;
 
@@ -1541,8 +1542,8 @@ namespace Action_Wheel.Overlay
         }
 
         /// <summary>
-        /// True nếu điểm (toạ độ màn hình) nằm trong vùng window của menu. LauncherService dùng
-        /// hàm này để phân biệt click vào menu với click ra chỗ khác trên màn hình.
+        /// True if the point (screen coordinates) falls within the menu's window bounds.
+        /// LauncherService uses this to tell a click on the menu apart from a click elsewhere on screen.
         /// </summary>
         public bool ContainsScreenPoint(PointInt32 point) => RingGeometry.Contains(
             new ScreenPoint(_screenOrigin.X, _screenOrigin.Y),

@@ -54,8 +54,7 @@ the WinUI 3 app on top of it. Application startup and the informational
 window live in `App.xaml(.cs)` / `MainWindow.xaml(.cs)`. Global hooks,
 action execution, configuration, and tray behavior live in `Services/`. The
 radial overlay is in `Overlay/`; settings UI and editable view models are in
-`Settings/` and `ViewModels/`. Packaging images are in `Assets/`; historical
-design/deployment notes are under `doc/`.
+`Settings/` and `ViewModels/`. Packaging images are in `Assets/`.
 
 ## Coding style
 

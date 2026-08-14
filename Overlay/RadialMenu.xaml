@@ -13,20 +13,20 @@
         <Grid.Resources>
             
             <!--
-                Style cho buttons bên ngoài.
+                Style for the outer buttons.
 
-                Các button này BẮT BUỘC phải dùng ControlTemplate riêng thay vì dựa vào template
-                mặc định của WinUI: ở template mặc định, Background/Foreground đặt trên Button chỉ
-                có tác dụng ở trạng thái nghỉ ban đầu - VisualState "PointerOver" ghi đè trực tiếp
-                lên ContentPresenter bằng theme brush, còn state "Normal" KHÔNG có setter nào để
-                khôi phục, nên màu hover bị kẹt vĩnh viễn sau lần rê chuột đầu tiên.
-                (Xem "lightweight styling" trong tài liệu XAML styles của Microsoft.)
+                These buttons MUST use their own ControlTemplate instead of relying on WinUI's
+                default one: in the default template, Background/Foreground set on the Button only
+                take effect in the initial rest state - the "PointerOver" VisualState overwrites the
+                ContentPresenter directly with a theme brush, and the "Normal" state has NO setter to
+                restore it, so the hover colour stays stuck permanently after the first time the
+                pointer moves over it. (See "lightweight styling" in Microsoft's XAML styles docs.)
 
-                Template này dùng TemplateBinding cho màu và CỐ Ý không khai báo màu trong bất kỳ
-                VisualState nào - màu của từng nút đến từ actions.json nên phải do code đặt vào
-                Background/Foreground của Button. Setter màu trong VisualState sẽ ghi đè lên giá trị
-                đó. Hover/pressed được RadialMenu.ApplyPointerStates xử lý trong code-behind; ở đây
-                chỉ còn hiệu ứng phóng to.
+                This template uses TemplateBinding for colour and DELIBERATELY declares no colour in
+                any VisualState - each button's colour comes from actions.json, so it has to be set
+                by code onto the Button's Background/Foreground. A colour setter in a VisualState
+                would overwrite that value. Hover/pressed are handled by RadialMenu.ApplyPointerStates
+                in code-behind; all that's left here is the scale-up effect.
             -->
             <Style x:Key="RadialButtonStyle" TargetType="Button">
                 <Setter Property="Width" Value="44"/>
@@ -49,8 +49,8 @@
                                 <Grid.RenderTransform>
                                     <ScaleTransform x:Name="HoverScale" ScaleX="1" ScaleY="1"/>
                                 </Grid.RenderTransform>
-                                <!-- Rỗng và nằm DƯỚI Bd: RadialMenu.ApplyShadow gắn sprite visual
-                                     đổ bóng vào đây, nên bóng được vẽ phía sau nút. -->
+                                <!-- Empty and BELOW Bd: RadialMenu.ApplyShadow attaches the shadow
+                                     sprite visual here, so the shadow is drawn behind the button. -->
                                 <Border x:Name="ShadowHost"
                                         Width="{TemplateBinding Width}"
                                         Height="{TemplateBinding Height}"/>
@@ -95,7 +95,7 @@
                 </Setter>
             </Style>
 
-            <!-- Style cho center button. Cùng lý do phải dùng template riêng như trên. -->
+            <!-- Style for the center button. Same reason as above for needing its own template. -->
             <Style x:Key="CenterButtonStyle" TargetType="Button">
                 <Setter Property="Width" Value="40"/>
                 <Setter Property="Height" Value="40"/>
@@ -202,7 +202,7 @@
                     <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF023;" FontSize="14"/>
                 </Button>
                 
-                <!-- Center Button - Màu Đỏ -->
+                <!-- Center button -->
                 <Button x:Name="CenterBtn" Canvas.Left="174" Canvas.Top="174" Style="{StaticResource CenterButtonStyle}" Click="ActionButton_Click" Tag="0" Opacity="0">
                     <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF00D;" FontSize="14"/>
                 </Button>

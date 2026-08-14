@@ -125,11 +125,13 @@
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                                             <Button Width="36" Height="34" Padding="0" Tag="{Binding}"
                                                     Click="TestAction_Click"
+                                                    AutomationProperties.Name="Test this action"
                                                     ToolTipService.ToolTip="Test this action without saving">
                                                 <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF04B;" FontSize="14"/>
                                             </Button>
                                             <Button Width="36" Height="34" Padding="0"
                                                     Command="{Binding ResetCommand}"
+                                                    AutomationProperties.Name="Reset this button to its default"
                                                     ToolTipService.ToolTip="Reset this button to its default">
                                                 <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF021;" FontSize="14"/>
                                             </Button>
@@ -147,6 +149,7 @@
                                                 Content="{Binding IconSource, Mode=OneWay, Converter={StaticResource IconPreviewConverter}}"
                                                 Tag="{Binding}"
                                                 Click="PickGlyph_Click"
+                                                AutomationProperties.Name="Choose an icon"
                                                 ToolTipService.ToolTip="Choose an icon"/>
                                         <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
                                             <TextBox PlaceholderText="Tooltip text"
@@ -197,6 +200,7 @@
                                                       Unchecked="Record_Unchecked"
                                                       IsEnabled="{Binding CanRecord, Mode=OneWay}"
                                                       Visibility="{Binding IsGroup, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"
+                                                      AutomationProperties.Name="Record a key press"
                                                       ToolTipService.ToolTip="Record a key press">
                                             <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF11C;" FontSize="14"/>
                                         </ToggleButton>
@@ -206,6 +210,7 @@
                                                 Click="Browse_Click"
                                                 IsEnabled="{Binding CanBrowse, Mode=OneWay}"
                                                 Visibility="{Binding IsGroup, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"
+                                                AutomationProperties.Name="Browse for a file"
                                                 ToolTipService.ToolTip="Browse for a file">
                                             <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF115;" FontSize="14"/>
                                         </Button>
@@ -246,12 +251,14 @@
                                                      Text="{Binding IconPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                             <Button Grid.Column="1" Width="36" Height="32" Padding="0"
                                                     Tag="{Binding}" Click="BrowseSvg_Click"
+                                                    AutomationProperties.Name="Choose an icon file"
                                                     ToolTipService.ToolTip="Choose an .svg, .png or .ico file">
                                                 <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF115;" FontSize="13"/>
                                             </Button>
                                             <Button Grid.Column="2" Width="36" Height="32" Padding="0"
                                                     Command="{Binding ClearIconCommand}"
                                                     IsEnabled="{Binding HasIconFile, Mode=OneWay}"
+                                                    AutomationProperties.Name="Back to the glyph icon"
                                                     ToolTipService.ToolTip="Back to the glyph icon">
                                                 <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF00D;" FontSize="13"/>
                                             </Button>
@@ -265,6 +272,7 @@
                                             <StackPanel Spacing="4" HorizontalAlignment="Center">
                                                 <Button Width="56" Height="34" Padding="0"
                                                         Tag="{Binding}" Click="PickForeground_Click"
+                                                        AutomationProperties.Name="Icon colour"
                                                         ToolTipService.ToolTip="Icon colour">
                                                     <Border Width="26" Height="18" CornerRadius="3"
                                                             BorderThickness="1"
@@ -277,6 +285,7 @@
                                             <StackPanel Spacing="4" HorizontalAlignment="Center">
                                                 <Button Width="56" Height="34" Padding="0"
                                                         Tag="{Binding}" Click="PickBackground_Click"
+                                                        AutomationProperties.Name="Button colour"
                                                         ToolTipService.ToolTip="Button colour">
                                                     <Border Width="26" Height="18" CornerRadius="3"
                                                             BorderThickness="1"
@@ -289,6 +298,7 @@
                                             <StackPanel Spacing="4" HorizontalAlignment="Center">
                                                 <Button Width="56" Height="34" Padding="0"
                                                         Tag="{Binding}" Click="PickShadow_Click"
+                                                        AutomationProperties.Name="Shadow colour"
                                                         ToolTipService.ToolTip="Shadow colour">
                                                     <Border Width="26" Height="18" CornerRadius="3"
                                                             BorderThickness="1"
@@ -926,11 +936,13 @@
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                         <Button Width="40" Height="34" Padding="0"
                                 Command="{Binding UndoCommand}"
+                                AutomationProperties.Name="Undo"
                                 ToolTipService.ToolTip="Undo (unsaved changes)">
                             <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF0E2;" FontSize="14"/>
                         </Button>
                         <Button Width="40" Height="34" Padding="0"
                                 Command="{Binding RedoCommand}"
+                                AutomationProperties.Name="Redo"
                                 ToolTipService.ToolTip="Redo">
                             <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF01E;" FontSize="14"/>
                         </Button>

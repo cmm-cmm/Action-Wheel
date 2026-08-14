@@ -24,6 +24,7 @@ namespace Action_Wheel.ViewModels
             OpenSettingsCommand = new RelayCommand(() => SettingsRequested?.Invoke(this, EventArgs.Empty));
             CopyDiagnosticsCommand = new RelayCommand(CopyDiagnostics);
             RestoreBackupCommand = new RelayCommand(RestoreBackup, () => CanRestoreBackup);
+            OpenUpdateCommand = new RelayCommand(OpenUpdate, () => HasUpdateAvailable);
 
             if (_launcher != null)
             {
@@ -42,6 +43,7 @@ namespace Action_Wheel.ViewModels
         public RelayCommand OpenSettingsCommand { get; }
         public RelayCommand CopyDiagnosticsCommand { get; }
         public RelayCommand RestoreBackupCommand { get; }
+        public RelayCommand OpenUpdateCommand { get; }
 
         /// <summary>The product version embedded in Action Wheel.exe, formatted for display.</summary>
         public string VersionText
@@ -222,6 +224,39 @@ namespace Action_Wheel.ViewModels
             _suppressStartupWrite = true;
             StartWithWindows = StartupManager.IsEnabled;
             _suppressStartupWrite = false;
+        }
+
+        #endregion
+
+        #region Update check
+
+        private UpdateInfo? _availableUpdate;
+
+        /// <summary>
+        /// Set once, from <see cref="Action_Wheel.App"/>'s background check after launch - there is
+        /// no re-check while the window is open, so this only ever moves from false to true.
+        /// </summary>
+        public void ApplyUpdateCheck(UpdateInfo update)
+        {
+            _availableUpdate = update;
+            Raise(nameof(HasUpdateAvailable), nameof(UpdateTitle), nameof(UpdateMessage));
+            OpenUpdateCommand.RaiseCanExecuteChanged();
+        }
+
+        public bool HasUpdateAvailable => _availableUpdate != null;
+
+        public string UpdateTitle => _availableUpdate == null
+            ? string.Empty
+            : $"Version {_availableUpdate.Version} is available";
+
+        public string UpdateMessage => "You're running an older release. Open the GitHub release page to download it.";
+
+        private void OpenUpdate()
+        {
+            if (_availableUpdate == null)
+                return;
+
+            ShellCommands.OpenPath(_availableUpdate.ReleaseUrl, out _);
         }
 
         #endregion

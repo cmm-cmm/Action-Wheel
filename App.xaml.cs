@@ -83,6 +83,25 @@ namespace Action_Wheel
             _window.Activate();
 
             SetUpTrayIcon();
+
+            _ = CheckForUpdatesAsync(viewModel);
+        }
+
+        /// <summary>
+        /// Fire-and-forget, same as <see cref="AppIconExtractor.CleanupUnusedAsync"/> above: a
+        /// network round-trip has no business delaying <see cref="OnLaunched"/>, which is already
+        /// measured at 185 ms. <see cref="UpdateChecker.CheckAsync"/> never throws, so nothing here
+        /// needs a try/catch of its own - only the explicit hop back onto the UI thread, the same
+        /// discipline <c>LauncherService</c> applies to its own background-thread callbacks.
+        /// </summary>
+        private async System.Threading.Tasks.Task CheckForUpdatesAsync(MainViewModel viewModel)
+        {
+            var currentVersion = typeof(App).Assembly.GetName().Version ?? new Version(0, 0, 0);
+            var update = await UpdateChecker.CheckAsync(currentVersion).ConfigureAwait(false);
+            if (update == null)
+                return;
+
+            _window?.DispatcherQueue.TryEnqueue(() => viewModel.ApplyUpdateCheck(update));
         }
 
         /// <summary>

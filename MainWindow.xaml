@@ -64,6 +64,17 @@
                         Message="{Binding HookMessage}"/>
 
                     <InfoBar
+                        IsOpen="{Binding HasUpdateAvailable, Mode=OneWay}"
+                        IsClosable="True"
+                        Severity="Informational"
+                        Title="{Binding UpdateTitle}"
+                        Message="{Binding UpdateMessage}">
+                        <InfoBar.ActionButton>
+                            <Button Content="View release" Command="{Binding OpenUpdateCommand}"/>
+                        </InfoBar.ActionButton>
+                    </InfoBar>
+
+                    <InfoBar
                         IsOpen="True"
                         IsClosable="False"
                         Severity="Warning"

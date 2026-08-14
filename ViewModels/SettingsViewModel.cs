@@ -156,7 +156,9 @@ namespace Action_Wheel.ViewModels
             Raise(nameof(ConfigPath));
             Raise(nameof(TriggerIndex));
             Raise(nameof(ChordTimeoutMs));
+            Raise(nameof(ChordTimeoutMsText));
             Raise(nameof(MovementThreshold));
+            Raise(nameof(MovementThresholdText));
             Raise(nameof(ActiveProfileText));
 
             // Mirrors ApplyAppearance's own Raise list - everything the ring size/animation card and
@@ -166,7 +168,9 @@ namespace Action_Wheel.ViewModels
             Raise(nameof(RingAnimationIndex));
             Raise(nameof(RingAnimationDescription));
             Raise(nameof(ButtonSize));
+            Raise(nameof(ButtonSizeText));
             Raise(nameof(OrbitRadius));
+            Raise(nameof(OrbitRadiusText));
             Raise(nameof(AnimationDurationMs));
             Raise(nameof(AnimationDurationMsText));
             Raise(nameof(Appearance));
@@ -247,14 +251,17 @@ namespace Action_Wheel.ViewModels
         public double ChordTimeoutMs
         {
             get => _chordTimeoutMs;
-            set => Set(ref _chordTimeoutMs, value);
+            set { if (Set(ref _chordTimeoutMs, value)) Raise(nameof(ChordTimeoutMsText)); }
         }
 
         public double MovementThreshold
         {
             get => _movementThreshold;
-            set => Set(ref _movementThreshold, value);
+            set { if (Set(ref _movementThreshold, value)) Raise(nameof(MovementThresholdText)); }
         }
+
+        public string ChordTimeoutMsText => $"{_chordTimeoutMs:0} ms";
+        public string MovementThresholdText => $"{_movementThreshold:0} px";
 
 
         #region Rows

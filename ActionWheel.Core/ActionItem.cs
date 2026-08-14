@@ -113,8 +113,13 @@ namespace Action_Wheel.Core
         /// <summary>Command-line arguments for a <see cref="ActionKind.Launch"/> hold action.</summary>
         public string HoldArguments { get; init; } = string.Empty;
 
-        /// <summary>Comfortably enough to fan out without crowding the outer ring.</summary>
-        public const int MaxGroupChildren = 5;
+        /// <summary>
+        /// At the default button size/orbit radius the fan's angular step between neighbours is
+        /// ~13 degrees (see <c>RadialMenu.BuildGroupButtons</c>), so 8 keeps the fan under 100
+        /// degrees total - comfortably short of wrapping into the opposite side of the ring while
+        /// still giving each satellite room to be hit accurately.
+        /// </summary>
+        public const int MaxGroupChildren = 8;
 
         /// <summary>
         /// The buttons a <see cref="ActionKind.Group"/> button reveals. Ignored for every other

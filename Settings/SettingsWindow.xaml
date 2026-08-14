@@ -301,41 +301,78 @@
                                                           IsOn="{Binding ShadowEnabled, Mode=TwoWay}" OnContent="Shadow on" OffContent="Shadow off"
                                                           ToolTipService.ToolTip="Enable button shadow"/>
                                         </StackPanel>
-                                        <Grid ColumnSpacing="8">
+                                        <Grid ColumnSpacing="10" RowSpacing="8">
                                             <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="46"/>
                                             </Grid.ColumnDefinitions>
-                                            <NumberBox Grid.Column="0" Minimum="0" Maximum="1" SmallChange="0.05"
-                                                       Value="{Binding ShadowOpacity, Mode=TwoWay}" SpinButtonPlacementMode="Compact"
-                                                       ToolTipService.ToolTip="Shadow opacity (0–1), shown with up to two decimals">
-                                                <NumberBox.Header>
-                                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF043;" FontSize="12"/>
-                                                </NumberBox.Header>
-                                            </NumberBox>
-                                            <NumberBox Grid.Column="1" Minimum="0" Maximum="64" SmallChange="1"
-                                                       Value="{Binding ShadowBlur, Mode=TwoWay}" SpinButtonPlacementMode="Compact"
-                                                       ToolTipService.ToolTip="Shadow blur, shown with up to one decimal">
-                                                <NumberBox.Header>
-                                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF00B8;" FontSize="12"/>
-                                                </NumberBox.Header>
-                                            </NumberBox>
-                                            <NumberBox Grid.Column="2" Minimum="-50" Maximum="50" SmallChange="1"
-                                                       Value="{Binding ShadowOffsetX, Mode=TwoWay}" SpinButtonPlacementMode="Compact"
-                                                       ToolTipService.ToolTip="Shadow horizontal offset, shown with up to one decimal">
-                                                <NumberBox.Header>
-                                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF07E;" FontSize="12"/>
-                                                </NumberBox.Header>
-                                            </NumberBox>
-                                            <NumberBox Grid.Column="3" Minimum="-50" Maximum="50" SmallChange="1"
-                                                       Value="{Binding ShadowOffsetY, Mode=TwoWay}" SpinButtonPlacementMode="Compact"
-                                                       ToolTipService.ToolTip="Shadow vertical offset, shown with up to one decimal">
-                                                <NumberBox.Header>
-                                                    <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF07D;" FontSize="12"/>
-                                                </NumberBox.Header>
-                                            </NumberBox>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+
+                                            <FontIcon Grid.Row="0" Grid.Column="0" FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF043;" FontSize="13"
+                                                      VerticalAlignment="Center" ToolTipService.ToolTip="Shadow opacity"/>
+                                            <Slider Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="1" StepFrequency="0.05"
+                                                    TickFrequency="0.25" VerticalAlignment="Center"
+                                                    Value="{Binding ShadowOpacity, Mode=TwoWay}"
+                                                    ToolTipService.ToolTip="Shadow opacity (0–1)"/>
+                                            <Border Grid.Row="0" Grid.Column="2" Height="26" CornerRadius="4" BorderThickness="1"
+                                                    Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                                    ToolTipService.ToolTip="Current shadow opacity">
+                                                <TextBlock Text="{Binding ShadowOpacityText, Mode=OneWay}" FontSize="12"
+                                                           TextAlignment="Center" HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+
+                                            <FontIcon Grid.Row="1" Grid.Column="0" FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF00B8;" FontSize="13"
+                                                      VerticalAlignment="Center" ToolTipService.ToolTip="Shadow blur"/>
+                                            <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="64" StepFrequency="1"
+                                                    TickFrequency="8" VerticalAlignment="Center"
+                                                    Value="{Binding ShadowBlur, Mode=TwoWay}"
+                                                    ToolTipService.ToolTip="Shadow blur"/>
+                                            <Border Grid.Row="1" Grid.Column="2" Height="26" CornerRadius="4" BorderThickness="1"
+                                                    Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                                    ToolTipService.ToolTip="Current shadow blur">
+                                                <TextBlock Text="{Binding ShadowBlurText, Mode=OneWay}" FontSize="12"
+                                                           TextAlignment="Center" HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+
+                                            <FontIcon Grid.Row="2" Grid.Column="0" FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF07E;" FontSize="13"
+                                                      VerticalAlignment="Center" ToolTipService.ToolTip="Shadow horizontal offset"/>
+                                            <Slider Grid.Row="2" Grid.Column="1" Minimum="-50" Maximum="50" StepFrequency="1"
+                                                    TickFrequency="10" VerticalAlignment="Center"
+                                                    Value="{Binding ShadowOffsetX, Mode=TwoWay}"
+                                                    ToolTipService.ToolTip="Shadow horizontal offset"/>
+                                            <Border Grid.Row="2" Grid.Column="2" Height="26" CornerRadius="4" BorderThickness="1"
+                                                    Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                                    ToolTipService.ToolTip="Current shadow horizontal offset">
+                                                <TextBlock Text="{Binding ShadowOffsetXText, Mode=OneWay}" FontSize="12"
+                                                           TextAlignment="Center" HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+
+                                            <FontIcon Grid.Row="3" Grid.Column="0" FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF07D;" FontSize="13"
+                                                      VerticalAlignment="Center" ToolTipService.ToolTip="Shadow vertical offset"/>
+                                            <Slider Grid.Row="3" Grid.Column="1" Minimum="-50" Maximum="50" StepFrequency="1"
+                                                    TickFrequency="10" VerticalAlignment="Center"
+                                                    Value="{Binding ShadowOffsetY, Mode=TwoWay}"
+                                                    ToolTipService.ToolTip="Shadow vertical offset"/>
+                                            <Border Grid.Row="3" Grid.Column="2" Height="26" CornerRadius="4" BorderThickness="1"
+                                                    Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                                    ToolTipService.ToolTip="Current shadow vertical offset">
+                                                <TextBlock Text="{Binding ShadowOffsetYText, Mode=OneWay}" FontSize="12"
+                                                           TextAlignment="Center" HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
                                         </Grid>
                                     </StackPanel>
 
@@ -618,7 +655,7 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
-                            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Padding="16" VerticalAlignment="Top">
+                            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Padding="16">
                                 <StackPanel Spacing="10">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF245;" FontSize="14"/>
@@ -645,21 +682,29 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <NumberBox Grid.Column="0" Header="Timeout (ms)"
-                                                   Minimum="200" Maximum="2000" SmallChange="50"
-                                                   Value="{Binding ChordTimeoutMs, Mode=TwoWay}"
-                                                   SpinButtonPlacementMode="Compact"
-                                                   ToolTipService.ToolTip="Maximum delay between pressing the first and second mouse buttons. Lower values reduce accidental activation."/>
-                                        <NumberBox Grid.Column="1" Header="Movement (px)"
-                                                   Minimum="2" Maximum="100" SmallChange="1"
-                                                   Value="{Binding MovementThreshold, Mode=TwoWay}"
-                                                   SpinButtonPlacementMode="Compact"
-                                                   ToolTipService.ToolTip="Maximum pointer movement allowed while completing a mouse chord. Lower values make the chord more deliberate."/>
+                                        <StackPanel Grid.Column="0" Spacing="2">
+                                            <Slider Header="Timeout (ms)"
+                                                    Minimum="200" Maximum="2000" StepFrequency="50" TickFrequency="450"
+                                                    Value="{Binding ChordTimeoutMs, Mode=TwoWay}"
+                                                    ToolTipService.ToolTip="Maximum delay between pressing the first and second mouse buttons. Lower values reduce accidental activation."/>
+                                            <TextBlock Text="{Binding ChordTimeoutMsText, Mode=OneWay}" FontSize="11"
+                                                       HorizontalAlignment="Right"
+                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <Slider Header="Movement (px)"
+                                                    Minimum="2" Maximum="100" StepFrequency="1" TickFrequency="20"
+                                                    Value="{Binding MovementThreshold, Mode=TwoWay}"
+                                                    ToolTipService.ToolTip="Maximum pointer movement allowed while completing a mouse chord. Lower values make the chord more deliberate."/>
+                                            <TextBlock Text="{Binding MovementThresholdText, Mode=OneWay}" FontSize="11"
+                                                       HorizontalAlignment="Right"
+                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                        </StackPanel>
                                     </Grid>
                                 </StackPanel>
                             </Border>
 
-                            <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" Padding="16" VerticalAlignment="Top">
+                            <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" Padding="16">
                                 <StackPanel Spacing="10">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF140;" FontSize="14"/>
@@ -705,20 +750,28 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <NumberBox Grid.Column="0" Header="Button size"
-                                                   Minimum="{Binding MinButtonSize, Mode=OneWay}"
-                                                   Maximum="{Binding MaxButtonSize, Mode=OneWay}"
-                                                   SmallChange="2"
-                                                   Value="{Binding ButtonSize, Mode=TwoWay}"
-                                                   SpinButtonPlacementMode="Compact"
-                                                   ToolTipService.ToolTip="Diameter of each outer button, in device-independent pixels. The centre button and the icons scale with it."/>
-                                        <NumberBox Grid.Column="1" Header="Distance from centre"
-                                                   Minimum="{Binding MinOrbitRadius, Mode=OneWay}"
-                                                   Maximum="{Binding MaxOrbitRadius, Mode=OneWay}"
-                                                   SmallChange="4"
-                                                   Value="{Binding OrbitRadius, Mode=TwoWay}"
-                                                   SpinButtonPlacementMode="Compact"
-                                                   ToolTipService.ToolTip="Distance from the ring's centre to each outer button. The lower limit rises as the buttons grow, so they never touch; the overlay window grows with the ring, so the upper limit does not move."/>
+                                        <StackPanel Grid.Column="0" Spacing="2">
+                                            <Slider Header="Button size"
+                                                    Minimum="{Binding MinButtonSize, Mode=OneWay}"
+                                                    Maximum="{Binding MaxButtonSize, Mode=OneWay}"
+                                                    StepFrequency="2"
+                                                    Value="{Binding ButtonSize, Mode=TwoWay}"
+                                                    ToolTipService.ToolTip="Diameter of each outer button, in device-independent pixels. The centre button and the icons scale with it."/>
+                                            <TextBlock Text="{Binding ButtonSizeText, Mode=OneWay}" FontSize="11"
+                                                       HorizontalAlignment="Right"
+                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <Slider Header="Distance from centre"
+                                                    Minimum="{Binding MinOrbitRadius, Mode=OneWay}"
+                                                    Maximum="{Binding MaxOrbitRadius, Mode=OneWay}"
+                                                    StepFrequency="4"
+                                                    Value="{Binding OrbitRadius, Mode=TwoWay}"
+                                                    ToolTipService.ToolTip="Distance from the ring's centre to each outer button. The lower limit rises as the buttons grow, so they never touch; the overlay window grows with the ring, so the upper limit does not move."/>
+                                            <TextBlock Text="{Binding OrbitRadiusText, Mode=OneWay}" FontSize="11"
+                                                       HorizontalAlignment="Right"
+                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                        </StackPanel>
                                     </Grid>
 
                                     <Grid ColumnSpacing="8">

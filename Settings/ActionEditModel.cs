@@ -329,10 +329,31 @@ namespace Action_Wheel.Settings
         // element - a disk stat (File.GetLastWriteTimeUtc) on every tick for a file-based icon - for
         // an update whose result was always identical to what was already on screen. Plain Set still
         // raises the property itself, which is all PreviewProperties needs for the big canvas redraw.
-        public double ShadowOpacity { get => _shadowOpacity; set => SetNormalised(ref _shadowOpacity, value, 0, 1, 2); }
-        public double ShadowBlur { get => _shadowBlur; set => SetNormalised(ref _shadowBlur, value, 0, 64, 1); }
-        public double ShadowOffsetX { get => _shadowOffsetX; set => SetNormalised(ref _shadowOffsetX, value, -50, 50, 1); }
-        public double ShadowOffsetY { get => _shadowOffsetY; set => SetNormalised(ref _shadowOffsetY, value, -50, 50, 1); }
+        public double ShadowOpacity
+        {
+            get => _shadowOpacity;
+            set { if (SetNormalised(ref _shadowOpacity, value, 0, 1, 2)) Raise(nameof(ShadowOpacityText)); }
+        }
+        public double ShadowBlur
+        {
+            get => _shadowBlur;
+            set { if (SetNormalised(ref _shadowBlur, value, 0, 64, 1)) Raise(nameof(ShadowBlurText)); }
+        }
+        public double ShadowOffsetX
+        {
+            get => _shadowOffsetX;
+            set { if (SetNormalised(ref _shadowOffsetX, value, -50, 50, 1)) Raise(nameof(ShadowOffsetXText)); }
+        }
+        public double ShadowOffsetY
+        {
+            get => _shadowOffsetY;
+            set { if (SetNormalised(ref _shadowOffsetY, value, -50, 50, 1)) Raise(nameof(ShadowOffsetYText)); }
+        }
+
+        public string ShadowOpacityText => _shadowOpacity.ToString("0.##", CultureInfo.CurrentCulture);
+        public string ShadowBlurText => _shadowBlur.ToString("0.#", CultureInfo.CurrentCulture);
+        public string ShadowOffsetXText => _shadowOffsetX.ToString("0.#", CultureInfo.CurrentCulture);
+        public string ShadowOffsetYText => _shadowOffsetY.ToString("0.#", CultureInfo.CurrentCulture);
 
         /// <summary>Stores a rounded, in-range value and keeps the editor showing what was stored.</summary>
         /// <remarks>
@@ -631,7 +652,8 @@ namespace Action_Wheel.Settings
             nameof(IconOffsetY), nameof(IconOffsetYText),
             nameof(IconTint), nameof(CanTintIcon),
             nameof(Foreground), nameof(Background), nameof(Shadow), nameof(KindIndex), nameof(IsValueEnabled),
-            nameof(ShadowEnabled), nameof(ShadowOpacity), nameof(ShadowBlur), nameof(ShadowOffsetX), nameof(ShadowOffsetY),
+            nameof(ShadowEnabled), nameof(ShadowOpacity), nameof(ShadowOpacityText), nameof(ShadowBlur), nameof(ShadowBlurText),
+            nameof(ShadowOffsetX), nameof(ShadowOffsetXText), nameof(ShadowOffsetY), nameof(ShadowOffsetYText),
             nameof(CanBrowse), nameof(CanRecord), nameof(ValuePlaceholder),
             nameof(IsFunction),
             nameof(HoldKindIndex), nameof(HoldValue), nameof(HoldArguments), nameof(IsHoldValueEnabled),

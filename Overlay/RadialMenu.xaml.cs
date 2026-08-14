@@ -756,8 +756,8 @@ namespace Action_Wheel.Overlay
         /// <remarks>
         /// The fan order is 0, +1, -1, +2, -2, ... steps away from the parent's own direction - child
         /// 1 starts exactly on the parent's own direction, child 2 one step clockwise, child 3 one
-        /// step anticlockwise, and so on outward on alternating sides. <see cref="ActionItem.MaxGroupChildren"/>
-        /// caps the fan at offsets -2..+2.
+        /// step anticlockwise, and so on outward on alternating sides. At <see cref="ActionItem.MaxGroupChildren"/>
+        /// (8) the fan reaches offsets -3..+4.
         ///
         /// The step is an angle computed from <see cref="GroupOrbitRadius"/> and
         /// <see cref="GroupButtonSize"/>, not the main ring's 45-degree slots: reusing the main

@@ -75,6 +75,10 @@ namespace Action_Wheel.ViewModels
             set => ApplyAppearance(_appearance with { OrbitRadius = value }, nameof(OrbitRadius));
         }
 
+        /// <summary>What each Slider's own Value would otherwise show as a bare, unlabelled number.</summary>
+        public string ButtonSizeText => $"{_appearance.ButtonSize:0} px";
+        public string OrbitRadiusText => $"{_appearance.OrbitRadius:0} px";
+
         /// <summary>
         /// How long the opening animation takes to finish, in milliseconds. Not on the
         /// animation-picker card's replay path: like <see cref="ButtonSize"/> and
@@ -123,11 +127,11 @@ namespace Action_Wheel.ViewModels
         /// Stores a normalised appearance and tells the UI what moved.
         /// </summary>
         /// <remarks>
-        /// The else branch is the one that is easy to leave out. A NumberBox reports NaN the moment
-        /// its text is empty; Normalised refuses that and keeps the old number, so the record
-        /// compares equal, so nothing is raised - and the box then stays blank for the rest of the
+        /// The else branch is the one that is easy to leave out. Normalised refuses an out-of-range
+        /// or non-finite value and keeps the old number, so the record compares equal, so nothing is
+        /// raised - and the control then stays showing the rejected value for the rest of the
         /// session while the model quietly holds a value the user cannot see. Raising the property
-        /// on a refused edit is what puts the real number back in the box.
+        /// on a refused edit is what puts the real number back in the control.
         /// </remarks>
         private void ApplyAppearance(RingAppearance requested, string propertyName, bool animate = false)
         {
@@ -143,18 +147,20 @@ namespace Action_Wheel.ViewModels
             // All of them, not just the one that was edited: clamping the button size moves the
             // orbit's limits, which can in turn move the orbit itself.
             //
-            // The limits go FIRST, and that order is load-bearing. A NumberBox coerces its Value
+            // The limits go FIRST, and that order is load-bearing. The Slider coerces its Value
             // into its own Minimum/Maximum and writes the coerced number back through the two-way
-            // binding. Raising OrbitRadius while the box still holds the previous size's Minimum
-            // therefore does not just display the wrong number - the box overwrites the model with
-            // it. Restore defaults with a 64 DIP ring showed exactly that: the size went back to 44
-            // and the orbit stuck at 92, the old minimum, instead of 88.
+            // binding. Raising OrbitRadius while the control still holds the previous size's Minimum
+            // therefore does not just display the wrong number - it overwrites the model with it.
+            // Restore defaults with a 64 DIP ring showed exactly that: the size went back to 44 and
+            // the orbit stuck at 92, the old minimum, instead of 88.
             Raise(nameof(MinOrbitRadius));
             Raise(nameof(MaxOrbitRadius));
             Raise(nameof(RingAnimationIndex));
             Raise(nameof(RingAnimationDescription));
             Raise(nameof(ButtonSize));
+            Raise(nameof(ButtonSizeText));
             Raise(nameof(OrbitRadius));
+            Raise(nameof(OrbitRadiusText));
             Raise(nameof(AnimationDurationMs));
             Raise(nameof(AnimationDurationMsText));
             Raise(nameof(Appearance));

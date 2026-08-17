@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text;
+using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -79,6 +81,9 @@ namespace Action_Wheel.Services
             if (TryCreateFileIcon(action, scaledSize, out var svg))
                 return svg!;
 
+            if (!string.IsNullOrWhiteSpace(action.IconText))
+                return CreateTextIcon(action, scaledSize, tint);
+
             // A code the shipped font has no icon for draws nothing at all. There is no fallback
             // picture on purpose: one would have to be a guess at what the user meant, and the
             // notdef box the font would otherwise draw reads as a broken app rather than as a
@@ -108,6 +113,61 @@ namespace Action_Wheel.Services
                 icon.Foreground = tint;
 
             return icon;
+        }
+
+        /// <summary>
+        /// Draws short text - a letter, an emoji, a couple of characters - as the icon instead of a
+        /// glyph or a file. The font shrinks as the text lengthens so two or three characters still
+        /// fit inside the same circle a single glyph would.
+        /// </summary>
+        private static FrameworkElement CreateTextIcon(ActionItem action, double scaledSize, Brush? tint)
+        {
+            string text = action.IconText.Trim();
+
+            // String.Length counts UTF-16 code units, not what the user typed - a single emoji is
+            // often a surrogate pair, sometimes several code points joined by a zero-width joiner.
+            // GetTextElementEnumerator counts what actually looks like one character on screen,
+            // which is what the sizing below needs to shrink correctly.
+            int elements = 0;
+            var enumerator = StringInfo.GetTextElementEnumerator(text);
+            while (enumerator.MoveNext())
+                elements++;
+            elements = Math.Max(1, elements);
+
+            double factor = elements switch
+            {
+                1 => 0.62,
+                2 => 0.48,
+                3 => 0.36,
+                _ => 0.30,
+            };
+
+            var block = new TextBlock
+            {
+                Text = text,
+                FontSize = Math.Max(1, scaledSize * factor),
+                FontWeight = FontWeights.SemiBold,
+                TextAlignment = TextAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxLines = 1,
+                Width = scaledSize,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                UseLayoutRounding = true,
+                RenderTransform = new TranslateTransform
+                {
+                    X = action.IconOffsetX,
+                    Y = action.IconOffsetY,
+                },
+            };
+
+            // Same rule as the glyph path above: a caller-supplied tint is a fixed colour for
+            // somewhere it never changes; leaving Foreground unset lets it inherit the button's own
+            // TemplateBinding instead, which is what keeps hover recolouring the text with it.
+            if (tint != null)
+                block.Foreground = tint;
+
+            return block;
         }
 
         private static bool TryCreateFileIcon(ActionItem action, double scaledSize, out FrameworkElement? element)

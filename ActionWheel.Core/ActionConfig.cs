@@ -241,6 +241,7 @@ namespace Action_Wheel.Core
                 Arguments = ReadString(element, "arguments"),
                 Glyph = ReadString(element, "glyph"),
                 IconPath = ReadString(element, "iconPath"),
+                IconText = ReadString(element, "iconText"),
                 IconScale = ReadDouble(element, "iconScale", ActionItem.DefaultIconScale),
                 IconOffsetX = ReadDouble(element, "iconOffsetX", 0),
                 IconOffsetY = ReadDouble(element, "iconOffsetY", 0),
@@ -401,6 +402,7 @@ namespace Action_Wheel.Core
             WriteIfSet(writer, "arguments", action.Arguments);
             writer.WriteString("glyph", action.Glyph);
             WriteIfSet(writer, "iconPath", action.IconPath);
+            WriteIfSet(writer, "iconText", action.IconText);
             if (action.IconScale != ActionItem.DefaultIconScale) writer.WriteNumber("iconScale", action.IconScale);
             if (action.IconOffsetX != 0) writer.WriteNumber("iconOffsetX", action.IconOffsetX);
             if (action.IconOffsetY != 0) writer.WriteNumber("iconOffsetY", action.IconOffsetY);

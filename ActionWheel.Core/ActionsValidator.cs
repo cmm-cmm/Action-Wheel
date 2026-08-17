@@ -75,9 +75,10 @@ namespace Action_Wheel.Core
                 || action.IconOffsetY is < -50 or > 50)
                 issues.Add(new(action.Tag, $"{prefix} contains invalid icon layout settings."));
             bool icon = !string.IsNullOrWhiteSpace(action.IconPath) && IconFile.IsUsable(action.IconPath);
+            bool text = string.IsNullOrWhiteSpace(action.IconPath) && !string.IsNullOrWhiteSpace(action.IconText);
             if (!string.IsNullOrWhiteSpace(action.IconPath) && !icon)
                 issues.Add(new(action.Tag, $"{prefix} refers to an icon file that cannot be read. Supported: {IconFile.SupportedDescription}."));
-            else if (!icon && !ActionValueCodec.TryConvertGlyph(action.Glyph, out _))
+            else if (!icon && !text && !ActionValueCodec.TryConvertGlyph(action.Glyph, out _))
                 issues.Add(new(action.Tag, $"{prefix} contains an invalid glyph."));
 
             if (isTopLevel && action.Kind == ActionKind.Group)

@@ -298,6 +298,7 @@ namespace Action_Wheel.ViewModels
                     // still act on the right button.
                     model.ResetCommand = new RelayCommand(() => ResetRow(model));
                     model.ClearIconCommand = new RelayCommand(() => ClearIcon(model));
+                    model.ClearIconTextCommand = new RelayCommand(() => ClearIconText(model));
 
                     model.PropertyChanged += OnItemPropertyChanged;
                     Items.Add(model);
@@ -459,6 +460,8 @@ namespace Action_Wheel.ViewModels
         }
 
         private void ClearIcon(ActionEditModel model) => model.IconPath = string.Empty;
+
+        private void ClearIconText(ActionEditModel model) => model.IconText = string.Empty;
 
         #endregion
 

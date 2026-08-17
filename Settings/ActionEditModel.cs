@@ -27,6 +27,7 @@ namespace Action_Wheel.Settings
         private string _arguments;
         private string _glyph;
         private string _iconPath;
+        private string _iconText;
         private double _iconScale;
         private double _iconOffsetX;
         private double _iconOffsetY;
@@ -61,6 +62,7 @@ namespace Action_Wheel.Settings
             _arguments = source.Arguments;
             _glyph = source.Glyph;
             _iconPath = source.IconPath;
+            _iconText = source.IconText;
             _iconScale = Math.Round(source.IconScale, 2, MidpointRounding.AwayFromZero);
             _iconOffsetX = Math.Round(source.IconOffsetX, 2, MidpointRounding.AwayFromZero);
             _iconOffsetY = Math.Round(source.IconOffsetY, 2, MidpointRounding.AwayFromZero);
@@ -90,6 +92,9 @@ namespace Action_Wheel.Settings
 
         /// <summary>Drops the custom SVG and goes back to the glyph icon.</summary>
         public ICommand? ClearIconCommand { get; internal set; }
+
+        /// <summary>Drops the custom text and goes back to the glyph icon.</summary>
+        public ICommand? ClearIconTextCommand { get; internal set; }
 
         public void RefreshFunctionChoices(IEnumerable<WindowsFunction> choices)
         {
@@ -223,6 +228,25 @@ namespace Action_Wheel.Settings
         }
 
         public bool HasIconFile => !string.IsNullOrWhiteSpace(_iconPath);
+
+        /// <summary>
+        /// Short text (a letter, an emoji, a couple of characters) drawn instead of the glyph. An
+        /// icon file set on the same row still wins - see <see cref="ActionItem.IconText"/>.
+        /// </summary>
+        public string IconText
+        {
+            get => _iconText;
+            set
+            {
+                if (!Set(ref _iconText, value))
+                    return;
+
+                Raise(nameof(HasIconText));
+                RaiseIconChanged();
+            }
+        }
+
+        public bool HasIconText => !string.IsNullOrWhiteSpace(_iconText);
 
         /// <summary>
         /// Only a vector icon can be recoloured, so the toggle is dead weight on any other file and
@@ -572,7 +596,7 @@ namespace Action_Wheel.Settings
         /// False when this row would draw no picture: a code the shipped icon font has no icon for,
         /// which is what a configuration written against the old icon font mostly contains.
         /// </summary>
-        public bool HasValidGlyph => HasIconFile || IconFont.TryResolve(_glyph, out _);
+        public bool HasValidGlyph => HasIconFile || HasIconText || IconFont.TryResolve(_glyph, out _);
 
         /// <summary>
         /// The icon exactly as the ring will draw it - SVG or glyph, in the configured colour - so
@@ -589,6 +613,7 @@ namespace Action_Wheel.Settings
             Arguments = (_arguments ?? string.Empty).Trim(),
             Glyph = (_glyph ?? string.Empty).Trim().ToUpperInvariant(),
             IconPath = (_iconPath ?? string.Empty).Trim(),
+            IconText = (_iconText ?? string.Empty).Trim(),
             IconScale = _iconScale,
             IconOffsetX = _iconOffsetX,
             IconOffsetY = _iconOffsetY,
@@ -619,6 +644,7 @@ namespace Action_Wheel.Settings
             _arguments = source.Arguments;
             _glyph = source.Glyph;
             _iconPath = source.IconPath;
+            _iconText = source.IconText;
             _iconScale = Math.Round(source.IconScale, 2, MidpointRounding.AwayFromZero);
             _iconOffsetX = Math.Round(source.IconOffsetX, 2, MidpointRounding.AwayFromZero);
             _iconOffsetY = Math.Round(source.IconOffsetY, 2, MidpointRounding.AwayFromZero);
@@ -648,6 +674,7 @@ namespace Action_Wheel.Settings
         {
             nameof(Tag), nameof(PositionName), nameof(TagCaption), nameof(Label), nameof(Value),
             nameof(Arguments), nameof(Glyph), nameof(IconPath), nameof(HasIconFile),
+            nameof(IconText), nameof(HasIconText),
             nameof(IconScale), nameof(IconScaleText), nameof(IconOffsetX), nameof(IconOffsetXText),
             nameof(IconOffsetY), nameof(IconOffsetYText),
             nameof(IconTint), nameof(CanTintIcon),

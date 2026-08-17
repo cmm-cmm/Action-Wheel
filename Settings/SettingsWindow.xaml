@@ -265,6 +265,31 @@
                                         </Grid>
                                     </StackPanel>
 
+                                    <!-- Icon text -->
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="Icon text" Style="{StaticResource SectionHeaderTextStyle}"/>
+                                        <TextBlock FontSize="11" TextWrapping="Wrap"
+                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                   Text="A short word, letter or emoji instead of a picture. An icon file above still wins over this."/>
+                                        <Grid ColumnSpacing="6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0"
+                                                     MaxLength="6"
+                                                     PlaceholderText="none — using the glyph"
+                                                     Text="{Binding IconText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <Button Grid.Column="1" Width="36" Height="32" Padding="0"
+                                                    Command="{Binding ClearIconTextCommand}"
+                                                    IsEnabled="{Binding HasIconText, Mode=OneWay}"
+                                                    AutomationProperties.Name="Back to the glyph icon from text"
+                                                    ToolTipService.ToolTip="Back to the glyph icon">
+                                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF00D;" FontSize="13"/>
+                                            </Button>
+                                        </Grid>
+                                    </StackPanel>
+
                                     <!-- Colours & shadow -->
                                     <StackPanel Spacing="10">
                                         <TextBlock Text="Colours &amp; shadow" Style="{StaticResource SectionHeaderTextStyle}"/>

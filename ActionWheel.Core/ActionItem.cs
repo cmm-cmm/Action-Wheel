@@ -61,7 +61,15 @@ namespace Action_Wheel.Core
         /// See <see cref="IconFile"/> for the formats that can be drawn.
         /// </summary>
         public string IconPath { get; init; } = string.Empty;
-        /// <summary>Display-size multiplier shared by glyph, SVG, PNG and ICO icons.</summary>
+
+        /// <summary>
+        /// Short text (a letter, a couple of characters, an emoji) to draw instead of
+        /// <see cref="Glyph"/>. Takes precedence over the glyph but not over <see cref="IconPath"/> -
+        /// a picked-out file is a stronger choice than either.
+        /// </summary>
+        public string IconText { get; init; } = string.Empty;
+
+        /// <summary>Display-size multiplier shared by glyph, SVG, PNG, ICO and text icons.</summary>
         public double IconScale { get; init; } = DefaultIconScale;
         public double IconOffsetX { get; init; }
         public double IconOffsetY { get; init; }

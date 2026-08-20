@@ -475,7 +475,8 @@ namespace Action_Wheel.Services
 
         private static bool TryPrepareShutdown(ActionItem action)
         {
-            if (!OpenProcessToken(Process.GetCurrentProcess().Handle,
+            using var currentProcess = Process.GetCurrentProcess();
+            if (!OpenProcessToken(currentProcess.Handle,
                 TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, out IntPtr token))
             {
                 ReportSystemFailure(action, "open the process token for shutdown");

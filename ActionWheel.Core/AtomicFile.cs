@@ -11,7 +11,11 @@ namespace Action_Wheel.Core
         {
             error = string.Empty;
             string? directory = Path.GetDirectoryName(path);
-            string temporary = path + ".tmp";
+
+            // GUID-suffixed, not a fixed ".tmp" - see ActionConfig.SaveTo, which does the same
+            // atomic-write job for actions.json. A fixed name lets two overlapping saves to the same
+            // path (a settings save racing a preferences reload, say) collide on the same temp file.
+            string temporary = $"{path}.{Guid.NewGuid():N}.tmp";
 
             try
             {

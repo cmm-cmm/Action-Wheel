@@ -51,6 +51,7 @@ namespace Action_Wheel.ViewModels
         {
             nameof(ActionEditModel.Tag), nameof(ActionEditModel.Label),
             nameof(ActionEditModel.Glyph), nameof(ActionEditModel.IconPath),
+            nameof(ActionEditModel.IconText),
             nameof(ActionEditModel.Foreground), nameof(ActionEditModel.Background),
             nameof(ActionEditModel.IconScale), nameof(ActionEditModel.IconOffsetX),
             nameof(ActionEditModel.IconOffsetY), nameof(ActionEditModel.IconTint),
@@ -64,7 +65,7 @@ namespace Action_Wheel.ViewModels
         {
             nameof(ActionEditModel.Tag), nameof(ActionEditModel.Label), nameof(ActionEditModel.Value),
             nameof(ActionEditModel.Arguments), nameof(ActionEditModel.Glyph),
-            nameof(ActionEditModel.IconPath), nameof(ActionEditModel.Foreground),
+            nameof(ActionEditModel.IconPath), nameof(ActionEditModel.IconText), nameof(ActionEditModel.Foreground),
             nameof(ActionEditModel.IconScale), nameof(ActionEditModel.IconOffsetX), nameof(ActionEditModel.IconOffsetY),
             nameof(ActionEditModel.IconTint),
             nameof(ActionEditModel.Background), nameof(ActionEditModel.KindIndex),

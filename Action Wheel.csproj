@@ -36,7 +36,7 @@
 
     <!-- Unpackaged app settings.
          MSIX tooling is off for normal builds because turning it on broke F5 debugging/deploy in
-         this project (see doc/FIX-DEBUG-DEPLOYMENT.md). It has to be ON while publishing though:
+         this project (see CLAUDE.md's Gotchas). It has to be ON while publishing though:
          Microsoft.WindowsAppSDK.SingleFile.targets refuses to run without it, since a single-file
          app needs resources.pri embedded rather than sitting next to the exe. Scoping it to
          $(_IsPublishing) gives both - debuggable builds and a working single-file publish. -->
@@ -91,13 +91,21 @@
 
   <!-- ActionWheel.Core lives in a subfolder of this project, so the SDK's **/*.cs glob would
        otherwise compile its sources into this assembly as well as its own - two definitions of
-       ActionItem, and a stale copy of every file the moment the two drift apart. -->
+       ActionItem, and a stale copy of every file the moment the two drift apart. Tools\ (the
+       RoundTripCheck console app) is the same problem: it is its own Exe project and must not be
+       swept into this WinExe's compile, or Program.cs's top-level statements collide with this
+       project's own entry point. -->
   <ItemGroup>
     <Compile Remove="ActionWheel.Core\**" />
     <Content Remove="ActionWheel.Core\**" />
     <EmbeddedResource Remove="ActionWheel.Core\**" />
     <None Remove="ActionWheel.Core\**" />
     <Page Remove="ActionWheel.Core\**" />
+    <Compile Remove="Tools\**" />
+    <Content Remove="Tools\**" />
+    <EmbeddedResource Remove="Tools\**" />
+    <None Remove="Tools\**" />
+    <Page Remove="Tools\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -112,7 +120,7 @@
   <!-- Publish-only properties for Release. These must stay scoped to an actual publish
        (not a plain "dotnet build -c Release"): the resources.pri this app needs at runtime is
        only generated when MSIX tooling is on, and this project intentionally runs unpackaged
-       (EnableMsixTooling=false for a normal build, see doc/FIX-DEBUG-DEPLOYMENT.md) - so
+       (EnableMsixTooling=false for a normal build, see CLAUDE.md's Gotchas) - so
        EnableMsixTooling is switched on above, but only while $(_IsPublishing).
 
        PublishSingleFile is true again as of Windows App SDK 2.3.1 (was 1.8.251106002). Below

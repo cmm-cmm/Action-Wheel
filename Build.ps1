@@ -17,8 +17,11 @@
     Package         - Publish, ZIP the output without renaming the exe, then run a launch smoke test
     Installer       - Publish, then build the Inno Setup installer from ActionWheel-Setup.iss
     VerifyBindings  - check every classic {Binding} path against the type behind it
+    VerifyRoundTrip - round-trip a probe ActionItem set through the actions.json and profile .xml
+                      codecs and diff every field; catches a field added to ActionItem but missed
+                      in one of the codecs
     Clean           - delete bin\ and obj\
-    All             - Restore, VerifyBindings, Debug, Release, Publish
+    All             - Restore, VerifyBindings, VerifyRoundTrip, Debug, Release, Publish
 
 .PARAMETER Platform
     x64 (default), x86 or ARM64. Sets both the MSBuild platform and the runtime identifier.
@@ -31,7 +34,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('Restore', 'Debug', 'Release', 'Publish', 'Package', 'Installer', 'VerifyBindings', 'Clean', 'All')]
+    [ValidateSet('Restore', 'Debug', 'Release', 'Publish', 'Package', 'Installer', 'VerifyBindings', 'VerifyRoundTrip', 'Clean', 'All')]
     [string]$Task = 'Debug',
 
     [ValidateSet('x64', 'x86', 'ARM64')]
@@ -213,11 +216,20 @@ function Invoke-VerifyBindings {
     & (Join-Path $root 'Verify-Bindings.ps1')
 }
 
+function Invoke-VerifyRoundTrip {
+    Write-Step 'Verifying ActionItem round-trips through the actions.json and profile .xml codecs'
+    $tool = Join-Path $root 'Tools\RoundTripCheck\RoundTripCheck.csproj'
+    Invoke-Dotnet @('run', '--project', $tool, '--nologo')
+}
+
 function Invoke-Clean {
     Write-Step 'Cleaning'
     Assert-NotRunning
 
-    foreach ($directory in @('bin', 'obj', 'ActionWheel.Core\bin', 'ActionWheel.Core\obj')) {
+    foreach ($directory in @(
+        'bin', 'obj', 'ActionWheel.Core\bin', 'ActionWheel.Core\obj',
+        'Tools\RoundTripCheck\bin', 'Tools\RoundTripCheck\obj'
+    )) {
         $path = Join-Path $root $directory
         if (Test-Path $path) {
             Write-Host "Removing $directory" -ForegroundColor DarkGray
@@ -234,10 +246,12 @@ switch ($Task) {
     'Package' { Invoke-Package }
     'Installer' { Invoke-Installer }
     'VerifyBindings' { Invoke-VerifyBindings }
+    'VerifyRoundTrip' { Invoke-VerifyRoundTrip }
     'Clean' { Invoke-Clean }
     'All' {
         Invoke-Restore
         Invoke-VerifyBindings
+        Invoke-VerifyRoundTrip
         Invoke-Build 'Debug'
         Invoke-Build 'Release'
         Invoke-Publish

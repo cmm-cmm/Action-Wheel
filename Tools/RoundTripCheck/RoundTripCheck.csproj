@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A throwaway console tool, not a test project - see CLAUDE.md's "No test project exists
+       (deliberately)". ActionWheel.Core has no WinUI/Win32 dependency, so it can be exercised from
+       a plain console app like this one, referenced directly by path since there is no .sln.
+       Run it with: ..\..\Build.ps1 -Task VerifyRoundTrip, or plain "dotnet run" from this folder. -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Action_Wheel.Tools.RoundTripCheck</RootNamespace>
+    <AssemblyName>RoundTripCheck</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!-- Its own bin/obj, outside the app's; Build.ps1's Clean task removes both by name. -->
+    <BaseOutputPath>bin\</BaseOutputPath>
+    <BaseIntermediateOutputPath>obj\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ActionWheel.Core\ActionWheel.Core.csproj" />
+  </ItemGroup>
+
+</Project>

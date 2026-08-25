@@ -1473,11 +1473,11 @@ namespace Action_Wheel.Overlay
             double centerBtnSize = _appearance.CenterButtonSize;
             double centerBtnLeft = (canvasSize - centerBtnSize) / 2.0;
             double centerBtnTop = (canvasSize - centerBtnSize) / 2.0;
-            
+
             // Actual centre point of the centre button.
             double centerBtnCenterX = centerBtnLeft + (centerBtnSize / 2.0);
             double centerBtnCenterY = centerBtnTop + (centerBtnSize / 2.0);
-            
+
             // Update button Canvas positions using the same size ApplySizes gave the buttons.
             double btnSize = _appearance.ButtonSize;
             var buttons = AllButtons;
@@ -1498,7 +1498,7 @@ namespace Action_Wheel.Overlay
             // Set center button position
             Canvas.SetLeft(CenterBtn, centerBtnLeft);
             Canvas.SetTop(CenterBtn, centerBtnTop);
-            
+
         }
 
         private void ActionButton_Click(object sender, RoutedEventArgs e)

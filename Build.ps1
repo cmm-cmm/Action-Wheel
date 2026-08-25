@@ -20,8 +20,16 @@
     VerifyRoundTrip - round-trip a probe ActionItem set through the actions.json and profile .xml
                       codecs and diff every field; catches a field added to ActionItem but missed
                       in one of the codecs
+    VerifyChordGate - regression-check the two-button chord trigger's DOWN/UP swallow decisions
+                      (ActionWheel.Core/ChordGate.cs), used by MouseHook
+    VerifyVersionSync - check Action Wheel.csproj's <Version> against Package.appxmanifest's
+                      Identity Version, which cannot be a project reference and so silently drifts
+    VerifyFormat    - dotnet format --verify-no-changes against .editorconfig
+    VerifyConfigBackup - regression-check ConfigBackup.TryImport's rejection paths (entry count,
+                      entry size, unrecognised entry names, zip-slip)
     Clean           - delete bin\ and obj\
-    All             - Restore, VerifyBindings, VerifyRoundTrip, Debug, Release, Publish
+    All             - Restore, VerifyBindings, VerifyRoundTrip, VerifyChordGate, VerifyVersionSync,
+                      VerifyFormat, VerifyConfigBackup, Debug, Release, Publish
 
 .PARAMETER Platform
     x64 (default), x86 or ARM64. Sets both the MSBuild platform and the runtime identifier.
@@ -34,7 +42,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('Restore', 'Debug', 'Release', 'Publish', 'Package', 'Installer', 'VerifyBindings', 'VerifyRoundTrip', 'Clean', 'All')]
+    [ValidateSet('Restore', 'Debug', 'Release', 'Publish', 'Package', 'Installer', 'VerifyBindings', 'VerifyRoundTrip', 'VerifyChordGate', 'VerifyVersionSync', 'VerifyFormat', 'VerifyConfigBackup', 'Clean', 'All')]
     [string]$Task = 'Debug',
 
     [ValidateSet('x64', 'x86', 'ARM64')]
@@ -92,9 +100,52 @@ function Invoke-Build([string]$configuration) {
     Invoke-Dotnet @('build', $project, '-c', $configuration, '-r', $rid, "-p:Platform=$Platform", '--nologo')
 }
 
+function Invoke-VerifyVersionSync {
+    Write-Step 'Verifying app version is in sync across csproj and Package.appxmanifest'
+
+    $csprojContent = Get-Content -LiteralPath $project -Raw
+    if ($csprojContent -notmatch '<Version>(?<v>[\d.]+)</Version>') {
+        throw 'Could not find <Version> in "Action Wheel.csproj".'
+    }
+    $csprojVersion = $Matches['v']
+
+    # Package.appxmanifest is not read by this unpackaged app at runtime, but it is not harmless
+    # dead weight either: a future switch back to MSIX would ship whatever stale version sits
+    # here, silently. It has no project-file mechanism to inherit the version from, unlike
+    # AssemblyVersion/FileVersion/Version, which is exactly how it drifted to 2.4.0.0 while the
+    # app moved on to 2.6.0 and 2.7.0 around it.
+    $manifestPath = Join-Path $root 'Package.appxmanifest'
+    $manifestContent = Get-Content -LiteralPath $manifestPath -Raw
+    if ($manifestContent -notmatch 'Version="(?<v>[\d.]+)"\s*/>') {
+        throw 'Could not find the Identity Version in Package.appxmanifest.'
+    }
+    $manifestVersion = $Matches['v']
+
+    $expectedManifestVersion = "$csprojVersion.0"
+    if ($manifestVersion -ne $expectedManifestVersion) {
+        throw "Version mismatch: Action Wheel.csproj is $csprojVersion but Package.appxmanifest's " +
+            "Identity Version is $manifestVersion (expected $expectedManifestVersion). " +
+            "Update Package.appxmanifest before releasing."
+    }
+
+    Write-Host "csproj $csprojVersion / manifest $manifestVersion - in sync." -ForegroundColor Green
+}
+
+function Invoke-VerifyFormat {
+    Write-Step 'Verifying formatting against .editorconfig'
+    Invoke-Dotnet @('format', $project, '--verify-no-changes')
+}
+
+function Invoke-VerifyConfigBackup {
+    Write-Step 'Verifying ConfigBackup.TryImport rejection paths'
+    $tool = Join-Path $root 'Tools\ConfigBackupCheck\ConfigBackupCheck.csproj'
+    Invoke-Dotnet @('run', '--project', $tool, '--nologo')
+}
+
 function Invoke-Publish {
     Write-Step "Publishing Release | $rid"
     Assert-NotRunning
+    Invoke-VerifyVersionSync
 
     if (Test-Path $Output) {
         Write-Host "Clearing $Output" -ForegroundColor DarkGray
@@ -222,13 +273,21 @@ function Invoke-VerifyRoundTrip {
     Invoke-Dotnet @('run', '--project', $tool, '--nologo')
 }
 
+function Invoke-VerifyChordGate {
+    Write-Step 'Verifying the chord trigger DOWN/UP swallow decisions'
+    $tool = Join-Path $root 'Tools\ChordGateCheck\ChordGateCheck.csproj'
+    Invoke-Dotnet @('run', '--project', $tool, '--nologo')
+}
+
 function Invoke-Clean {
     Write-Step 'Cleaning'
     Assert-NotRunning
 
     foreach ($directory in @(
         'bin', 'obj', 'ActionWheel.Core\bin', 'ActionWheel.Core\obj',
-        'Tools\RoundTripCheck\bin', 'Tools\RoundTripCheck\obj'
+        'Tools\RoundTripCheck\bin', 'Tools\RoundTripCheck\obj',
+        'Tools\ChordGateCheck\bin', 'Tools\ChordGateCheck\obj',
+        'Tools\ConfigBackupCheck\bin', 'Tools\ConfigBackupCheck\obj'
     )) {
         $path = Join-Path $root $directory
         if (Test-Path $path) {
@@ -247,11 +306,19 @@ switch ($Task) {
     'Installer' { Invoke-Installer }
     'VerifyBindings' { Invoke-VerifyBindings }
     'VerifyRoundTrip' { Invoke-VerifyRoundTrip }
+    'VerifyChordGate' { Invoke-VerifyChordGate }
+    'VerifyVersionSync' { Invoke-VerifyVersionSync }
+    'VerifyFormat' { Invoke-VerifyFormat }
+    'VerifyConfigBackup' { Invoke-VerifyConfigBackup }
     'Clean' { Invoke-Clean }
     'All' {
         Invoke-Restore
         Invoke-VerifyBindings
         Invoke-VerifyRoundTrip
+        Invoke-VerifyChordGate
+        Invoke-VerifyVersionSync
+        Invoke-VerifyFormat
+        Invoke-VerifyConfigBackup
         Invoke-Build 'Debug'
         Invoke-Build 'Release'
         Invoke-Publish

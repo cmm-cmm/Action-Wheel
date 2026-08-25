@@ -57,7 +57,7 @@
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Company>KoneForge</Company>
     <Product>Action Wheel</Product>
-    <Copyright>Copyright © 2025</Copyright>
+    <Copyright>Copyright © 2025-2026</Copyright>
     <Description>Global Radial Menu Launcher for Windows</Description>
   </PropertyGroup>
 
@@ -114,7 +114,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2526" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.3.1" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.4.0" />
   </ItemGroup>
 
   <!-- Publish-only properties for Release. These must stay scoped to an actual publish

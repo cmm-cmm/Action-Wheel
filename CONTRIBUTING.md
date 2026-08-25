@@ -14,7 +14,7 @@ participating you are expected to uphold it.
 
 - Windows 10 version 1809 (build 17763) or later
 - .NET 10.0 SDK
-- Windows App SDK 1.8
+- Windows App SDK 2.3.1
 - Visual Studio 2022 with the "Windows application development" workload
   (for debugging with F5)
 

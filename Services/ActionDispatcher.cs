@@ -107,7 +107,8 @@ namespace Action_Wheel.Services
         private static extern bool CloseHandle(IntPtr handle);
 
         [StructLayout(LayoutKind.Sequential)] private struct LUID { public uint LowPart; public int HighPart; }
-        [StructLayout(LayoutKind.Sequential)] private struct TOKEN_PRIVILEGES
+        [StructLayout(LayoutKind.Sequential)]
+        private struct TOKEN_PRIVILEGES
         {
             public uint PrivilegeCount;
             public LUID Luid;

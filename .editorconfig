@@ -1,0 +1,37 @@
+# Formatting baseline for `dotnet format` / Build.ps1 -Task VerifyFormat.
+#
+# Deliberately formatting-only. A project audit found 6 whitespace-only diffs `dotnet format
+# --verify-no-changes` already catches and 296 warnings under `-p:AnalysisMode=All`, most of them
+# API-design/globalization/IDisposable/broad-catch/P/Invoke rules meant for a published library,
+# not this desktop app. Turning all of AnalysisMode=All on here and mechanically clearing every
+# warning was explicitly the wrong call - a rule worth having is one someone chose for a reason
+# that applies to this project, not "the biggest set available". This file exists to stop
+# formatting from drifting again, not to adopt a broad analyzer ruleset by default.
+
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# end_of_line is deliberately not set. Line endings are already a genuine mix across this repo
+# (most files LF, a handful - RadialMenu.xaml.cs, ActionDispatcher.cs among them - CRLF),
+# predating this file. Declaring one and letting `dotnet format` "fix" every file to match would
+# be a huge, pointless diff with no correctness value - exactly the kind of mechanical,
+# out-of-proportion change this file's own header warns against.
+
+[*.{cs}]
+# Matches this codebase's existing style: braces on their own line, block namespaces (not
+# file-scoped) throughout every file already in the repo - a rule here that fought that would
+# make every future edit fight `dotnet format` too.
+csharp_new_line_before_open_brace = all
+csharp_style_namespace_declarations = block_scoped:suggestion
+
+[*.{json,xaml,xml,csproj,proj,manifest,appxmanifest}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false

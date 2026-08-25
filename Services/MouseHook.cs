@@ -67,19 +67,22 @@ namespace Action_Wheel.Services
 
         private IntPtr _hookID = IntPtr.Zero;
         private readonly LowLevelMouseProc _proc;
-        private bool _leftDown;
-        private bool _rightDown;
-        private bool _swallowLeftUp;
-        private bool _swallowRightUp;
-        private DateTime _leftDownAt;
-        private DateTime _rightDownAt;
-        private PointInt32 _leftDownPosition;
-        private PointInt32 _rightDownPosition;
+        private readonly ChordGate _chordGate = new();
         public long LastCallbackTick { get; private set; }
 
         public MouseTrigger Trigger { get; set; } = MouseTrigger.MiddleButton;
-        public int ChordTimeoutMs { get; set; } = 800;
-        public int ChordMovementThreshold { get; set; } = 12;
+
+        public int ChordTimeoutMs
+        {
+            get => _chordGate.ChordTimeoutMs;
+            set => _chordGate.ChordTimeoutMs = value;
+        }
+
+        public int ChordMovementThreshold
+        {
+            get => _chordGate.ChordMovementThreshold;
+            set => _chordGate.ChordMovementThreshold = value;
+        }
 
         /// <summary>
         /// Raised when the middle mouse button is pressed.
@@ -180,7 +183,8 @@ namespace Action_Wheel.Services
         /// the cursor. Both the middle button's DOWN and UP are swallowed: the middle click is this
         /// app's trigger gesture, and letting it through would also open a browser tab / start
         /// autoscroll underneath the menu. Swallowing DOWN without UP would leave apps that track
-        /// button state believing the button is still held.
+        /// button state believing the button is still held - see <see cref="ChordGate"/> for how the
+        /// two chord triggers keep left and right balanced individually rather than as a pair.
         /// </remarks>
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
@@ -278,73 +282,54 @@ namespace Action_Wheel.Services
 
                 if (msg == WM_LBUTTONDOWN)
                 {
-                    _leftDown = true;
-                    _leftDownAt = DateTime.UtcNow;
-                    _leftDownPosition = at;
+                    var chordTrigger = Trigger == MouseTrigger.HoldRightPressLeft
+                        ? ChordTrigger.HoldRightPressLeft : ChordTrigger.None;
+                    bool swallow = _chordGate.OnLeftDown(chordTrigger, DateTime.UtcNow, at.X, at.Y, out bool chordFired);
 
-                    if (Trigger == MouseTrigger.HoldRightPressLeft && _rightDown
-                        && IsChordValid(_rightDownAt, _rightDownPosition, at))
+                    if (chordFired)
                     {
-                        _swallowLeftUp = true;
-                        _swallowRightUp = true;
                         MiddleClick?.Invoke(this, at);
                         MiddleUp?.Invoke(this, at); // Chords open in click mode, not drag mode.
-                        return true;
                     }
+
+                    if (swallow)
+                        return true;
 
                     AnyButtonDown?.Invoke(this, at);
                 }
 
                 else if (msg == WM_RBUTTONDOWN)
                 {
-                    _rightDown = true;
-                    _rightDownAt = DateTime.UtcNow;
-                    _rightDownPosition = at;
+                    var chordTrigger = Trigger == MouseTrigger.HoldLeftPressRight
+                        ? ChordTrigger.HoldLeftPressRight : ChordTrigger.None;
+                    bool swallow = _chordGate.OnRightDown(chordTrigger, DateTime.UtcNow, at.X, at.Y, out bool chordFired);
 
-                    if (Trigger == MouseTrigger.HoldLeftPressRight && _leftDown
-                        && IsChordValid(_leftDownAt, _leftDownPosition, at))
+                    if (chordFired)
                     {
-                        _swallowRightUp = true;
-                        _swallowLeftUp = true;
                         MiddleClick?.Invoke(this, at);
                         MiddleUp?.Invoke(this, at); // Chords open in click mode, not drag mode.
-                        return true;
                     }
+
+                    if (swallow)
+                        return true;
 
                     AnyButtonDown?.Invoke(this, at);
                 }
 
                 else if (msg == WM_LBUTTONUP)
                 {
-                    _leftDown = false;
-                    if (_swallowLeftUp)
-                    {
-                        _swallowLeftUp = false;
+                    if (_chordGate.OnLeftUp())
                         return true;
-                    }
                 }
 
                 else if (msg == WM_RBUTTONUP)
                 {
-                    _rightDown = false;
-                    if (_swallowRightUp)
-                    {
-                        _swallowRightUp = false;
+                    if (_chordGate.OnRightUp())
                         return true;
-                    }
                 }
             }
 
             return false;
-        }
-
-        private bool IsChordValid(DateTime firstDownAt, PointInt32 firstPosition, PointInt32 currentPosition)
-        {
-            if ((DateTime.UtcNow - firstDownAt).TotalMilliseconds > ChordTimeoutMs)
-                return false;
-            int dx = currentPosition.X - firstPosition.X;
-            int dy = currentPosition.Y - firstPosition.Y;
-            return dx * dx + dy * dy <= ChordMovementThreshold * ChordMovementThreshold;
         }
 
         public void Dispose()

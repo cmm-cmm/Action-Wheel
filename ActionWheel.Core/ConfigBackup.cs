@@ -44,6 +44,20 @@ namespace Action_Wheel.Core
         private const string IconsEntryPrefix = "Icons/";
 
         /// <summary>
+        /// A real backup this app wrote has a handful of files: the four fixed ones, a few dozen
+        /// profiles at most, and however many icons have been extracted from applications. None of
+        /// these limits are close to that - they exist so an untrusted ZIP handed to
+        /// <see cref="TryImport"/> cannot fill the staging directory (or the disk) before
+        /// validation even gets a chance to reject it.
+        /// </summary>
+        private const int MaxEntryCount = 512;
+
+        /// <summary>Bigger than any icon PNG or profile XML this app itself would ever write.</summary>
+        private const long MaxEntryUncompressedBytes = 64L * 1024 * 1024;
+
+        private const long MaxTotalUncompressedBytes = 512L * 1024 * 1024;
+
+        /// <summary>
         /// The manifest shape a reader has to understand. Bumped only if a future change removes or
         /// repurposes a field an older reader would misinterpret - adding an optional field, the way
         /// every other config format in this app evolves, does not need a bump.
@@ -205,10 +219,42 @@ namespace Action_Wheel.Core
                 using (var stream = new FileStream(zipPath, FileMode.Open, FileAccess.Read))
                 using (var zip = new ZipArchive(stream, ZipArchiveMode.Read))
                 {
+                    if (zip.Entries.Count > MaxEntryCount)
+                    {
+                        error = $"This backup has {zip.Entries.Count} entries, more than a real Action Wheel backup ever has.";
+                        return false;
+                    }
+
+                    long totalUncompressed = 0;
+
                     foreach (var entry in zip.Entries)
                     {
                         if (entry.Name.Length == 0 || entry.FullName == ManifestEntryName)
                             continue; // A directory entry, or the manifest - already read by TryPreview.
+
+                        if (!IsKnownBackupEntry(entry.FullName))
+                        {
+                            error = $"The backup contains an entry '{entry.FullName}' that is not part of the Action Wheel backup format.";
+                            return false;
+                        }
+
+                        // entry.Length comes from the ZIP's central directory and is not itself
+                        // trustworthy - it is exactly what a hand-crafted zip bomb would lie about.
+                        // It is still worth checking up front (cheap, no decompression needed) so an
+                        // honestly-labelled oversized entry is rejected without extracting a single
+                        // byte of it; ExtractBounded below is what catches a header that lies.
+                        if (entry.Length > MaxEntryUncompressedBytes)
+                        {
+                            error = $"The backup entry '{entry.FullName}' is larger than a real Action Wheel backup ever has.";
+                            return false;
+                        }
+
+                        totalUncompressed += entry.Length;
+                        if (totalUncompressed > MaxTotalUncompressedBytes)
+                        {
+                            error = "This backup's total uncompressed size is larger than a real Action Wheel backup ever has.";
+                            return false;
+                        }
 
                         if (!TryGetSafeDestination(staging, entry.FullName, out string destination))
                         {
@@ -217,7 +263,7 @@ namespace Action_Wheel.Core
                         }
 
                         Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                        entry.ExtractToFile(destination, overwrite: true);
+                        ExtractBounded(entry, destination, MaxEntryUncompressedBytes);
                     }
                 }
 
@@ -263,27 +309,65 @@ namespace Action_Wheel.Core
                 // Everything validated - now commit, each through the same write path the app already
                 // trusts for that file, so a restore is indistinguishable from the user having set
                 // everything up by hand.
-                if (actions != null && !ActionConfig.SaveTo(ActionConfig.ActiveConfigPath, actions, out error))
-                    return false;
+                //
+                // The four kinds of target here don't share one atomic-write primitive -
+                // ActionConfig.SaveTo and AtomicFile.TryWriteText each keep their own .bak,
+                // ProfileXml.Save keeps none - so without help, a failure partway through (say,
+                // preferences.json after actions.json already landed) would leave the restore
+                // half-applied with no way back, silently. The snapshot below, put back byte for
+                // byte in the finally block unless every one of these commits succeeds, is what
+                // makes the four behave as one operation instead of four independent ones.
+                var targetPaths = new List<string>();
+                if (actions != null)
+                    targetPaths.Add(ActionConfig.ActiveConfigPath);
+                if (preview.HasPreferences)
+                    targetPaths.Add(PreferencesPath);
+                if (preview.HasActiveProfile)
+                    targetPaths.Add(ActiveProfilePath);
+                foreach (var (name, _) in stagedProfiles)
+                    targetPaths.Add(Path.Combine(ProfilesDirectory, SafeFileName(name) + ".xml"));
 
-                if (preview.HasPreferences
-                    && !AtomicFile.TryWriteText(PreferencesPath, File.ReadAllText(Path.Combine(staging, PreferencesEntryName)), out error))
-                    return false;
+                var restorePoint = targetPaths
+                    .Select(path => (Path: path, Bytes: File.Exists(path) ? File.ReadAllBytes(path) : null))
+                    .ToList();
 
-                if (preview.HasActiveProfile
-                    && !AtomicFile.TryWriteText(ActiveProfilePath, File.ReadAllText(Path.Combine(staging, ActiveProfileEntryName)), out error))
-                    return false;
-
-                foreach (var (name, profileActions) in stagedProfiles)
+                bool committed = false;
+                try
                 {
-                    string destination = Path.Combine(ProfilesDirectory, SafeFileName(name) + ".xml");
-                    if (!ProfileXml.Save(destination, profileActions, out error))
+                    if (actions != null && !ActionConfig.SaveTo(ActionConfig.ActiveConfigPath, actions, out error))
                         return false;
+
+                    if (preview.HasPreferences
+                        && !AtomicFile.TryWriteText(PreferencesPath, File.ReadAllText(Path.Combine(staging, PreferencesEntryName)), out error))
+                        return false;
+
+                    if (preview.HasActiveProfile
+                        && !AtomicFile.TryWriteText(ActiveProfilePath, File.ReadAllText(Path.Combine(staging, ActiveProfileEntryName)), out error))
+                        return false;
+
+                    foreach (var (name, profileActions) in stagedProfiles)
+                    {
+                        string destination = Path.Combine(ProfilesDirectory, SafeFileName(name) + ".xml");
+                        if (!ProfileXml.Save(destination, profileActions, out error))
+                            return false;
+                    }
+
+                    committed = true;
+                }
+                finally
+                {
+                    if (!committed)
+                    {
+                        string rollbackError = RestorePreviousFiles(restorePoint);
+                        if (!string.IsNullOrEmpty(rollbackError))
+                            error = $"{error} It also could not fully undo the files it had already changed: {rollbackError}";
+                    }
                 }
 
                 // Icons are regenerable (re-extracted from the source application the next time it is
                 // browsed to) and purely cosmetic, so a copy failure here is not worth rejecting the
-                // rest of an otherwise-valid restore over.
+                // rest of an otherwise-valid restore over. Deliberately outside the try/finally above:
+                // a rolled-back restore should not leave stray icons behind either.
                 string stagedIconsDir = Path.Combine(staging, "Icons");
                 if (Directory.Exists(stagedIconsDir))
                 {
@@ -316,6 +400,88 @@ namespace Action_Wheel.Core
         /// </summary>
         private static string SafeFileName(string value) => string.Join("_",
             (value ?? string.Empty).Trim().Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
+
+        /// <summary>
+        /// Puts every path in <paramref name="restorePoint"/> back to what it held before the
+        /// commit started - deleted if it did not exist yet, overwritten byte for byte if it did.
+        /// Best-effort and does not stop at the first failure: every path is attempted and every
+        /// failure collected, since silently leaving some files rolled back and others not is
+        /// exactly the half-applied state this method exists to avoid.
+        /// </summary>
+        private static string RestorePreviousFiles(IReadOnlyList<(string Path, byte[]? Bytes)> restorePoint)
+        {
+            var failures = new List<string>();
+
+            foreach (var (path, bytes) in restorePoint)
+            {
+                try
+                {
+                    if (bytes == null)
+                    {
+                        if (File.Exists(path))
+                            File.Delete(path);
+                    }
+                    else
+                    {
+                        File.WriteAllBytes(path, bytes);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    failures.Add($"{path}: {ex.Message}");
+                }
+            }
+
+            return failures.Count == 0 ? string.Empty : string.Join("; ", failures);
+        }
+
+        /// <summary>
+        /// Whether an entry name is one <see cref="TryExport"/> could actually have written - the
+        /// four fixed files, a profile XML, or an extracted icon PNG. Everything else is rejected
+        /// outright rather than silently extracted into the staging directory and then ignored,
+        /// which is what an unrecognised entry name used to be.
+        /// </summary>
+        private static bool IsKnownBackupEntry(string entryFullName)
+        {
+            string normalized = entryFullName.Replace('\\', '/');
+
+            if (normalized is ActionsEntryName or PreferencesEntryName or ActiveProfileEntryName)
+                return true;
+
+            if (IsUnder(normalized, ProfilesEntryPrefix) && normalized.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (IsUnder(normalized, IconsEntryPrefix) && normalized.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return false;
+        }
+
+        /// <summary>
+        /// <see cref="ZipArchiveEntry.ExtractToFile(string, bool)"/> writes however many bytes the
+        /// compressed stream actually decompresses to, regardless of what <c>entry.Length</c>
+        /// claimed in the central directory - a crafted entry can under-report its own size. This
+        /// copies by hand and aborts the moment the real byte count passes <paramref name="maxBytes"/>,
+        /// so a lying header cannot buy its way past the size check already done against the
+        /// (possibly false) declared length.
+        /// </summary>
+        private static void ExtractBounded(ZipArchiveEntry entry, string destination, long maxBytes)
+        {
+            using var source = entry.Open();
+            using var destinationStream = new FileStream(destination, FileMode.Create, FileAccess.Write);
+
+            var buffer = new byte[81920];
+            long total = 0;
+            int read;
+            while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                total += read;
+                if (total > maxBytes)
+                    throw new InvalidDataException($"Entry '{entry.FullName}' decompressed past its declared size.");
+
+                destinationStream.Write(buffer, 0, read);
+            }
+        }
 
         private static bool IsUnder(string entryFullName, string prefix) =>
             entryFullName.Replace('\\', '/').StartsWith(prefix, StringComparison.Ordinal);

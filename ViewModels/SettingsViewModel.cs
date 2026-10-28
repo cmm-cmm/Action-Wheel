@@ -829,8 +829,22 @@ namespace Action_Wheel.ViewModels
             foreach (var item in Items.Where(i => !i.HasValidGlyph))
                 warnings.Add($"{item.PositionName}: icon code \"{item.Glyph}\" is not in the icon font, so that button shows no picture");
 
+            // Not a blocking error: see ActionsValidator for why a missing icon file never rejects
+            // the configuration. Group children are checked too, since they keep their own icons.
+            foreach (var item in Items)
+            {
+                if (IsMissingIconFile(item.IconPath))
+                    warnings.Add($"{item.PositionName}: icon file \"{item.IconPath}\" was not found, so that button shows its glyph instead");
+
+                foreach (var child in item.GroupChildren.Where(child => IsMissingIconFile(child.IconPath)))
+                    warnings.Add($"{item.PositionName}, \"{child.Label}\": icon file \"{child.IconPath}\" was not found, so that button shows its glyph instead");
+            }
+
             return warnings;
         }
+
+        private static bool IsMissingIconFile(string iconPath) =>
+            !string.IsNullOrWhiteSpace(iconPath) && !IconFile.IsUsable(iconPath);
 
         private void RestoreDefaults()
         {

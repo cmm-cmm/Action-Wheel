@@ -148,6 +148,10 @@ namespace Action_Wheel.Services
         {
             foreach (var action in actions)
             {
+                // A group's children carry their own icons. Skipping them deleted every icon used
+                // only by a group child on the next startup.
+                AddReferences(action.GroupChildren, referenced);
+
                 if (string.IsNullOrWhiteSpace(action.IconPath))
                     continue;
                 try { referenced.Add(Path.GetFullPath(action.IconPath)); }

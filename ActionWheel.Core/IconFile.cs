@@ -19,10 +19,13 @@ namespace Action_Wheel.Core
         public static bool IsRaster(string? path) =>
             HasExtension(path, ".png") || HasExtension(path, ".ico");
 
+        /// <summary>True if the path names a format this app can draw, whether or not the file exists.</summary>
+        public static bool IsSupported(string? path) => IsVector(path) || IsRaster(path);
+
         /// <summary>True if the path points at a file this app can actually draw.</summary>
         public static bool IsUsable(string? path) =>
             !string.IsNullOrWhiteSpace(path)
-            && (IsVector(path) || IsRaster(path))
+            && IsSupported(path)
             && File.Exists(path);
 
         /// <summary>The formats accepted, for a message that has to name them.</summary>

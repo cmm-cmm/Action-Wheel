@@ -74,11 +74,16 @@ namespace Action_Wheel.Core
                 || action.IconOffsetX is < -50 or > 50
                 || action.IconOffsetY is < -50 or > 50)
                 issues.Add(new(action.Tag, $"{prefix} contains invalid icon layout settings."));
-            bool icon = !string.IsNullOrWhiteSpace(action.IconPath) && IconFile.IsUsable(action.IconPath);
-            bool text = string.IsNullOrWhiteSpace(action.IconPath) && !string.IsNullOrWhiteSpace(action.IconText);
-            if (!string.IsNullOrWhiteSpace(action.IconPath) && !icon)
-                issues.Add(new(action.Tag, $"{prefix} refers to an icon file that cannot be read. Supported: {IconFile.SupportedDescription}."));
-            else if (!icon && !text && !ActionValueCodec.TryConvertGlyph(action.Glyph, out _))
+            // Only the icon file's type is checked here, not whether it exists. This validator also
+            // gates loading actions.json, restoring a backup and switching profiles, and a deleted or
+            // not-yet-restored icon (or one on a drive that is not mounted yet) would otherwise reject
+            // all nine buttons over one picture. IconFactory already draws the text or glyph instead
+            // when the file is missing; the settings window reports it as a warning.
+            bool hasIconPath = !string.IsNullOrWhiteSpace(action.IconPath);
+            bool text = !hasIconPath && !string.IsNullOrWhiteSpace(action.IconText);
+            if (hasIconPath && !IconFile.IsSupported(action.IconPath))
+                issues.Add(new(action.Tag, $"{prefix} refers to an icon file of an unsupported type. Supported: {IconFile.SupportedDescription}."));
+            else if (!hasIconPath && !text && !ActionValueCodec.TryConvertGlyph(action.Glyph, out _))
                 issues.Add(new(action.Tag, $"{prefix} contains an invalid glyph."));
 
             if (isTopLevel && action.Kind == ActionKind.Group)

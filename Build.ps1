@@ -23,7 +23,8 @@
     VerifyChordGate - regression-check the two-button chord trigger's DOWN/UP swallow decisions
                       (ActionWheel.Core/ChordGate.cs), used by MouseHook
     VerifyVersionSync - check Action Wheel.csproj's <Version> against Package.appxmanifest's
-                      Identity Version, which cannot be a project reference and so silently drifts
+                      Identity Version and ActionWheel-Setup.iss's MyAppVersion, neither of which
+                      can be a project reference and so both silently drift
     VerifyFormat    - dotnet format --verify-no-changes against .editorconfig
     VerifyConfigBackup - regression-check ConfigBackup.TryImport's rejection paths (entry count,
                       entry size, unrecognised entry names, zip-slip)
@@ -101,7 +102,7 @@ function Invoke-Build([string]$configuration) {
 }
 
 function Invoke-VerifyVersionSync {
-    Write-Step 'Verifying app version is in sync across csproj and Package.appxmanifest'
+    Write-Step 'Verifying app version is in sync across csproj, Package.appxmanifest and the installer'
 
     $csprojContent = Get-Content -LiteralPath $project -Raw
     if ($csprojContent -notmatch '<Version>(?<v>[\d.]+)</Version>') {
@@ -128,7 +129,20 @@ function Invoke-VerifyVersionSync {
             "Update Package.appxmanifest before releasing."
     }
 
-    Write-Host "csproj $csprojVersion / manifest $manifestVersion - in sync." -ForegroundColor Green
+    # The installer script hard-codes its own copy of the version too, and nothing else reads it
+    # before ISCC turns it into the setup file's name and the version shown in Apps & features.
+    $issPath = Join-Path $root 'ActionWheel-Setup.iss'
+    $issContent = Get-Content -LiteralPath $issPath -Raw
+    if ($issContent -notmatch '#define\s+MyAppVersion\s+"(?<v>[\d.]+)"') {
+        throw 'Could not find "#define MyAppVersion" in ActionWheel-Setup.iss.'
+    }
+    $issVersion = $Matches['v']
+    if ($issVersion -ne $csprojVersion) {
+        throw "Version mismatch: Action Wheel.csproj is $csprojVersion but ActionWheel-Setup.iss " +
+            "defines MyAppVersion $issVersion. Update ActionWheel-Setup.iss before releasing."
+    }
+
+    Write-Host "csproj $csprojVersion / manifest $manifestVersion / installer $issVersion - in sync." -ForegroundColor Green
 }
 
 function Invoke-VerifyFormat {
@@ -243,6 +257,12 @@ function Invoke-Package {
 }
 
 function Invoke-Installer {
+    # ActionWheel-Setup.iss reads bin\Publish\win-x64 and installs in x64 mode. Publishing another
+    # platform first would package whatever stale x64 output happens to be sitting there.
+    if ($Platform -ne 'x64') {
+        throw "The installer only supports x64 (ActionWheel-Setup.iss packages bin\Publish\win-x64). Use -Task Package for $Platform."
+    }
+
     Invoke-Publish
 
     Write-Step 'Building the installer'

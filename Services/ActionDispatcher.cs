@@ -119,10 +119,20 @@ namespace Action_Wheel.Services
         private const int SW_MAXIMIZE = 3;
         private const uint WM_CLOSE = 0x0010;
         private const uint MB_YESNO_WARNING_DEFBUTTON2 = 0x00000004 | 0x00000030 | 0x00000100;
+        private const uint MB_SETFOREGROUND = 0x00010000;
+        private const uint MB_TOPMOST = 0x00040000;
         private const int IDYES = 6;
         private const uint EWX_LOGOFF = 0x00000000;
-        private const uint EWX_SHUTDOWN = 0x00000001;
         private const uint EWX_REBOOT = 0x00000002;
+
+        // EWX_SHUTDOWN only brings the system to the point where power can be turned off; the
+        // documentation says it does not turn the power off itself. EWX_POWEROFF does both.
+        private const uint EWX_POWEROFF = 0x00000008;
+
+        // Without a reason code ExitWindowsEx records the shutdown as unplanned ("Other
+        // (Unplanned)") in the System event log. This one was asked for: major/minor "Other",
+        // flagged as planned.
+        private const uint SHTDN_REASON_FLAG_PLANNED = 0x80000000;
         private const uint TOKEN_ADJUST_PRIVILEGES = 0x0020;
         private const uint TOKEN_QUERY = 0x0008;
         private const uint SE_PRIVILEGE_ENABLED = 0x00000002;
@@ -137,7 +147,7 @@ namespace Action_Wheel.Services
         /// <summary>
         /// Raised when an action could not be carried out, with a message fit to show the user.
         /// The menu has already closed by this point, so there is no window left to report into -
-        /// the app surfaces it on the main window and in the log instead of it vanishing.
+        /// the app surfaces it on the main window instead of it vanishing.
         /// </summary>
         public static event EventHandler<string>? ActionFailed;
 
@@ -151,10 +161,14 @@ namespace Action_Wheel.Services
         public static event EventHandler<string>? ProfileRequested;
 
         /// <summary>
-        /// Runs the action. Never throws - a bad entry in actions.json must not take the app down.
+        /// The window the user was working in when the menu opened, for the window functions
+        /// (minimise, maximise, close).
         /// </summary>
         public static IntPtr CaptureTargetWindow() => GetForegroundWindow();
 
+        /// <summary>
+        /// Runs the action. Never throws - a bad entry in actions.json must not take the app down.
+        /// </summary>
         public static void Execute(ActionItem action, IntPtr targetWindow = default)
         {
             try
@@ -176,11 +190,11 @@ namespace Action_Wheel.Services
             }
             catch (Exception ex)
             {
-                Fail(action, ex.Message, ex);
+                Fail(action, ex.Message);
             }
         }
 
-        private static void Fail(ActionItem action, string reason, Exception? ex = null)
+        private static void Fail(ActionItem action, string reason)
         {
             var message = $"'{action.Label}' failed: {reason}";
 
@@ -399,27 +413,27 @@ namespace Action_Wheel.Services
                     break;
 
                 case WindowsFunctions.Sleep:
-                    if (ConfirmPowerAction(targetWindow, "Put this computer to sleep?")
+                    if (ConfirmPowerAction("Put this computer to sleep?")
                         && !SetSuspendState(false, false, false))
                         ReportSystemFailure(action, "put the computer to sleep");
                     break;
 
                 case WindowsFunctions.SignOut:
-                    if (ConfirmPowerAction(targetWindow, "Sign out of Windows now? Unsaved work may be lost.")
+                    if (ConfirmPowerAction("Sign out of Windows now? Unsaved work may be lost.")
                         && !ExitWindowsEx(EWX_LOGOFF, 0))
                         ReportSystemFailure(action, "sign out of Windows");
                     break;
 
                 case WindowsFunctions.Restart:
-                    if (ConfirmPowerAction(targetWindow, "Restart this computer now? Unsaved work may be lost.")
+                    if (ConfirmPowerAction("Restart this computer now? Unsaved work may be lost.")
                         && TryPrepareShutdown(action)
-                        && !ExitWindowsEx(EWX_REBOOT, 0)) ReportSystemFailure(action, "restart Windows");
+                        && !ExitWindowsEx(EWX_REBOOT, SHTDN_REASON_FLAG_PLANNED)) ReportSystemFailure(action, "restart Windows");
                     break;
 
                 case WindowsFunctions.Shutdown:
-                    if (ConfirmPowerAction(targetWindow, "Shut down this computer now? Unsaved work may be lost.")
+                    if (ConfirmPowerAction("Shut down this computer now? Unsaved work may be lost.")
                         && TryPrepareShutdown(action)
-                        && !ExitWindowsEx(EWX_SHUTDOWN, 0)) ReportSystemFailure(action, "shut down Windows");
+                        && !ExitWindowsEx(EWX_POWEROFF, SHTDN_REASON_FLAG_PLANNED)) ReportSystemFailure(action, "shut down Windows");
                     break;
 
                 case WindowsFunctions.ActionSettings:
@@ -464,9 +478,16 @@ namespace Action_Wheel.Services
             _ = ShowWindow(targetWindow, command);
         }
 
-        private static bool ConfirmPowerAction(IntPtr owner, string message) =>
-            MessageBox(owner, message, "Action Wheel — Confirm system action",
-                MB_YESNO_WARNING_DEFBUTTON2) == IDYES;
+        /// <summary>Asks before a power action. The answer defaults to No.</summary>
+        /// <remarks>
+        /// Ownerless and topmost. It used to be owned by the window the user was working in, which
+        /// belongs to another process. Windows then disables that window and ties the two input
+        /// queues together for as long as the box is up, so a hung target app could take the
+        /// confirmation down with it. Topmost keeps an ownerless box from opening behind the app.
+        /// </remarks>
+        private static bool ConfirmPowerAction(string message) =>
+            MessageBox(IntPtr.Zero, message, "Action Wheel — Confirm system action",
+                MB_YESNO_WARNING_DEFBUTTON2 | MB_TOPMOST | MB_SETFOREGROUND) == IDYES;
 
         private static void ReportSystemFailure(ActionItem action, string operation)
         {

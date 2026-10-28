@@ -112,6 +112,72 @@ namespace Action_Wheel.ViewModels
 
         public double MaxOrbitRadius => RingGeometry.MaxOrbitFor(_appearance.ButtonSize);
 
+        /// <summary>
+        /// The hover effects in picker order. Like <see cref="AnimationOrder"/>, kept apart from the
+        /// enum's append-only numbers; it must stay in step with the ComboBoxItems in SettingsWindow.xaml.
+        /// </summary>
+        private static readonly RingHoverEffect[] HoverEffectOrder =
+        {
+            RingHoverEffect.GrowAndColour,
+            RingHoverEffect.Glow,
+            RingHoverEffect.Lift,
+            RingHoverEffect.None,
+        };
+
+        public int HoverEffectIndex
+        {
+            get => Math.Max(0, Array.IndexOf(HoverEffectOrder, _appearance.HoverEffect));
+            set => ApplyAppearance(
+                _appearance with
+                {
+                    HoverEffect = value >= 0 && value < HoverEffectOrder.Length
+                        ? HoverEffectOrder[value] : RingHoverEffect.GrowAndColour,
+                },
+                nameof(HoverEffectIndex));
+        }
+
+        public string HoverEffectDescription => _appearance.HoverEffect switch
+        {
+            RingHoverEffect.Glow => "The button grows and glows softly in its own colour.",
+            RingHoverEffect.Lift => "The button grows and its shadow deepens, as if lifted off the screen.",
+            RingHoverEffect.None => "Nothing happens on hover. Pressing a button still gives its usual feedback.",
+            _ => "The button grows and swaps its colours; the centre button lightens instead.",
+        };
+
+        /// <summary>The growth and its speed mean nothing with no hover effect, so their controls are disabled.</summary>
+        public bool HasHoverEffect => _appearance.HoverEffect != RingHoverEffect.None;
+
+        public double HoverScalePercent
+        {
+            get => _appearance.HoverScalePercent;
+            set => ApplyAppearance(_appearance with { HoverScalePercent = value }, nameof(HoverScalePercent));
+        }
+
+        public string HoverScalePercentText => _appearance.HoverScalePercent <= RingAppearance.MinHoverScalePercent
+            ? "No growth"
+            : $"{_appearance.HoverScalePercent:0} %";
+
+        public double MinHoverScalePercent => RingAppearance.MinHoverScalePercent;
+        public double MaxHoverScalePercent => RingAppearance.MaxHoverScalePercent;
+
+        public double HoverAnimationMs
+        {
+            get => _appearance.HoverAnimationMs;
+            set => ApplyAppearance(_appearance with { HoverAnimationMs = value }, nameof(HoverAnimationMs));
+        }
+
+        public string HoverAnimationMsText => _appearance.HoverAnimationMs <= 0
+            ? "Instant"
+            : $"{_appearance.HoverAnimationMs:0} ms";
+
+        public double MaxHoverAnimationMs => RingAppearance.MaxHoverAnimationMs;
+
+        public bool HoverOnGesture
+        {
+            get => _appearance.HoverOnGesture;
+            set => ApplyAppearance(_appearance with { HoverOnGesture = value }, nameof(HoverOnGesture));
+        }
+
         public string RingAnimationDescription => _appearance.Animation switch
         {
             RingAnimation.None => "No animation. The ring is fully drawn on its first frame - the fastest option.",
@@ -163,8 +229,22 @@ namespace Action_Wheel.ViewModels
             Raise(nameof(OrbitRadiusText));
             Raise(nameof(AnimationDurationMs));
             Raise(nameof(AnimationDurationMsText));
+            RaiseHoverProperties();
             Raise(nameof(Appearance));
             ScheduleRefresh(redraw: true, animate: animate);
+        }
+
+        /// <summary>Every hover-effect binding, for ApplyAppearance and for a reload from disk.</summary>
+        private void RaiseHoverProperties()
+        {
+            Raise(nameof(HoverEffectIndex));
+            Raise(nameof(HoverEffectDescription));
+            Raise(nameof(HasHoverEffect));
+            Raise(nameof(HoverScalePercent));
+            Raise(nameof(HoverScalePercentText));
+            Raise(nameof(HoverAnimationMs));
+            Raise(nameof(HoverAnimationMsText));
+            Raise(nameof(HoverOnGesture));
         }
 
         #endregion

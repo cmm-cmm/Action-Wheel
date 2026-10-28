@@ -159,7 +159,7 @@ namespace Action_Wheel.Overlay
         /// this once, at most, per action set - not per frame.
         /// </remarks>
         private int MenuSize => HasGroups
-            ? RingGeometry.MenuSizeFor(_appearance.ButtonSize, GroupOrbitRadius)
+            ? RingGeometry.MenuSizeFor(_appearance.ButtonSize, GroupOrbitRadius, _appearance.HoverScale)
             : _appearance.MenuSize;
 
         /// <summary>True when at least one button reveals a satellite ring when selected.</summary>
@@ -391,14 +391,22 @@ namespace Action_Wheel.Overlay
                     continue;
 
                 var action = byTag[tag];
-                if (action?.ShadowEnabled == false)
+
+                // A button with its shadow off still gets one, invisible at rest, when the hover
+                // effect is drawn with the shadow (Glow, Lift). See HoverVisuals.
+                bool shadowOn = action?.ShadowEnabled != false;
+                if (!shadowOn && !HoverVisuals.NeedsShadow(_appearance))
                     continue;
 
                 var color = IconFactory.ColorOr(action?.Shadow ?? string.Empty, Colors.Black);
                 double diameter = tag == 0 ? _appearance.CenterButtonSize : _appearance.ButtonSize;
-                ButtonShadow.Apply(host, diameter, color,
-                    action?.ShadowOpacity ?? 0.45, action?.ShadowBlur ?? 11,
-                    action?.ShadowOffsetX ?? 0, action?.ShadowOffsetY ?? 3);
+                var rest = new ShadowLook(color,
+                    shadowOn ? (float)(action?.ShadowOpacity ?? 0.45) : 0f,
+                    (float)(action?.ShadowBlur ?? 11),
+                    new System.Numerics.Vector2((float)(action?.ShadowOffsetX ?? 0), (float)(action?.ShadowOffsetY ?? 3)));
+
+                var shadow = ButtonShadow.Apply(host, diameter, color, rest.Opacity, rest.Blur, rest.Offset.X, rest.Offset.Y);
+                _hoverVisuals[tag]?.AttachShadow(shadow, rest, _hoverGlow[tag]);
             }
         }
 
@@ -429,11 +437,20 @@ namespace Action_Wheel.Overlay
             return index;
         }
 
-        /// <summary>Draws a button's rest/highlighted state.</summary>
-        private sealed record ButtonPainter(Action Rest, Action Hover, Action Pressed);
+        /// <summary>
+        /// Draws a button's rest/highlighted state. Hover takes whether to grow, which is false only
+        /// for the drag gesture with <see cref="RingAppearance.HoverOnGesture"/> off.
+        /// </summary>
+        private sealed record ButtonPainter(Action Rest, Action<bool> Hover, Action Pressed);
 
         /// <summary>Each button's painter, indexed by Tag.</summary>
         private readonly ButtonPainter?[] _buttonPainters = new ButtonPainter?[9];
+
+        /// <summary>Each button's growth and shadow, indexed by Tag. See <see cref="HoverVisuals"/>.</summary>
+        private readonly HoverVisuals?[] _hoverVisuals = new HoverVisuals?[9];
+
+        /// <summary>The glow colour per Tag: the button's own background, recorded by ApplyPointerStates.</summary>
+        private readonly Color[] _hoverGlow = new Color[9];
 
         /// <summary>The button the drag gesture is currently highlighting, null if none.</summary>
         private int? _highlightedTag;
@@ -463,7 +480,7 @@ namespace Action_Wheel.Overlay
 
             if (tag is int current)
             {
-                _buttonPainters[current]?.Hover();
+                _buttonPainters[current]?.Hover(_appearance.HoverOnGesture);
                 OnMainRingHover(current);
             }
         }
@@ -826,33 +843,62 @@ namespace Action_Wheel.Overlay
 
                 button.Click += GroupChildButton_Click;
 
+                // Same hover effect as the main ring, minus the colour swap: a satellite always
+                // wears its parent's colours (see the remarks above). Created on Loaded, below,
+                // once the template it grows exists.
+                HoverVisuals? visuals = null;
+
                 // Same trap as the main ring's ApplyPointerStates: ButtonBase marks pointer events
                 // Handled while driving its own visual states, so a plain "+=" here would never run.
                 int childIndex = i;
+                button.AddHandler(UIElement.PointerEnteredEvent, new PointerEventHandler((s2, e2) => visuals?.Hover()), true);
                 button.AddHandler(UIElement.PointerPressedEvent,
-                    new PointerEventHandler((s2, e2) => ArmChildHold(parentTag, childIndex, child, button)), true);
-                button.AddHandler(UIElement.PointerReleasedEvent, new PointerEventHandler((s2, e2) => DisarmHold()), true);
-                button.AddHandler(UIElement.PointerExitedEvent, new PointerEventHandler((s2, e2) => DisarmHold()), true);
-                button.AddHandler(UIElement.PointerCanceledEvent, new PointerEventHandler((s2, e2) => DisarmHold()), true);
-                button.AddHandler(UIElement.PointerCaptureLostEvent, new PointerEventHandler((s2, e2) => DisarmHold()), true);
+                    new PointerEventHandler((s2, e2) =>
+                    {
+                        visuals?.Pressed();
+                        ArmChildHold(parentTag, childIndex, child, button);
+                    }), true);
+                button.AddHandler(UIElement.PointerReleasedEvent, new PointerEventHandler((s2, e2) =>
+                {
+                    visuals?.Hover();
+                    DisarmHold();
+                }), true);
+                foreach (var leave in new[] { UIElement.PointerExitedEvent, UIElement.PointerCanceledEvent, UIElement.PointerCaptureLostEvent })
+                {
+                    button.AddHandler(leave, new PointerEventHandler((s2, e2) =>
+                    {
+                        visuals?.Rest();
+                        DisarmHold();
+                    }), true);
+                }
 
                 // The template is only applied once the button is actually in the visual tree, which
                 // for one built here happens asynchronously after ButtonsCanvas.Children.Add below -
                 // unlike the main ring's static XAML buttons, whose templates are already applied by
                 // the time RadialMenu_Loaded calls ApplyShadows.
-                if (parentAction.ShadowEnabled)
+                button.Loaded += (s2, e2) =>
                 {
-                    button.Loaded += (s2, e2) =>
-                    {
-                        var host = ButtonShadow.FindTemplatePart(button, "ShadowHost");
-                        if (host != null)
-                        {
-                            ButtonShadow.Apply(host, size, shadowColor,
-                                parentAction.ShadowOpacity, parentAction.ShadowBlur,
-                                parentAction.ShadowOffsetX, parentAction.ShadowOffsetY);
-                        }
-                    };
-                }
+                    if (visuals != null || VisualTreeHelper.GetChildrenCount(button) == 0
+                        || VisualTreeHelper.GetChild(button, 0) is not UIElement face)
+                        return;
+
+                    visuals = new HoverVisuals(face, size, _appearance);
+
+                    bool shadowOn = parentAction.ShadowEnabled;
+                    if (!shadowOn && !HoverVisuals.NeedsShadow(_appearance))
+                        return;
+
+                    var host = ButtonShadow.FindTemplatePart(button, "ShadowHost");
+                    if (host == null)
+                        return;
+
+                    var rest = new ShadowLook(shadowColor,
+                        shadowOn ? (float)parentAction.ShadowOpacity : 0f,
+                        (float)parentAction.ShadowBlur,
+                        new System.Numerics.Vector2((float)parentAction.ShadowOffsetX, (float)parentAction.ShadowOffsetY));
+                    var shadow = ButtonShadow.Apply(host, size, shadowColor, rest.Opacity, rest.Blur, rest.Offset.X, rest.Offset.Y);
+                    visuals.AttachShadow(shadow, rest, background);
+                };
 
                 Canvas.SetLeft(button, x - size / 2.0);
                 Canvas.SetTop(button, y - size / 2.0);
@@ -1089,11 +1135,44 @@ namespace Action_Wheel.Overlay
                     icon.Foreground = content;
             }
 
-            void Rest() => Paint(restBackground, restForeground, restBorder, false);
+            // Only the original effect changes colour on hover. The others keep the button's own
+            // colours and let growth and the shadow do the work; pressing still darkens, as feedback.
+            bool swapsColours = _appearance.HoverEffect == RingHoverEffect.GrowAndColour;
+            var plainPressedBackground = new SolidColorBrush(IconFactory.Darken(background, 0.13));
+
+            // The template's root Grid grows. It used to be a ScaleTransform set by the template's
+            // VisualStates; see HoverVisuals for why that moved into code.
+            var visuals = VisualTreeHelper.GetChildrenCount(button) > 0 && VisualTreeHelper.GetChild(button, 0) is UIElement face
+                ? new HoverVisuals(face, tag == 0 ? _appearance.CenterButtonSize : _appearance.ButtonSize, _appearance)
+                : null;
+            _hoverVisuals[tag] = visuals;
+            _hoverGlow[tag] = background;
+
+            void Rest()
+            {
+                Paint(restBackground, restForeground, restBorder, false);
+                visuals?.Rest();
+            }
+
             // Keep the circular outline opposite to the fill as well. Only its brush changes; the
             // template keeps the same 2 px BorderThickness in every pointer state.
-            void Hover() => Paint(hoverBackground, hoverForeground, hoverForeground, true);
-            void Pressed() => Paint(pressedBackground, hoverForeground, hoverForeground, true);
+            void Hover(bool grow)
+            {
+                if (swapsColours)
+                    Paint(hoverBackground, hoverForeground, hoverForeground, true);
+                else
+                    Paint(restBackground, restForeground, restBorder, false);
+                visuals?.Hover(grow);
+            }
+
+            void Pressed()
+            {
+                if (swapsColours)
+                    Paint(pressedBackground, hoverForeground, hoverForeground, true);
+                else
+                    Paint(plainPressedBackground, restForeground, restBorder, false);
+                visuals?.Pressed();
+            }
 
             // Kept so the drag gesture can highlight a button the pointer is nowhere near.
             _buttonPainters[tag] = new ButtonPainter(Rest, Hover, Pressed);
@@ -1122,7 +1201,7 @@ namespace Action_Wheel.Overlay
             // normal Click (release before the threshold) or already handled by FireHold (release
             // after it, but that path clears _heldAction itself before this ever runs).
             DisarmHold();
-            PainterFor(sender)?.Hover();
+            PainterFor(sender)?.Hover(true);
             if (TagOf(sender) is int tag)
                 OnMainRingHover(tag);
         }

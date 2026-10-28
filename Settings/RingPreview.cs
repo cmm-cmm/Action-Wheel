@@ -113,9 +113,16 @@ namespace Action_Wheel.Settings
                 ToolTipService.SetToolTip(bubble, $"{item.PositionName} — {item.Label}");
 
                 var shadowHost = new Border { Width = diameter, Height = diameter };
+
+                // The part that grows on hover, separate from the host: RingOpenAnimation animates
+                // the host's RenderTransform, and the hover growth uses the Scale facade, so the two
+                // never act on one element. Same shape as the ring's button template.
+                var face = new Grid { Width = diameter, Height = diameter };
+                face.Children.Add(shadowHost);
+                face.Children.Add(bubble);
+
                 var host = new Grid { Width = diameter, Height = diameter };
-                host.Children.Add(shadowHost);
-                host.Children.Add(bubble);
+                host.Children.Add(face);
 
                 // A static hint rather than a working simulation of the group actually opening:
                 // this preview draws Borders, not the real Buttons RadialMenu.ExpandGroup adds and
@@ -149,19 +156,61 @@ namespace Action_Wheel.Settings
                     host.Children.Add(badge);
                 }
 
-                if (item.ShadowEnabled)
+                // The ring's own hover effect, so hovering the preview shows what the Hover effect
+                // settings do. Growth and shadow come from HoverVisuals, exactly as on the ring.
+                var visuals = new HoverVisuals(face, diameter, appearance);
+
+                if (item.ShadowEnabled || HoverVisuals.NeedsShadow(appearance))
                 {
                     // Blur and offset scale with everything else, or a shrunken ring keeps a shadow
                     // sized for the full-size one and the preview stops matching the overlay.
-                    host.Loaded += (s, e) => ButtonShadow.Apply(shadowHost, diameter, item.ShadowColor,
-                        item.ShadowOpacity, item.ShadowBlur * scale,
-                        item.ShadowOffsetX * scale, item.ShadowOffsetY * scale);
+                    var rest = new ShadowLook(item.ShadowColor,
+                        item.ShadowEnabled ? (float)item.ShadowOpacity : 0f,
+                        (float)(item.ShadowBlur * scale),
+                        new System.Numerics.Vector2((float)(item.ShadowOffsetX * scale), (float)(item.ShadowOffsetY * scale)));
+                    host.Loaded += (s, e) => visuals.AttachShadow(
+                        ButtonShadow.Apply(shadowHost, diameter, item.ShadowColor, rest.Opacity, rest.Blur, rest.Offset.X, rest.Offset.Y),
+                        rest, item.BackgroundColor);
                 }
+
+                // The colour half, for the one effect that has one. It mirrors
+                // RadialMenu.ApplyPointerStates on a Border: outer buttons swap fill and icon colour,
+                // the centre lightens. A picture icon keeps its pixels here; the ring also swaps a
+                // tinted SVG, which is not worth decoding a second copy for in a preview.
+                bool swapsColours = appearance.HoverEffect == RingHoverEffect.GrowAndColour;
+                void Recolour(Windows.UI.Color fill, Windows.UI.Color content)
+                {
+                    bubble.Background = new SolidColorBrush(fill);
+                    if (bubble.Child is FontIcon glyph)
+                        glyph.Foreground = new SolidColorBrush(content);
+                    else if (bubble.Child is TextBlock text)
+                        text.Foreground = new SolidColorBrush(content);
+                }
+
+                host.PointerEntered += (s, e) =>
+                {
+                    visuals.Hover();
+                    if (swapsColours)
+                    {
+                        if (item.Tag == 0)
+                            Recolour(IconFactory.Lighten(item.BackgroundColor, 0.10), item.ForegroundColor);
+                        else
+                            Recolour(item.ForegroundColor, item.BackgroundColor);
+                    }
+                };
+                host.PointerExited += (s, e) =>
+                {
+                    visuals.Rest();
+                    if (swapsColours)
+                        Recolour(item.BackgroundColor, item.ForegroundColor);
+                };
                 host.PointerPressed += (s, e) =>
                 {
+                    visuals.Pressed();
                     selected?.Invoke(item);
                     e.Handled = true;
                 };
+                host.PointerReleased += (s, e) => visuals.Hover();
 
                 Canvas.SetLeft(host, x - diameter / 2);
                 Canvas.SetTop(host, y - diameter / 2);

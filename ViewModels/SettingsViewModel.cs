@@ -182,6 +182,7 @@ namespace Action_Wheel.ViewModels
             Raise(nameof(OrbitRadiusText));
             Raise(nameof(AnimationDurationMs));
             Raise(nameof(AnimationDurationMsText));
+            RaiseHoverProperties();
             Raise(nameof(Appearance));
 
             UndoCommand.RaiseCanExecuteChanged();

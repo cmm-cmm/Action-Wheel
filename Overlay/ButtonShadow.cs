@@ -44,9 +44,11 @@ namespace Action_Wheel.Overlay
 
         /// <summary>
         /// Attaches the shadow to <paramref name="host"/> - an empty element sitting behind the
-        /// button's filled border, so the shadow is drawn underneath it.
+        /// button's filled border, so the shadow is drawn underneath it. Returns the shadow, so a
+        /// hover effect can change it later (see <see cref="HoverVisuals"/>), or null if none could
+        /// be made.
         /// </summary>
-        public static void Apply(FrameworkElement host, double diameter, Windows.UI.Color color,
+        public static DropShadow? Apply(FrameworkElement host, double diameter, Windows.UI.Color color,
             double opacity = 0.45, double blur = 11, double offsetX = 0, double offsetY = 3)
         {
             try
@@ -68,10 +70,12 @@ namespace Action_Wheel.Overlay
                 sprite.Shadow = shadow;
 
                 ElementCompositionPreview.SetElementChildVisual(host, sprite);
+                return shadow;
             }
             catch (Exception)
             {
                 // Purely decorative - never let it stop the menu from opening.
+                return null;
             }
         }
 

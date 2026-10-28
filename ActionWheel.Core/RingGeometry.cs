@@ -54,8 +54,11 @@ namespace Action_Wheel.Core
         /// <summary>Clear space left between the centre button and an outer one at the tightest orbit.</summary>
         private const double CenterGapDip = 8.0;
 
-        /// <summary>The PointerOver scale in RadialMenu.xaml. A hovered button must still fit.</summary>
-        private const double HoverScale = 1.12;
+        /// <summary>
+        /// The hover scale the ring always used, and still the default
+        /// (<see cref="RingAppearance.DefaultHoverScalePercent"/>). A hovered button must still fit.
+        /// </summary>
+        private const double DefaultHoverScale = 1.12;
 
         /// <summary>
         /// Clear space kept between the outermost hovered button and the window edge, in DIPs.
@@ -124,9 +127,13 @@ namespace Action_Wheel.Core
         /// boundary between "clicked the menu's empty space" and "clicked another application"
         /// inward, changing what a click just outside the buttons does.
         /// </remarks>
-        public static int MenuSizeFor(double buttonSize, double orbitRadius) => Math.Max(
+        /// <param name="hoverScale">
+        /// How far a hovered button grows (<see cref="RingAppearance.HoverScale"/>). The default keeps
+        /// the default ring at exactly 400; a larger hover scale widens the window by just enough.
+        /// </param>
+        public static int MenuSizeFor(double buttonSize, double orbitRadius, double hoverScale = DefaultHoverScale) => Math.Max(
             MenuSizeDip,
-            (int)Math.Ceiling(2.0 * (orbitRadius + buttonSize * HoverScale / 2.0 + EdgeMarginDip)));
+            (int)Math.Ceiling(2.0 * (orbitRadius + buttonSize * hoverScale / 2.0 + EdgeMarginDip)));
 
 
         /// <summary>

@@ -31,9 +31,26 @@ namespace Action_Wheel.Core
         CounterSweep = 6,
     }
 
+    /// <summary>What a ring button does when the pointer is over it.</summary>
+    /// <remarks>Written to preferences.json like <see cref="RingAnimation"/>: append only.</remarks>
+    public enum RingHoverEffect
+    {
+        /// <summary>The original: the button grows, and an outer one swaps its colours (the centre lightens).</summary>
+        GrowAndColour = 0,
+
+        /// <summary>The button grows and its shadow turns into a soft glow in the button's own colour.</summary>
+        Glow = 1,
+
+        /// <summary>The button grows and its shadow deepens and drops further, as if lifted off the screen.</summary>
+        Lift = 2,
+
+        /// <summary>Nothing on hover. Pressing still gives its usual feedback.</summary>
+        None = 3,
+    }
+
     /// <summary>
     /// The parts of the ring's look that the user controls but that are not per-button: the opening
-    /// animation and the two numbers that decide how big the ring is.
+    /// animation, the hover effect, and the two numbers that decide how big the ring is.
     /// </summary>
     /// <remarks>
     /// Deliberately not part of <c>actions.json</c>. Those are the nine buttons and travel between
@@ -77,6 +94,42 @@ namespace Action_Wheel.Core
         /// <summary>The slowest the opening animation can be played.</summary>
         public const double MaxAnimationDurationMs = 1000.0;
 
+        /// <summary>What a button does under the pointer. The default is how the ring always behaved.</summary>
+        public RingHoverEffect HoverEffect { get; init; } = RingHoverEffect.GrowAndColour;
+
+        /// <summary>
+        /// How much a hovered button grows, in percent of its size. 112 is the scale the ring always
+        /// used. Ignored by <see cref="RingHoverEffect.None"/>.
+        /// </summary>
+        public double HoverScalePercent { get; init; } = DefaultHoverScalePercent;
+
+        public const double DefaultHoverScalePercent = 112.0;
+        public const double MinHoverScalePercent = 100.0;
+
+        /// <summary>
+        /// The ceiling also bounds the overlay window, which must leave room for a fully grown button
+        /// and its shadow (see <see cref="RingGeometry.MenuSizeFor"/>).
+        /// </summary>
+        public const double MaxHoverScalePercent = 130.0;
+
+        /// <summary>
+        /// How long the hover change takes, in milliseconds. 0 is instant, which is how the ring always
+        /// behaved. Above that, growing and the shadow change ease in over this time.
+        /// </summary>
+        public double HoverAnimationMs { get; init; } = 0;
+
+        public const double MaxHoverAnimationMs = 300.0;
+
+        /// <summary>
+        /// Whether choosing a button by the drag gesture grows it like a pointer hover does. Off, the
+        /// gesture still shows the colour and shadow change, without the growth. The gesture used to
+        /// show colour only.
+        /// </summary>
+        public bool HoverOnGesture { get; init; } = true;
+
+        /// <summary>The hover scale as a factor, 1.0 for <see cref="RingHoverEffect.None"/>.</summary>
+        public double HoverScale => HoverEffect == RingHoverEffect.None ? 1.0 : HoverScalePercent / 100.0;
+
         /// <summary>Diameter of one of the eight outer buttons, in DIPs.</summary>
         public double ButtonSize { get; init; } = RingGeometry.OuterButtonSizeDip;
 
@@ -93,7 +146,7 @@ namespace Action_Wheel.Core
         public double IconSize => Math.Round(ButtonSize * RingGeometry.IconSizeRatio);
 
         /// <summary>Side of the square overlay window this ring needs, in DIPs.</summary>
-        public int MenuSize => RingGeometry.MenuSizeFor(ButtonSize, OrbitRadius);
+        public int MenuSize => RingGeometry.MenuSizeFor(ButtonSize, OrbitRadius, HoverScale);
 
         /// <summary>
         /// The same appearance with both numbers brought inside their legal range. The orbit is
@@ -114,12 +167,22 @@ namespace Action_Wheel.Core
                 double.IsFinite(AnimationDurationMs) ? Math.Round(AnimationDurationMs) : DefaultAnimationDurationMs,
                 MinAnimationDurationMs, MaxAnimationDurationMs);
 
+            double hoverScale = Math.Clamp(
+                double.IsFinite(HoverScalePercent) ? Math.Round(HoverScalePercent) : DefaultHoverScalePercent,
+                MinHoverScalePercent, MaxHoverScalePercent);
+
+            double hoverMs = Math.Clamp(
+                double.IsFinite(HoverAnimationMs) ? Math.Round(HoverAnimationMs) : 0, 0, MaxHoverAnimationMs);
+
             return this with
             {
                 Animation = Enum.IsDefined(typeof(RingAnimation), Animation) ? Animation : RingAnimation.Fade,
                 ButtonSize = button,
                 OrbitRadius = orbit,
                 AnimationDurationMs = duration,
+                HoverEffect = Enum.IsDefined(typeof(RingHoverEffect), HoverEffect) ? HoverEffect : RingHoverEffect.GrowAndColour,
+                HoverScalePercent = hoverScale,
+                HoverAnimationMs = hoverMs,
             };
         }
     }

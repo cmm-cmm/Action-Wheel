@@ -907,6 +907,60 @@
                                                        VerticalAlignment="Center"/>
                                         </Border>
                                     </Grid>
+
+                                    <!-- Hover effect. The preview above uses the same code as the ring
+                                         (Overlay/HoverVisuals.cs), so hovering it shows the choice. -->
+                                    <MenuFlyoutSeparator Margin="0,4,0,0"/>
+
+                                    <!-- This order must match SettingsViewModel.HoverEffectOrder. -->
+                                    <ComboBox HorizontalAlignment="Stretch" Header="Hover effect"
+                                              SelectedIndex="{Binding HoverEffectIndex, Mode=TwoWay}"
+                                              ToolTipService.ToolTip="What a button does under the pointer. Hover over the preview above to try it.">
+                                        <ComboBoxItem Content="Grow and swap colours"/>
+                                        <ComboBoxItem Content="Glow"/>
+                                        <ComboBoxItem Content="Lift"/>
+                                        <ComboBoxItem Content="None"/>
+                                    </ComboBox>
+                                    <TextBlock Text="{Binding HoverEffectDescription, Mode=OneWay}"
+                                               TextWrapping="Wrap" FontSize="12"
+                                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+
+                                    <Grid ColumnSpacing="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Spacing="2">
+                                            <Slider Header="Hover growth"
+                                                    Minimum="{Binding MinHoverScalePercent, Mode=OneWay}"
+                                                    Maximum="{Binding MaxHoverScalePercent, Mode=OneWay}"
+                                                    StepFrequency="1"
+                                                    IsEnabled="{Binding HasHoverEffect, Mode=OneWay}"
+                                                    Value="{Binding HoverScalePercent, Mode=TwoWay}"
+                                                    ToolTipService.ToolTip="How much a hovered button grows. 112 % is the original size; 100 % does not grow at all."/>
+                                            <TextBlock Text="{Binding HoverScalePercentText, Mode=OneWay}" FontSize="11"
+                                                       HorizontalAlignment="Right"
+                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <Slider Header="Hover speed"
+                                                    Minimum="0"
+                                                    Maximum="{Binding MaxHoverAnimationMs, Mode=OneWay}"
+                                                    StepFrequency="10"
+                                                    IsEnabled="{Binding HasHoverEffect, Mode=OneWay}"
+                                                    Value="{Binding HoverAnimationMs, Mode=TwoWay}"
+                                                    ToolTipService.ToolTip="How long the hover change takes. 0 is instant, the original behaviour; higher values ease it in smoothly."/>
+                                            <TextBlock Text="{Binding HoverAnimationMsText, Mode=OneWay}" FontSize="11"
+                                                       HorizontalAlignment="Right"
+                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <ToggleSwitch Header="Also when choosing by dragging"
+                                                  OnContent="The chosen button grows too" OffContent="Colour and shadow only"
+                                                  IsEnabled="{Binding HasHoverEffect, Mode=OneWay}"
+                                                  IsOn="{Binding HoverOnGesture, Mode=TwoWay}"
+                                                  ToolTipService.ToolTip="When you hold the trigger and flick towards a button, that button shows the hover effect. Off, it does not grow."/>
                                 </StackPanel>
                             </Border>
                         </Grid>

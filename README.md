@@ -48,6 +48,7 @@ A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor wheneve
 - **Configurable buttons** — 8 outer buttons plus a centre button. Each can send a keyboard shortcut, launch a program/file/URL, run a built-in Windows function (lock, sleep, snap, show desktop, switch profile, ...), or reveal a group. Edit them in the built-in settings window, or by hand in `actions.json`.
 - **Group buttons** — turn any outer button into a small satellite ring of up to 8 more buttons. They fan out on hover from that button's own position, sized and coloured to match it, so a group reads as one control rather than a separate menu.
 - **Ring size, distance and animation are all adjustable** — button size and orbit radius have a live preview, and there are 7 opening animations to choose from (fade and scale, pop, radiate from centre, converge from outside, clockwise/counter-clockwise sweep, or none), each with its own effect duration.
+- **Choose the hover effect** — the hovered button can grow and swap colours (the original), glow in its own colour, lift with a deeper shadow, or do nothing. How much it grows (100–130 %) and how quickly (instant up to 300 ms) are adjustable, and choosing a button by dragging can show the same effect. Hover over the preview in Settings to try it.
 - **Truly transparent** — per-pixel alpha, so only the buttons are drawn; the desktop shows through everywhere else.
 - **Buttons carry a drop shadow** — they stay readable over a white window underneath, which matters because the overlay is genuinely transparent.
 - **Picks up edits to `actions.json` on its own** — the file is watched in both locations it can live in.
@@ -125,7 +126,7 @@ Self-contained publishes are large (roughly 250–300 MB). That is normal for a 
 - **reset** and **test** buttons — test runs the action immediately, without saving or opening the ring
 - a **live status marker** next to the value: green when a launch target was found (on disk, on PATH, registered under App Paths the way Chrome, Edge and Office are, or a well-formed URL), amber when it was not or when another button uses the same shortcut, red when the shortcut contains a key that cannot be sent
 
-**Appearance & trigger** holds the mouse trigger (which gesture opens the ring, and the chord timing/movement limits) and the ring's own size, orbit distance and opening animation, each with a live preview.
+**Appearance & trigger** holds the mouse trigger (which gesture opens the ring, and the chord timing/movement limits) and the ring's own size, orbit distance, opening animation and hover effect, each with a live preview. The preview responds to the pointer, so hovering it shows the chosen effect.
 
 **Profiles & backup** holds saving/loading/renaming/deleting named profiles, the active profile indicator, the "Recognised key names" reference, and the one-file backup/restore.
 
@@ -297,6 +298,7 @@ The code is in two assemblies. **`ActionWheel.Core`** is the business logic and 
 | `ViewModels/MainViewModel.cs` | Everything the main window shows and does |
 | `ViewModels/SettingsViewModel*.cs` | The settings window's rows, undo/redo, validation and saving (`.Appearance.cs`, `.Profiles.cs` and `.Ai.cs` are partials of the same class) |
 | `Overlay/ButtonShadow.cs` | The composition drop shadow behind each ring button, including a group's satellites |
+| `Overlay/HoverVisuals.cs` | The hover effect's growth and shadow change, shared by the ring, a group's satellites and the settings preview |
 | `Overlay/RingOpenAnimation.cs` | The seven opening-animation presets, driving only `Opacity` and a `RenderTransform` |
 | `Overlay/RadialMenu.xaml(.cs)` | The overlay window: transparency, positioning, layout, hit-testing, and a Group button's satellite ring |
 | `Settings/SettingsWindow.xaml(.cs)` | The settings window: the `NavigationView` sections, drag-reorder retagging, dialogs, the file picker |

@@ -45,6 +45,12 @@ namespace Action_Wheel.Services
                         ButtonSize = ReadInt(root, "buttonSize", (int)RingGeometry.OuterButtonSizeDip),
                         OrbitRadius = ReadInt(root, "orbitRadius", (int)RingGeometry.OrbitRadiusDip),
                         AnimationDurationMs = ReadAnimationDurationMs(root),
+                        // Absent in every file written before hover effects existed, and each
+                        // fallback is the behaviour those versions had.
+                        HoverEffect = (RingHoverEffect)ReadInt(root, "hoverEffect", (int)RingHoverEffect.GrowAndColour),
+                        HoverScalePercent = ReadInt(root, "hoverScalePercent", (int)RingAppearance.DefaultHoverScalePercent),
+                        HoverAnimationMs = ReadInt(root, "hoverAnimationMs", 0),
+                        HoverOnGesture = ReadBool(root, "hoverOnGesture", true),
                     }.Normalised(),
                 };
             }
@@ -73,6 +79,10 @@ namespace Action_Wheel.Services
                     writer.WriteNumber("buttonSize", (int)appearance.ButtonSize);
                     writer.WriteNumber("orbitRadius", (int)appearance.OrbitRadius);
                     writer.WriteNumber("animationDurationMs", (int)appearance.AnimationDurationMs);
+                    writer.WriteNumber("hoverEffect", (int)appearance.HoverEffect);
+                    writer.WriteNumber("hoverScalePercent", (int)appearance.HoverScalePercent);
+                    writer.WriteNumber("hoverAnimationMs", (int)appearance.HoverAnimationMs);
+                    writer.WriteBoolean("hoverOnGesture", appearance.HoverOnGesture);
                     writer.WriteEndObject();
                 }
 
@@ -95,6 +105,10 @@ namespace Action_Wheel.Services
             return root.TryGetProperty(legacy, out value) && value.TryGetInt32(out result)
                 ? result : fallback;
         }
+
+        private static bool ReadBool(JsonElement root, string name, bool fallback) =>
+            root.TryGetProperty(name, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
+                ? value.GetBoolean() : fallback;
 
         /// <summary>
         /// Reads the effect duration in its current unit (milliseconds), or converts a percentage

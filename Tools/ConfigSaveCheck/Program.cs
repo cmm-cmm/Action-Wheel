@@ -276,6 +276,42 @@ try
         catch (FormatException) { rejected = true; }
         Check("tasks: duplicate template ids are rejected", rejected);
     }
+
+    // 8. Hover effects: the defaults are exactly the ring's old behaviour, and every value is clamped.
+    {
+        var standard = RingAppearance.Default;
+        Check("hover: the default effect is the original grow-and-swap",
+            standard.HoverEffect == RingHoverEffect.GrowAndColour && standard.HoverScale == 1.12);
+        Check("hover: the default is instant, as before", standard.HoverAnimationMs == 0);
+        Check("hover: the default ring's window is still exactly 400", standard.MenuSize == 400);
+
+        var wild = new RingAppearance
+        {
+            HoverEffect = (RingHoverEffect)99, HoverScalePercent = 500, HoverAnimationMs = -20,
+        }.Normalised();
+        Check("hover: an unknown effect falls back to the original", wild.HoverEffect == RingHoverEffect.GrowAndColour);
+        Check("hover: growth is capped", wild.HoverScalePercent == RingAppearance.MaxHoverScalePercent);
+        Check("hover: a negative speed becomes instant", wild.HoverAnimationMs == 0);
+        Check("hover: speed is capped",
+            new RingAppearance { HoverAnimationMs = 9999 }.Normalised().HoverAnimationMs == RingAppearance.MaxHoverAnimationMs);
+        Check("hover: non-finite growth falls back to the default",
+            new RingAppearance { HoverScalePercent = double.NaN }.Normalised().HoverScalePercent == RingAppearance.DefaultHoverScalePercent);
+
+        var none = standard with { HoverEffect = RingHoverEffect.None, HoverScalePercent = 130 };
+        Check("hover: None never grows, whatever the growth setting", none.HoverScale == 1.0);
+
+        // The window must fit the largest hover at the largest ring, or the grown button and its
+        // shadow are clipped at the window edge.
+        var largest = new RingAppearance
+        {
+            ButtonSize = RingGeometry.MaxButtonSizeDip, OrbitRadius = RingGeometry.MaxOrbitRadiusDip,
+            HoverScalePercent = RingAppearance.MaxHoverScalePercent,
+        }.Normalised();
+        double needed = 2.0 * (largest.OrbitRadius + largest.ButtonSize * largest.HoverScale / 2.0);
+        Check("hover: the window always holds a fully grown outer button", largest.MenuSize > needed);
+        Check("hover: more growth never shrinks the window",
+            largest.MenuSize >= (largest with { HoverScalePercent = 100 }).MenuSize);
+    }
 }
 finally
 {

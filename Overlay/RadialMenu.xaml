@@ -26,7 +26,8 @@
                 any VisualState - each button's colour comes from actions.json, so it has to be set
                 by code onto the Button's Background/Foreground. A colour setter in a VisualState
                 would overwrite that value. Hover/pressed are handled by RadialMenu.ApplyPointerStates
-                in code-behind; all that's left here is the scale-up effect.
+                in code-behind, and the hover growth by Overlay/HoverVisuals.cs, so the VisualStates
+                below are deliberately empty.
             -->
             <Style x:Key="RadialButtonStyle" TargetType="Button">
                 <Setter Property="Width" Value="44"/>
@@ -41,14 +42,12 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Grid RenderTransformOrigin="0.5,0.5">
-                                <!-- RenderTransformOrigin, not CenterX/CenterY: the origin is a
-                                     fraction of the element, so it stays the middle whatever
-                                     diameter the user picks. Absolute centres would need
-                                     rewriting on every size change. -->
-                                <Grid.RenderTransform>
-                                    <ScaleTransform x:Name="HoverScale" ScaleX="1" ScaleY="1"/>
-                                </Grid.RenderTransform>
+                            <!-- This root Grid is what grows on hover. It is driven from code
+                                 (Overlay/HoverVisuals.cs, through the Scale facade) rather than
+                                 by VisualState setters, so the hover effect, its size and its
+                                 speed are settings, and the drag gesture can grow a button too.
+                                 No RenderTransform here: the facade replaces it. -->
+                            <Grid>
                                 <!-- Empty and BELOW Bd: RadialMenu.ApplyShadow attaches the shadow
                                      sprite visual here, so the shadow is drawn behind the button. -->
                                 <Border x:Name="ShadowHost"
@@ -68,24 +67,9 @@
                                 </Border>
                                 <VisualStateManager.VisualStateGroups>
                                     <VisualStateGroup x:Name="CommonStates">
-                                        <VisualState x:Name="Normal">
-                                            <VisualState.Setters>
-                                                <Setter Target="HoverScale.ScaleX" Value="1"/>
-                                                <Setter Target="HoverScale.ScaleY" Value="1"/>
-                                            </VisualState.Setters>
-                                        </VisualState>
-                                        <VisualState x:Name="PointerOver">
-                                            <VisualState.Setters>
-                                                <Setter Target="HoverScale.ScaleX" Value="1.12"/>
-                                                <Setter Target="HoverScale.ScaleY" Value="1.12"/>
-                                            </VisualState.Setters>
-                                        </VisualState>
-                                        <VisualState x:Name="Pressed">
-                                            <VisualState.Setters>
-                                                <Setter Target="HoverScale.ScaleX" Value="0.94"/>
-                                                <Setter Target="HoverScale.ScaleY" Value="0.94"/>
-                                            </VisualState.Setters>
-                                        </VisualState>
+                                        <VisualState x:Name="Normal"/>
+                                        <VisualState x:Name="PointerOver"/>
+                                        <VisualState x:Name="Pressed"/>
                                         <VisualState x:Name="Disabled"/>
                                     </VisualStateGroup>
                                 </VisualStateManager.VisualStateGroups>
@@ -106,10 +90,8 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Grid RenderTransformOrigin="0.5,0.5">
-                                <Grid.RenderTransform>
-                                    <ScaleTransform x:Name="HoverScale" ScaleX="1" ScaleY="1"/>
-                                </Grid.RenderTransform>
+                            <!-- Grows from code; see the outer style above. -->
+                            <Grid>
                                 <Border x:Name="ShadowHost"
                                         Width="{TemplateBinding Width}"
                                         Height="{TemplateBinding Height}"/>
@@ -126,24 +108,9 @@
                                 </Border>
                                 <VisualStateManager.VisualStateGroups>
                                     <VisualStateGroup x:Name="CommonStates">
-                                        <VisualState x:Name="Normal">
-                                            <VisualState.Setters>
-                                                <Setter Target="HoverScale.ScaleX" Value="1"/>
-                                                <Setter Target="HoverScale.ScaleY" Value="1"/>
-                                            </VisualState.Setters>
-                                        </VisualState>
-                                        <VisualState x:Name="PointerOver">
-                                            <VisualState.Setters>
-                                                <Setter Target="HoverScale.ScaleX" Value="1.12"/>
-                                                <Setter Target="HoverScale.ScaleY" Value="1.12"/>
-                                            </VisualState.Setters>
-                                        </VisualState>
-                                        <VisualState x:Name="Pressed">
-                                            <VisualState.Setters>
-                                                <Setter Target="HoverScale.ScaleX" Value="0.94"/>
-                                                <Setter Target="HoverScale.ScaleY" Value="0.94"/>
-                                            </VisualState.Setters>
-                                        </VisualState>
+                                        <VisualState x:Name="Normal"/>
+                                        <VisualState x:Name="PointerOver"/>
+                                        <VisualState x:Name="Pressed"/>
                                         <VisualState x:Name="Disabled"/>
                                     </VisualStateGroup>
                                 </VisualStateManager.VisualStateGroups>

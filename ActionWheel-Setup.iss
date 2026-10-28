@@ -5,7 +5,7 @@
 ; ==============================================
 
 #define MyAppName "Action Wheel"
-#define MyAppVersion "2.8.0"
+#define MyAppVersion "2.9.0"
 #define MyAppPublisher "KoneForge"
 #define MyAppURL "https://konexforge.com/"
 #define MyAppExeName "Action Wheel.exe"

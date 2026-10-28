@@ -51,9 +51,9 @@
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     
     <!-- Version Info -->
-    <AssemblyVersion>2.10.0.0</AssemblyVersion>
-    <FileVersion>2.10.0.0</FileVersion>
-    <Version>2.10.0</Version>
+    <AssemblyVersion>2.11.0.0</AssemblyVersion>
+    <FileVersion>2.11.0.0</FileVersion>
+    <Version>2.11.0</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Company>KoneForge</Company>
     <Product>Action Wheel</Product>

@@ -42,8 +42,16 @@ namespace Action_Wheel.Core
                     NewLineChars = Environment.NewLine,
                 };
 
-                using (var writer = XmlWriter.Create(temporaryPath, settings))
-                    document.Save(writer);
+                // Flushed all the way to disk before the move, the same as actions.json. The active
+                // profile is rewritten on every Settings save, and a move of a temp file still in
+                // the OS cache can leave an empty file behind after a power cut.
+                using (var stream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write,
+                    FileShare.None, bufferSize: 4096, FileOptions.WriteThrough))
+                {
+                    using (var writer = XmlWriter.Create(stream, settings))
+                        document.Save(writer);
+                    stream.Flush(flushToDisk: true);
+                }
 
                 File.Move(temporaryPath, fullPath, overwrite: true);
                 return true;

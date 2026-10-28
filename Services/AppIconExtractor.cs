@@ -82,7 +82,7 @@ namespace Action_Wheel.Services
             {
                 // A bare command such as "notepad.exe" is a legitimate launch target; it just has
                 // to be resolved to a real file before the shell can be asked about it.
-                string? resolved = ResolveOnPath(path);
+                string? resolved = CommandResolver.Resolve(path);
                 if (resolved == null)
                     return Failed($"'{path}' was not found, so its icon could not be read.");
                 path = resolved;
@@ -174,39 +174,6 @@ namespace Action_Wheel.Services
         {
             var trimmed = (target ?? string.Empty).Trim().Trim('"');
             return trimmed.Length == 0 ? string.Empty : Environment.ExpandEnvironmentVariables(trimmed);
-        }
-
-        private static string? ResolveOnPath(string command)
-        {
-            if (Path.IsPathRooted(command) || command.Contains(Path.DirectorySeparatorChar))
-                return null;
-
-            var directories = Environment.GetEnvironmentVariable("PATH");
-            if (string.IsNullOrEmpty(directories))
-                return null;
-
-            var extensions = string.IsNullOrEmpty(Path.GetExtension(command))
-                ? new[] { ".exe", ".com", ".bat", ".cmd" }
-                : new[] { string.Empty };
-
-            foreach (var directory in directories.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-            {
-                foreach (var extension in extensions)
-                {
-                    try
-                    {
-                        string candidate = Path.Combine(directory.Trim(), command + extension);
-                        if (File.Exists(candidate))
-                            return candidate;
-                    }
-                    catch (ArgumentException)
-                    {
-                        // A malformed PATH entry - skip it rather than give up on the rest.
-                    }
-                }
-            }
-
-            return null;
         }
 
         /// <summary>

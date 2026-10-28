@@ -44,7 +44,7 @@ namespace Action_Wheel.Settings
                 if (Uri.TryCreate(target, UriKind.Absolute, out var uri) && !uri.IsFile)
                     return LaunchTargetStatus.Resolved;
 
-                if (ExistsOnPath(target))
+                if (Services.CommandResolver.Resolve(target) != null)
                     return LaunchTargetStatus.Resolved;
             }
             catch (Exception)
@@ -54,43 +54,6 @@ namespace Action_Wheel.Settings
             }
 
             return LaunchTargetStatus.Unresolved;
-        }
-
-        /// <summary>
-        /// Resolves a bare command such as "notepad.exe" the way the shell would, by walking PATH.
-        /// Without this every sensible default in actions.json would be flagged as missing.
-        /// </summary>
-        private static bool ExistsOnPath(string command)
-        {
-            if (Path.IsPathRooted(command) || command.Contains(Path.DirectorySeparatorChar))
-                return false;
-
-            var paths = Environment.GetEnvironmentVariable("PATH");
-            if (string.IsNullOrEmpty(paths))
-                return false;
-
-            // A bare name may omit the extension, exactly as it may on a command line.
-            var extensions = string.IsNullOrEmpty(Path.GetExtension(command))
-                ? new[] { ".exe", ".com", ".bat", ".cmd" }
-                : new[] { string.Empty };
-
-            foreach (var directory in paths.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-            {
-                foreach (var extension in extensions)
-                {
-                    try
-                    {
-                        if (File.Exists(Path.Combine(directory.Trim(), command + extension)))
-                            return true;
-                    }
-                    catch (ArgumentException)
-                    {
-                        // A malformed PATH entry - skip it rather than give up on the rest.
-                    }
-                }
-            }
-
-            return false;
         }
     }
 }

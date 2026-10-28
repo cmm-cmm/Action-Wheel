@@ -19,7 +19,8 @@ void Check(string label, bool passed)
         failures++;
 }
 
-var epoch = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+// Milliseconds on a monotonic clock, the way MouseHook reads Environment.TickCount64.
+long epoch = 1_000_000;
 
 Console.WriteLine("ChordGate regression check");
 Console.WriteLine();
@@ -35,7 +36,7 @@ Console.WriteLine();
     Check("chord 1: right-down alone does not fire the chord", !rightChordFired);
 
     bool leftDownSwallowed = gate.OnLeftDown(
-        ChordTrigger.HoldRightPressLeft, epoch.AddMilliseconds(100), 3, -2, out bool leftChordFired);
+        ChordTrigger.HoldRightPressLeft, epoch + 100, 3, -2, out bool leftChordFired);
     Check("chord 1: left-down (second button) is swallowed", leftDownSwallowed);
     Check("chord 1: left-down fires the chord", leftChordFired);
 
@@ -53,7 +54,7 @@ Console.WriteLine();
     Check("chord 2: left-down alone does not fire the chord", !leftChordFired);
 
     bool rightDownSwallowed = gate.OnRightDown(
-        ChordTrigger.HoldLeftPressRight, epoch.AddMilliseconds(100), -1, 4, out bool rightChordFired);
+        ChordTrigger.HoldLeftPressRight, epoch + 100, -1, 4, out bool rightChordFired);
     Check("chord 2: right-down (second button) is swallowed", rightDownSwallowed);
     Check("chord 2: right-down fires the chord", rightChordFired);
 
@@ -79,7 +80,7 @@ Console.WriteLine();
 
     gate.OnRightDown(ChordTrigger.None, epoch, 0, 0, out _);
     bool leftDownSwallowed = gate.OnLeftDown(
-        ChordTrigger.HoldRightPressLeft, epoch.AddMilliseconds(501), 0, 0, out bool chordFired);
+        ChordTrigger.HoldRightPressLeft, epoch + 501, 0, 0, out bool chordFired);
 
     Check("chord 4: a too-slow second press does not fire the chord", !chordFired);
     Check("chord 4: a too-slow second press's down is not swallowed", !leftDownSwallowed);
@@ -92,7 +93,7 @@ Console.WriteLine();
 
     gate.OnRightDown(ChordTrigger.None, epoch, 0, 0, out _);
     bool leftDownSwallowed = gate.OnLeftDown(
-        ChordTrigger.HoldRightPressLeft, epoch.AddMilliseconds(50), 11, 0, out bool chordFired);
+        ChordTrigger.HoldRightPressLeft, epoch + 50, 11, 0, out bool chordFired);
 
     Check("chord 5: a too-far second press does not fire the chord", !chordFired);
     Check("chord 5: a too-far second press's down is not swallowed", !leftDownSwallowed);
@@ -107,7 +108,7 @@ Console.WriteLine();
     var gate = new ChordGate();
 
     gate.OnLeftDown(ChordTrigger.None, epoch, 0, 0, out _);
-    bool rightDownSwallowed = gate.OnRightDown(ChordTrigger.None, epoch.AddMilliseconds(50), 0, 0, out bool chordFired);
+    bool rightDownSwallowed = gate.OnRightDown(ChordTrigger.None, epoch + 50, 0, 0, out bool chordFired);
 
     Check("chord 6: the wrong physical order does not fire the chord", !chordFired);
     Check("chord 6: the wrong physical order's down is not swallowed", !rightDownSwallowed);

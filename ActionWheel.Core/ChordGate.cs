@@ -19,8 +19,11 @@ namespace Action_Wheel.Core
     /// Extracted out of <c>MouseHook</c> so this decision can be driven from a plain object, with no
     /// real Win32 hook installed - see <c>Tools/ChordGateCheck</c>. <c>MouseHook</c> still owns
     /// everything that needs an actual HWND/hook handle; this owns only "should this event be
-    /// swallowed", given as plain values (a timestamp and a position, not <c>DateTime.UtcNow</c> or
-    /// <c>Windows.Graphics.PointInt32</c>) so it has no Win32/WinRT dependency to test around.
+    /// swallowed", given as plain values (a timestamp and a position, not <c>Windows.Graphics.PointInt32</c>)
+    /// so it has no Win32/WinRT dependency to test around. The timestamp is milliseconds on a
+    /// monotonic clock (<c>Environment.TickCount64</c>), not wall-clock time. A system clock
+    /// change, such as an NTP correction between the two presses, used to make a real chord look
+    /// too slow, or a stale first press look recent.
     ///
     /// The button held FIRST is not swallowed. Its DOWN has already gone through to the app before
     /// the chord could be recognised - recognition needs the SECOND button's DOWN to arrive - so its
@@ -35,8 +38,8 @@ namespace Action_Wheel.Core
         private bool _rightDown;
         private bool _swallowLeftUp;
         private bool _swallowRightUp;
-        private DateTime _leftDownAt;
-        private DateTime _rightDownAt;
+        private long _leftDownAtMs;
+        private long _rightDownAtMs;
         private (int X, int Y) _leftDownPosition;
         private (int X, int Y) _rightDownPosition;
 
@@ -51,15 +54,15 @@ namespace Action_Wheel.Core
         /// <see cref="ChordTrigger.HoldRightPressLeft"/> chord), and sets
         /// <paramref name="chordFired"/> so the caller knows to raise its own open/close events.
         /// </summary>
-        public bool OnLeftDown(ChordTrigger trigger, DateTime now, int x, int y, out bool chordFired)
+        public bool OnLeftDown(ChordTrigger trigger, long nowMs, int x, int y, out bool chordFired)
         {
             _leftDown = true;
-            _leftDownAt = now;
+            _leftDownAtMs = nowMs;
             _leftDownPosition = (x, y);
             chordFired = false;
 
             if (trigger == ChordTrigger.HoldRightPressLeft && _rightDown
-                && IsChordValid(_rightDownAt, _rightDownPosition, now, x, y))
+                && IsChordValid(_rightDownAtMs, _rightDownPosition, nowMs, x, y))
             {
                 // Only this press's own UP - the right button's DOWN already reached the app before
                 // this chord was recognised, so its UP must still reach the app too.
@@ -87,15 +90,15 @@ namespace Action_Wheel.Core
         /// <see cref="ChordTrigger.HoldLeftPressRight"/> chord), and sets
         /// <paramref name="chordFired"/> so the caller knows to raise its own open/close events.
         /// </summary>
-        public bool OnRightDown(ChordTrigger trigger, DateTime now, int x, int y, out bool chordFired)
+        public bool OnRightDown(ChordTrigger trigger, long nowMs, int x, int y, out bool chordFired)
         {
             _rightDown = true;
-            _rightDownAt = now;
+            _rightDownAtMs = nowMs;
             _rightDownPosition = (x, y);
             chordFired = false;
 
             if (trigger == ChordTrigger.HoldLeftPressRight && _leftDown
-                && IsChordValid(_leftDownAt, _leftDownPosition, now, x, y))
+                && IsChordValid(_leftDownAtMs, _leftDownPosition, nowMs, x, y))
             {
                 _swallowRightUp = true;
                 chordFired = true;
@@ -116,9 +119,9 @@ namespace Action_Wheel.Core
             return true;
         }
 
-        private bool IsChordValid(DateTime firstDownAt, (int X, int Y) firstPosition, DateTime now, int x, int y)
+        private bool IsChordValid(long firstDownAtMs, (int X, int Y) firstPosition, long nowMs, int x, int y)
         {
-            if ((now - firstDownAt).TotalMilliseconds > ChordTimeoutMs)
+            if (nowMs - firstDownAtMs > ChordTimeoutMs)
                 return false;
 
             int dx = x - firstPosition.X;

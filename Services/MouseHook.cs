@@ -284,7 +284,7 @@ namespace Action_Wheel.Services
                 {
                     var chordTrigger = Trigger == MouseTrigger.HoldRightPressLeft
                         ? ChordTrigger.HoldRightPressLeft : ChordTrigger.None;
-                    bool swallow = _chordGate.OnLeftDown(chordTrigger, DateTime.UtcNow, at.X, at.Y, out bool chordFired);
+                    bool swallow = _chordGate.OnLeftDown(chordTrigger, Environment.TickCount64, at.X, at.Y, out bool chordFired);
 
                     if (chordFired)
                     {
@@ -302,7 +302,7 @@ namespace Action_Wheel.Services
                 {
                     var chordTrigger = Trigger == MouseTrigger.HoldLeftPressRight
                         ? ChordTrigger.HoldLeftPressRight : ChordTrigger.None;
-                    bool swallow = _chordGate.OnRightDown(chordTrigger, DateTime.UtcNow, at.X, at.Y, out bool chordFired);
+                    bool swallow = _chordGate.OnRightDown(chordTrigger, Environment.TickCount64, at.X, at.Y, out bool chordFired);
 
                     if (chordFired)
                     {

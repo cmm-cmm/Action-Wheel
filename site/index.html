@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Action Wheel — A radial menu for Windows, right under your cursor</title>
+<meta name="description" content="Action Wheel pops a radial menu up under your cursor. Flick toward a button to send a shortcut, launch an app or run a Windows action — in any app. Free, open source, Windows 10 and 11.">
+<meta name="keywords" content="radial menu windows, pie menu windows, mouse gesture windows, middle click menu, shortcut launcher, productivity tool windows 11, open source">
+<meta name="robots" content="index, follow">
+<meta name="author" content="KonexForge">
+<meta name="theme-color" content="#0d1117">
+<link rel="canonical" href="https://actionwheel.konexforge.com/">
+<link rel="alternate" hreflang="en" href="https://actionwheel.konexforge.com/">
+<link rel="alternate" hreflang="vi" href="https://actionwheel.konexforge.com/vi/">
+<link rel="alternate" hreflang="x-default" href="https://actionwheel.konexforge.com/">
+<link rel="icon" type="image/png" href="/assets/icon.png">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/assets/icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Action Wheel">
+<meta property="og:url" content="https://actionwheel.konexforge.com/">
+<meta property="og:title" content="Action Wheel — your favourite actions, one flick away">
+<meta property="og:description" content="A radial menu for Windows that opens under your cursor. Shortcuts, apps, Windows actions and AI tools, one flick away. Free and open source.">
+<meta property="og:image" content="https://actionwheel.konexforge.com/assets/og-banner.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Action Wheel — a radial menu opened over a desktop">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="vi_VN">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Action Wheel — your favourite actions, one flick away">
+<meta name="twitter:description" content="A radial menu for Windows that opens under your cursor. Free and open source.">
+<meta name="twitter:image" content="https://actionwheel.konexforge.com/assets/og-banner.png">
+<link rel="stylesheet" href="/assets/site.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Action Wheel",
+  "url": "https://actionwheel.konexforge.com/",
+  "description": "A radial menu for Windows that opens under the cursor: keyboard shortcuts, apps, Windows actions and AI tools, one flick away.",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Windows 10, Windows 11",
+  "softwareVersion": "2.11.0",
+  "downloadUrl": "https://github.com/cmm-cmm/Action-Wheel/releases/latest",
+  "license": "https://opensource.org/licenses/MIT",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "codeRepository": "https://github.com/cmm-cmm/Action-Wheel",
+  "image": "https://actionwheel.konexforge.com/assets/og-banner.png",
+  "publisher": { "@type": "Organization", "name": "KonexForge" }
+}
+</script>
+</head>
+<body>
+<a class="skip" href="#try">Skip to the live demo</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/assets/icon.png" alt="" width="30" height="30"> Action Wheel <span class="ver" data-version>v2.11.0</span></a>
+    <nav class="nav" aria-label="Main">
+      <a href="#try">Try it</a>
+      <a href="#features" class="opt">Features</a>
+      <a href="#ai" class="opt">AI</a>
+      <a href="#faq" class="opt">FAQ</a>
+      <a href="https://github.com/cmm-cmm/Action-Wheel">GitHub</a>
+      <span class="lang" aria-label="Language"><a href="/" aria-current="true" lang="en">EN</a><a href="/vi/" lang="vi">VI</a></span>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="hero" aria-labelledby="hero-title">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow"><span class="dots"><i></i><i></i><i></i></span> Free · Open source · Windows 10 &amp; 11</span>
+      <h1 id="hero-title">Your favourite actions, <em>one flick</em> away.</h1>
+      <p class="lead">Action Wheel pops a radial menu up right under your cursor. Flick towards a button to send a shortcut, launch an app or run a Windows action — in any app, without reaching for the keyboard.</p>
+      <div class="cta">
+        <a class="btn btn-primary" data-download href="https://github.com/cmm-cmm/Action-Wheel/releases/latest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+          <span>Download for Windows<small><span data-version>v2.11.0</span> · portable .zip · <span data-size>108 MB</span></small></span>
+        </a>
+        <a class="btn btn-ghost" href="#try">Try it right here</a>
+      </div>
+      <div class="chips">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>No installer</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>No telemetry, no activity logs</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>MIT licensed</span>
+      </div>
+    </div>
+
+    <div id="try">
+      <div id="stage" class="stage" tabindex="0" role="application" aria-label="Live Action Wheel demo. Press Enter to open the wheel, Escape to close it.">
+        <div class="fakeapp" aria-hidden="true">
+          <div class="bar"><i></i><i></i><i></i></div>
+          <div class="lines"><b style="width:62%"></b><b style="width:88%"></b><b class="hl" style="width:46%"></b><b style="width:79%"></b><b style="width:55%"></b><b style="width:70%"></b></div>
+        </div>
+        <div class="toast" role="status" aria-live="polite"></div>
+        <p class="stage-hint">Middle-click or press and hold here, then flick to a button.</p>
+      </div>
+      <div class="controls">
+        <label>Opening
+          <select id="anim">
+            <option value="none">None</option>
+            <option value="fade" selected>Fade and scale</option>
+            <option value="pop">Pop</option>
+            <option value="radiate">Radiate from centre</option>
+            <option value="converge">Converge from outside</option>
+            <option value="sweep">Clockwise sweep</option>
+            <option value="counter">Counter-clockwise sweep</option>
+          </select>
+        </label>
+        <label>Hover
+          <select id="hover">
+            <option value="grow" selected>Grow and swap colours</option>
+            <option value="glow">Glow</option>
+            <option value="lift">Lift</option>
+            <option value="none">None</option>
+          </select>
+        </label>
+        <button class="open-kb" id="open-kb" type="button">Open with the keyboard</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band" aria-labelledby="how-title">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">How it works</div>
+      <h2 id="how-title">Press. Flick. Done.</h2>
+      <p>No hotkeys to memorise and no toolbar to aim at. The ring comes to your cursor, wherever it is.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><h3>Press</h3><p>The middle mouse button by default. Or hold one button and press the other, or use a side button. <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd> always works too.</p></div>
+      <div class="step"><h3>Flick</h3><p>Keep holding and flick towards a button, then let go. Or let go straight away and click a button instead.</p></div>
+      <div class="step"><h3>Done</h3><p>The shortcut lands in the app you were using, the program starts, the window snaps. The ring is gone before you notice it.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="features" aria-labelledby="features-title">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Features</div>
+      <h2 id="features-title">Nine buttons. Endless setups.</h2>
+      <p>Everything is set up in a proper settings window with a live preview, and saved as plain files you own.</p>
+    </div>
+    <div class="bento">
+      <div class="tile wide" style="--accent:var(--coral)">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3.5v3M20.5 12h-3M12 20.5v-3M3.5 12h3"/></svg></div>
+        <h3>Any action on any button</h3>
+        <p>Send a keyboard shortcut, open a program, file, folder or URL, or run one of more than 30 built-in Windows actions — lock, sleep, snap, show the desktop, task view, volume mixer, clipboard history and more.</p>
+      </div>
+      <div class="tile wide" style="--accent:var(--amber)">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg></div>
+        <h3>Hold for a second action</h3>
+        <p>Press and hold a button for about half a second and it runs a different action. Two jobs per button, so nine buttons go a long way.</p>
+      </div>
+      <div class="tile" style="--accent:var(--teal)">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><circle cx="12.5" cy="4.5" r="2.2"/><circle cx="18" cy="7.5" r="2.2"/><circle cx="19.5" cy="14" r="2.2"/></svg></div>
+        <h3>Groups</h3>
+        <p>Turn a button into a small satellite ring of up to eight more.</p>
+        <div class="mini-group" aria-hidden="true">
+          <i class="p" style="left:20px;top:53px"></i>
+          <i style="left:55px;top:3px"></i><i style="left:82px;top:36px"></i><i style="left:82px;top:78px"></i><i style="left:55px;top:111px"></i>
+        </div>
+      </div>
+      <div class="tile" style="--accent:var(--green)">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div>
+        <h3>Profiles</h3>
+        <p>Keep a set of buttons for work, one for design, one for games. Switch from the tray menu, or from a button on the ring itself.</p>
+      </div>
+      <div class="tile" style="--accent:var(--slate)">
+        <div class="ic" style="color:var(--fg-2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 15h18M15 18h2"/></svg></div>
+        <h3>Lives in the tray</h3>
+        <p>Starts with Windows if you like, can start hidden, and runs only once. Closing its window just hides it.</p>
+      </div>
+      <div class="tile full">
+        <div>
+          <div class="ic" style="--accent:var(--coral)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 2-.8 2-1.8 0-1.2-1-1.5-1-2.6 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg></div>
+          <h3>Make it look like yours</h3>
+          <p>Every button has its own colours, shadow and icon — a glyph, your own SVG or PNG, the icon of the app it opens, or a short word or emoji.</p>
+          <ul>
+            <li>Button size and distance from the centre, with a live preview</li>
+            <li>7 opening animations, from an instant pop to a clockwise sweep</li>
+            <li>4 hover effects: grow and swap colours, glow, lift, or none</li>
+          </ul>
+        </div>
+        <div>
+          <div class="swatches" aria-hidden="true"><i style="background:#da6b6b"></i><i style="background:#ffffff"></i><i style="background:#4a7c7e"></i><i style="background:#f2b33d"></i><i style="background:#5dbb63"></i><i style="background:#5b6b80"></i><i style="background:#8e7cc3"></i><i style="background:#2f80ed"></i></div>
+          <p style="margin-top:14px">Try the animations and hover effects in the demo above — they are the same ones the app offers.</p>
+        </div>
+      </div>
+      <div class="tile wide" style="--accent:var(--teal)">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M10 13h4"/></svg></div>
+        <h3>One-file backup</h3>
+        <p>Every profile, the trigger, the ring's look and its icons in a single .zip. Before a restore it shows what is inside — including every program its buttons can start.</p>
+      </div>
+      <div class="tile wide" style="--accent:var(--amber)">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h3l2-6 4 12 2-6h5"/></svg></div>
+        <h3>Never in your way</h3>
+        <p>The ring never takes the focus, so shortcuts land where you meant them. It stays out of Alt+Tab and the taskbar, and <kbd>Esc</kbd> or a click elsewhere puts it away.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="ai" class="band" aria-labelledby="ai-title">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">New in 2.10</div>
+      <h2 id="ai-title">Your AI tools, on the ring.</h2>
+      <p>Action Wheel looks for the AI tools already on your PC and only offers what is really there — a leftover registration or an installer stub never counts.</p>
+    </div>
+    <div class="tools" aria-label="Supported tools">
+      <span>Claude Code</span><span>Codex CLI</span><span>OpenCode</span><span>Gemini CLI</span><span>GitHub Copilot CLI</span><span>Antigravity</span><span>Cursor</span><span>Windsurf</span><span>Claude desktop</span>
+    </div>
+    <div class="ai-grid">
+      <div class="ai-card">
+        <h3>Open where you work</h3>
+        <p>A command-line tool opens in a Windows Terminal tab, in the folder of the File Explorer window you were using. An editor opens that folder.</p>
+        <ul>
+          <li>Nothing is sent anywhere — you type into the tool yourself</li>
+          <li>Switch any tool off in Settings and it leaves the menu</li>
+        </ul>
+      </div>
+      <div class="ai-card">
+        <h3>Ask about the selected text</h3>
+        <p>Select text in any app and press a button such as <em>Fix spelling and grammar with Claude Code</em>. Copy the answer, or put it in place of the selection.</p>
+        <ul>
+          <li>Claude Code runs with every tool off; Codex in its read-only sandbox</li>
+          <li>It shows the text and asks before sending it, through your own sign-in</li>
+        </ul>
+        <div class="taskwin" aria-hidden="true">
+          <div class="tt">Fix spelling and grammar with Claude Code</div>
+          <div class="body"><s>Teh</s> <ins>The</ins> quick brown fox <s>jumpd</s> <ins>jumped</ins> over the <s>lazzy</s> <ins>lazy</ins> dog.</div>
+          <div class="acts"><span class="p">Replace selection</span><span>Copy</span><span>Close</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="privacy-title">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Privacy</div>
+      <h2 id="privacy-title">Quiet by design.</h2>
+      <p>It watches for one mouse gesture, and that is all it watches.</p>
+    </div>
+    <div class="pillars">
+      <div class="pillar"><h3>No telemetry</h3><p>No usage data, no activity logs. Clicks, gestures and actions are never written down.</p></div>
+      <div class="pillar"><h3>Your files, locally</h3><p>Buttons, profiles and settings are plain files in <code>%LOCALAPPDATA%\ActionWheel</code>.</p></div>
+      <div class="pillar"><h3>One small check</h3><p>It asks GitHub whether a new release exists, at most about once a day. Nothing else goes online.</p></div>
+      <div class="pillar"><h3>AI only on request</h3><p>Text goes to an AI tool only from a task button you press, after you have seen it.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="download" class="band" aria-labelledby="download-title">
+  <div class="wrap dl">
+    <div class="dl-card">
+      <h2 id="download-title">Get Action Wheel</h2>
+      <p>Free and open source. One portable .zip — no installer, and .NET comes inside.</p>
+      <a class="btn btn-primary" data-download href="https://github.com/cmm-cmm/Action-Wheel/releases/latest">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+        <span>Download <span data-version>v2.11.0</span><small>Windows 10 (1809) or later · x64 · <span data-size>108 MB</span></small></span>
+      </a>
+      <div class="dl-meta">
+        <a data-sha href="https://github.com/cmm-cmm/Action-Wheel/releases/latest">SHA-256 checksum</a>
+        <a href="https://github.com/cmm-cmm/Action-Wheel/releases">All releases</a>
+        <a href="https://github.com/cmm-cmm/Action-Wheel">Source code</a>
+      </div>
+    </div>
+    <div class="dl-steps">
+      <ol>
+        <li><b>Download</b> the .zip above.</li>
+        <li><b>Extract it</b> anywhere, such as <code>C:\Tools\Action Wheel</code>.</li>
+        <li><b>Run <code>Action Wheel.exe</code>.</b> It settles in the notification area — then middle-click anywhere.</li>
+      </ol>
+      <div class="note"><b>Keep the file name.</b> A renamed <code>Action Wheel.exe</code> will not start, so run it as it comes out of the zip.</div>
+      <div class="note"><b>Not code-signed yet.</b> Windows SmartScreen may warn the first time. Choose <em>More info → Run anyway</em>, or check the SHA-256 checksum first.</div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" aria-labelledby="faq-title">
+  <div class="wrap">
+    <div class="section-head"><div class="kicker">FAQ</div><h2 id="faq-title">Questions, answered.</h2></div>
+    <div class="faq">
+      <details><summary>Is Action Wheel free?</summary><p>Yes. It is open source under the MIT license, with no paid tier and no ads. The code is on <a href="https://github.com/cmm-cmm/Action-Wheel">GitHub</a>.</p></details>
+      <details><summary>My mouse has no middle button, or I use it for something else.</summary><p>Pick another trigger in Settings: hold the right button and press the left (or the other way round), or a side button. <code>Ctrl+Alt+Space</code> always opens the ring as well.</p></details>
+      <details><summary>Why does Windows warn me when I first run it?</summary><p>The download is not code-signed yet, so SmartScreen does not recognise the publisher. Choose <em>More info → Run anyway</em> if you trust it, or compare the zip with the SHA-256 checksum published next to it on the release page.</p></details>
+      <details><summary>Does it work in every app?</summary><p>In every normal app, yes. Windows blocks synthetic keystrokes into apps running as administrator, so a shortcut aimed at one will not arrive — Action Wheel tells you when that happens rather than failing silently.</p></details>
+      <details><summary>Which AI tools does it support, and what does it send?</summary><p>Claude Code, Codex CLI, OpenCode, Gemini CLI, GitHub Copilot CLI, Antigravity, Cursor, Windsurf and the Claude desktop app — whichever are installed. Opening a tool sends nothing. Tasks on selected text run with Claude Code or Codex only, show you the text first, and go through your own sign-in.</p></details>
+      <details><summary>How do I uninstall it?</summary><p>Turn off <em>Start with Windows</em>, quit from the tray icon and delete the folder. To remove your settings too, delete <code>%LOCALAPPDATA%\ActionWheel</code>.</p></details>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <span>Action Wheel · MIT License · Built with ❤️ by KonexForge</span>
+    <nav aria-label="Footer">
+      <a href="https://github.com/cmm-cmm/Action-Wheel">GitHub</a>
+      <a href="https://github.com/cmm-cmm/Action-Wheel/releases">Releases</a>
+      <a href="https://github.com/cmm-cmm/Action-Wheel/issues">Issues</a>
+      <a href="/vi/" lang="vi">Tiếng Việt</a>
+    </nav>
+  </div>
+</footer>
+
+<script type="application/json" id="wheel-strings">
+{
+  "menuLabel": "Action Wheel",
+  "actions": [
+    { "label": "Close menu", "does": "closes the ring." },
+    { "label": "Copy", "does": "sends Ctrl+C to the app you were using." },
+    { "label": "Paste", "does": "sends Ctrl+V to the app you were using." },
+    { "label": "Cut", "does": "sends Ctrl+X to the app you were using." },
+    { "label": "Screenshot", "does": "opens the Windows snipping bar (Win+Shift+S)." },
+    { "label": "Settings", "does": "opens Action Wheel's settings." },
+    { "label": "Task View", "does": "shows every open window." },
+    { "label": "File Explorer", "does": "opens a new File Explorer window." },
+    { "label": "Lock screen", "does": "locks your PC." }
+  ]
+}
+</script>
+<script src="/assets/wheel.js" defer></script>
+</body>
+</html>

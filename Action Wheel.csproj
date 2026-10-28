@@ -108,6 +108,16 @@
     <Page Remove="Tools\**" />
   </ItemGroup>
 
+  <!-- The website (site\, deployed to Cloudflare by wrangler.toml) and wrangler's own cache
+       (.wrangler\) are not part of the app. Without these, every file in them would be globbed
+       into the project as an item. -->
+  <ItemGroup>
+    <Content Remove="site\**;.wrangler\**" />
+    <None Remove="site\**;.wrangler\**;wrangler.toml" />
+    <EmbeddedResource Remove="site\**;.wrangler\**" />
+    <Page Remove="site\**;.wrangler\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="ActionWheel.Core\ActionWheel.Core.csproj" />
   </ItemGroup>

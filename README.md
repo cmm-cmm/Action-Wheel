@@ -12,8 +12,10 @@ A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor wheneve
 [![Latest tag](https://img.shields.io/github/v/tag/cmm-cmm/Action-Wheel?label=version&color=success)](https://github.com/cmm-cmm/Action-Wheel/tags)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-0078D6?logo=windows&logoColor=white)](#requirements)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](#requirements)
-[![Windows App SDK](https://img.shields.io/badge/Windows%20App%20SDK-2.3.1-0078D6?logo=windowsxp&logoColor=white)](#requirements)
+[![Windows App SDK](https://img.shields.io/badge/Windows%20App%20SDK-2.4.0-0078D6?logo=windowsxp&logoColor=white)](#requirements)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+**[Website](https://actionwheel.konexforge.com/)** · **[Download the latest release](https://github.com/cmm-cmm/Action-Wheel/releases/latest)** · [Report an issue](https://github.com/cmm-cmm/Action-Wheel/issues)
 
 </div>
 
@@ -22,6 +24,7 @@ A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor wheneve
 ## Table of contents
 
 - [Features](#features)
+- [Download & install](#download--install)
 - [Requirements](#requirements)
 - [Build & run](#build--run)
 - [Using it](#using-it)
@@ -71,12 +74,42 @@ A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor wheneve
 - **Starts with Windows** — optional, from the main window's toggle or the tray menu. Uses the per-user Run key, so it needs no elevation and shows up in Windows' own Startup Apps settings.
 - **Stays out of the way** — `WS_EX_TOOLWINDOW` + `WS_EX_NOACTIVATE` keep the overlay out of Alt+Tab and the taskbar, and it never steals focus, so shortcuts land in the app you were actually using.
 
+## Download & install
+
+Action Wheel is portable: there is no installer, and nothing else needs to be installed.
+
+1. **Download** `ActionWheel-v<version>-win-x64.zip` from the [latest release](https://github.com/cmm-cmm/Action-Wheel/releases/latest).
+2. **Extract it** anywhere you like, such as `C:\Tools\Action Wheel`.
+3. **Run `Action Wheel.exe`** from the extracted folder. It lives in the notification area from then on. Turn on **Start with Windows** in its window or tray menu to have it there after every sign-in.
+
+> [!IMPORTANT]
+> **Keep the file name `Action Wheel.exe`.** A renamed copy crashes on launch (`0xc000027b`), even though its bytes are identical. The app's resource identity is tied to the name it was published under. Extract the zip and run the exe as it is.
+
+**The download is not code-signed yet.**
+- The first time you run it, Windows SmartScreen may show *"Windows protected your PC"*, and the publisher appears as *Unknown*. Choose **More info → Run anyway** if you trust the download.
+- Each release also ships a `.sha256` file next to the zip. Check the zip against it first if you prefer:
+
+```powershell
+(Get-FileHash .\ActionWheel-v2.11.0-win-x64.zip -Algorithm SHA256).Hash
+# compare with the hash inside ActionWheel-v2.11.0-win-x64.zip.sha256
+```
+
+**To uninstall:**
+1. Turn off **Start with Windows**.
+2. Quit from the tray icon.
+3. Delete the folder.
+
+Your settings, profiles and extracted icons are in `%LOCALAPPDATA%\ActionWheel`. Delete that folder too to remove everything.
+
 ## Requirements
 
-- Windows 10 version 1809 (build 17763) or later
-- .NET 10.0
-- Windows App SDK 2.4.0
-- Visual Studio 2022 with the "Windows application development" workload (for building)
+**To run:**
+- Windows 10 version 1809 (build 17763) or later, x64.
+- The release is self-contained: .NET and the Windows App SDK come with it.
+
+**To build:**
+- The .NET 10 SDK; the Windows App SDK 2.4.0 comes in through NuGet.
+- Optionally, Visual Studio 2022 with the "Windows application development" workload.
 
 ## Build & run
 
@@ -99,6 +132,17 @@ Plain `dotnet build` also works: the project defaults `Platform` to `x64` and de
 In Visual Studio, press F5 — there is one launch profile, **"Action Wheel (Unpackaged)"**.
 
 Self-contained publishes are large (roughly 250–300 MB). That is normal for a self-contained WinUI 3 / .NET 10 app, not a bug. `-Task Package` exists because a single-file publish that *builds* is not proof it *runs* - Windows App SDK below 2.3.1 produced an exe that crashed on launch (`0xc000027b` in `Microsoft.UI.Xaml.dll`) despite building cleanly, so this task extracts the exact ZIP a user would download and launches it for real before calling the build a success.
+
+### Website
+
+The website at [actionwheel.konexforge.com](https://actionwheel.konexforge.com/) lives in `site/`: plain HTML, CSS and JavaScript (English at `/`, Vietnamese at `/vi/`), with no build step and no dependencies. It is served by a Cloudflare Worker with static assets, configured in `wrangler.toml`. Security and cache headers are in `site/_headers`.
+
+```powershell
+npx serve site                    # preview locally (any static file server works)
+npx wrangler deploy               # publish (needs a Cloudflare login with access to the konexforge.com zone)
+```
+
+The download button and version label read the latest GitHub release when the page loads, so a new release needs no change to the site. The version and size written into the HTML (and the JSON-LD `softwareVersion`) are only seen if that request fails, and the button then falls back to the releases page, so bump them when it is convenient rather than on every release.
 
 ## Using it
 

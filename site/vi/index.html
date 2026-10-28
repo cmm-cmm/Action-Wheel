@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Action Wheel — Menu vòng tròn cho Windows, ngay dưới con trỏ</title>
+<meta name="description" content="Action Wheel bật một menu vòng tròn ngay dưới con trỏ chuột. Vẩy chuột về một nút để gửi phím tắt, mở ứng dụng hoặc chạy thao tác Windows — trong mọi ứng dụng. Miễn phí, mã nguồn mở, cho Windows 10 và 11.">
+<meta name="keywords" content="menu vòng tròn windows, radial menu, pie menu, cử chỉ chuột, phím tắt chuột giữa, công cụ năng suất windows 11, mã nguồn mở">
+<meta name="robots" content="index, follow">
+<meta name="author" content="KonexForge">
+<meta name="theme-color" content="#0d1117">
+<link rel="canonical" href="https://actionwheel.konexforge.com/vi/">
+<link rel="alternate" hreflang="en" href="https://actionwheel.konexforge.com/">
+<link rel="alternate" hreflang="vi" href="https://actionwheel.konexforge.com/vi/">
+<link rel="alternate" hreflang="x-default" href="https://actionwheel.konexforge.com/">
+<link rel="icon" type="image/png" href="/assets/icon.png">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/assets/icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Action Wheel">
+<meta property="og:url" content="https://actionwheel.konexforge.com/vi/">
+<meta property="og:title" content="Action Wheel — thao tác quen thuộc, chỉ một cú vẩy chuột">
+<meta property="og:description" content="Menu vòng tròn cho Windows, mở ngay dưới con trỏ. Phím tắt, ứng dụng, thao tác Windows và công cụ AI chỉ cách một cú vẩy. Miễn phí, mã nguồn mở.">
+<meta property="og:image" content="https://actionwheel.konexforge.com/assets/og-banner.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Action Wheel — menu vòng tròn mở trên màn hình">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Action Wheel — thao tác quen thuộc, chỉ một cú vẩy chuột">
+<meta name="twitter:description" content="Menu vòng tròn cho Windows, mở ngay dưới con trỏ. Miễn phí, mã nguồn mở.">
+<meta name="twitter:image" content="https://actionwheel.konexforge.com/assets/og-banner.png">
+<link rel="stylesheet" href="/assets/site.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Action Wheel",
+  "url": "https://actionwheel.konexforge.com/vi/",
+  "inLanguage": "vi",
+  "description": "Menu vòng tròn cho Windows, mở ngay dưới con trỏ: phím tắt, ứng dụng, thao tác Windows và công cụ AI chỉ cách một cú vẩy chuột.",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Windows 10, Windows 11",
+  "softwareVersion": "2.11.0",
+  "downloadUrl": "https://github.com/cmm-cmm/Action-Wheel/releases/latest",
+  "license": "https://opensource.org/licenses/MIT",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "codeRepository": "https://github.com/cmm-cmm/Action-Wheel",
+  "image": "https://actionwheel.konexforge.com/assets/og-banner.png",
+  "publisher": { "@type": "Organization", "name": "KonexForge" }
+}
+</script>
+</head>
+<body>
+<a class="skip" href="#try">Tới phần dùng thử</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/vi/"><img src="/assets/icon.png" alt="" width="30" height="30"> Action Wheel <span class="ver" data-version>v2.11.0</span></a>
+    <nav class="nav" aria-label="Điều hướng chính">
+      <a href="#try">Dùng thử</a>
+      <a href="#features" class="opt">Tính năng</a>
+      <a href="#ai" class="opt">AI</a>
+      <a href="#faq" class="opt">Hỏi đáp</a>
+      <a href="https://github.com/cmm-cmm/Action-Wheel">GitHub</a>
+      <span class="lang" aria-label="Ngôn ngữ"><a href="/" lang="en">EN</a><a href="/vi/" aria-current="true" lang="vi">VI</a></span>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="hero" aria-labelledby="hero-title">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow"><span class="dots"><i></i><i></i><i></i></span> Miễn phí · Mã nguồn mở · Windows 10 &amp; 11</span>
+      <h1 id="hero-title">Thao tác quen thuộc, chỉ <em>một cú vẩy</em>.</h1>
+      <p class="lead">Action Wheel bật một menu vòng tròn ngay dưới con trỏ chuột. Vẩy chuột về một nút để gửi phím tắt, mở ứng dụng hay chạy thao tác Windows — trong bất kỳ ứng dụng nào, không cần với tới bàn phím.</p>
+      <div class="cta">
+        <a class="btn btn-primary" data-download href="https://github.com/cmm-cmm/Action-Wheel/releases/latest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+          <span>Tải cho Windows<small><span data-version>v2.11.0</span> · file .zip chạy ngay · <span data-size>108 MB</span></small></span>
+        </a>
+        <a class="btn btn-ghost" href="#try">Dùng thử ngay tại đây</a>
+      </div>
+      <div class="chips">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Không cần cài đặt</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Không thu thập dữ liệu, không ghi log</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Giấy phép MIT</span>
+      </div>
+    </div>
+
+    <div id="try">
+      <div id="stage" class="stage" tabindex="0" role="application" aria-label="Dùng thử Action Wheel. Nhấn Enter để mở vòng, Escape để đóng.">
+        <div class="fakeapp" aria-hidden="true">
+          <div class="bar"><i></i><i></i><i></i></div>
+          <div class="lines"><b style="width:62%"></b><b style="width:88%"></b><b class="hl" style="width:46%"></b><b style="width:79%"></b><b style="width:55%"></b><b style="width:70%"></b></div>
+        </div>
+        <div class="toast" role="status" aria-live="polite"></div>
+        <p class="stage-hint">Click chuột giữa hoặc nhấn giữ tại đây, rồi vẩy về một nút.</p>
+      </div>
+      <div class="controls">
+        <label>Hiệu ứng mở
+          <select id="anim">
+            <option value="none">Không có</option>
+            <option value="fade" selected>Mờ dần và phóng to</option>
+            <option value="pop">Bật nảy</option>
+            <option value="radiate">Toả ra từ tâm</option>
+            <option value="converge">Hội tụ từ ngoài vào</option>
+            <option value="sweep">Quét theo chiều kim đồng hồ</option>
+            <option value="counter">Quét ngược chiều kim đồng hồ</option>
+          </select>
+        </label>
+        <label>Hover
+          <select id="hover">
+            <option value="grow" selected>Phóng to và đổi màu</option>
+            <option value="glow">Phát sáng</option>
+            <option value="lift">Nổi lên</option>
+            <option value="none">Không có</option>
+          </select>
+        </label>
+        <button class="open-kb" id="open-kb" type="button">Mở bằng bàn phím</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band" aria-labelledby="how-title">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Cách dùng</div>
+      <h2 id="how-title">Nhấn. Vẩy. Xong.</h2>
+      <p>Không phải nhớ tổ hợp phím, không phải ngắm thanh công cụ. Vòng tròn tự tới chỗ con trỏ của bạn, dù nó đang ở đâu.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><h3>Nhấn</h3><p>Mặc định là nút giữa chuột. Hoặc giữ một nút rồi nhấn nút kia, hoặc dùng nút bên hông. <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd> lúc nào cũng dùng được.</p></div>
+      <div class="step"><h3>Vẩy</h3><p>Giữ nút và vẩy về phía một nút trên vòng, rồi thả ra. Hoặc thả ngay và click vào nút cần dùng.</p></div>
+      <div class="step"><h3>Xong</h3><p>Phím tắt tới đúng ứng dụng bạn đang dùng, chương trình được mở, cửa sổ được xếp gọn. Vòng tròn biến mất trước khi bạn kịp để ý.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="features" aria-labelledby="features-title">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Tính năng</div>
+      <h2 id="features-title">Chín nút. Vô vàn cách dùng.</h2>
+      <p>Mọi thứ chỉnh trong một cửa sổ Settings đầy đủ, có xem trước trực tiếp, và được lưu thành file thông thường do bạn giữ.</p>
+    </div>
+    <div class="bento">
+      <div class="tile wide" style="--accent:var(--coral)">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3.5v3M20.5 12h-3M12 20.5v-3M3.5 12h3"/></svg></div>
+        <h3>Thao tác nào cũng gắn được</h3>
+        <p>Gửi phím tắt, mở chương trình, file, thư mục hay URL, hoặc chạy một trong hơn 30 thao tác Windows dựng sẵn — khoá máy, ngủ, xếp cửa sổ, hiện màn hình nền, Task View, chỉnh âm lượng, lịch sử clipboard…</p>
+      </div>
+      <div class="tile wide" style="--accent:var(--amber)">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg></div>
+        <h3>Giữ nút cho thao tác thứ hai</h3>
+        <p>Nhấn giữ một nút khoảng nửa giây là chạy một thao tác khác. Mỗi nút làm được hai việc, nên chín nút đã đủ dùng cho rất nhiều thứ.</p>
+      </div>
+      <div class="tile" style="--accent:var(--teal)">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><circle cx="12.5" cy="4.5" r="2.2"/><circle cx="18" cy="7.5" r="2.2"/><circle cx="19.5" cy="14" r="2.2"/></svg></div>
+        <h3>Nhóm nút</h3>
+        <p>Biến một nút thành vòng vệ tinh nhỏ chứa thêm tối đa tám nút nữa.</p>
+        <div class="mini-group" aria-hidden="true">
+          <i class="p" style="left:20px;top:53px"></i>
+          <i style="left:55px;top:3px"></i><i style="left:82px;top:36px"></i><i style="left:82px;top:78px"></i><i style="left:55px;top:111px"></i>
+        </div>
+      </div>
+      <div class="tile" style="--accent:var(--green)">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div>
+        <h3>Profile</h3>
+        <p>Một bộ nút cho công việc, một bộ cho thiết kế, một bộ cho chơi game. Đổi qua lại từ menu khay hệ thống, hoặc ngay từ một nút trên vòng.</p>
+      </div>
+      <div class="tile" style="--accent:var(--slate)">
+        <div class="ic" style="color:var(--fg-2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 15h18M15 18h2"/></svg></div>
+        <h3>Nằm gọn trong khay</h3>
+        <p>Tự chạy cùng Windows nếu bạn muốn, có thể khởi động ẩn, và chỉ chạy một bản duy nhất. Đóng cửa sổ chỉ là ẩn nó đi.</p>
+      </div>
+      <div class="tile full">
+        <div>
+          <div class="ic" style="--accent:var(--coral)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 2-.8 2-1.8 0-1.2-1-1.5-1-2.6 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg></div>
+          <h3>Chỉnh theo gu của bạn</h3>
+          <p>Mỗi nút có màu, bóng đổ và icon riêng — glyph có sẵn, file SVG hay PNG của bạn, icon của chính ứng dụng nó mở, hoặc một chữ ngắn hay emoji.</p>
+          <ul>
+            <li>Kích thước nút và khoảng cách tới tâm, có xem trước trực tiếp</li>
+            <li>7 hiệu ứng mở vòng, từ bật nảy tới quét theo chiều kim đồng hồ</li>
+            <li>4 hiệu ứng hover: phóng to và đổi màu, phát sáng, nổi lên, hoặc không có</li>
+          </ul>
+        </div>
+        <div>
+          <div class="swatches" aria-hidden="true"><i style="background:#da6b6b"></i><i style="background:#ffffff"></i><i style="background:#4a7c7e"></i><i style="background:#f2b33d"></i><i style="background:#5dbb63"></i><i style="background:#5b6b80"></i><i style="background:#8e7cc3"></i><i style="background:#2f80ed"></i></div>
+          <p style="margin-top:14px">Thử các hiệu ứng mở và hover trong khung dùng thử ở trên — đó chính là những hiệu ứng có trong app.</p>
+        </div>
+      </div>
+      <div class="tile wide" style="--accent:var(--teal)">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M10 13h4"/></svg></div>
+        <h3>Sao lưu trong một file</h3>
+        <p>Mọi profile, trigger, giao diện vòng và icon gói trong một file .zip. Trước khi khôi phục, app cho xem bên trong có gì — kể cả mọi chương trình mà các nút có thể chạy.</p>
+      </div>
+      <div class="tile wide" style="--accent:var(--amber)">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h3l2-6 4 12 2-6h5"/></svg></div>
+        <h3>Không bao giờ cản đường</h3>
+        <p>Vòng tròn không bao giờ giành focus, nên phím tắt tới đúng nơi bạn muốn. Nó không hiện trong Alt+Tab hay thanh taskbar, và <kbd>Esc</kbd> hoặc một cú click ra ngoài là cất nó đi.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="ai" class="band" aria-labelledby="ai-title">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Mới từ 2.10</div>
+      <h2 id="ai-title">Công cụ AI của bạn, ngay trên vòng.</h2>
+      <p>Action Wheel tìm các công cụ AI đã có trên máy và chỉ đưa ra những gì thực sự tồn tại — đăng ký còn sót lại hay trình cài đặt trung gian đều không được tính.</p>
+    </div>
+    <div class="tools" aria-label="Công cụ được hỗ trợ">
+      <span>Claude Code</span><span>Codex CLI</span><span>OpenCode</span><span>Gemini CLI</span><span>GitHub Copilot CLI</span><span>Antigravity</span><span>Cursor</span><span>Windsurf</span><span>Claude desktop</span>
+    </div>
+    <div class="ai-grid">
+      <div class="ai-card">
+        <h3>Mở ngay chỗ bạn đang làm</h3>
+        <p>Công cụ dòng lệnh mở trong một tab Windows Terminal, đúng thư mục của cửa sổ File Explorer bạn đang dùng. Trình soạn code thì mở luôn thư mục đó.</p>
+        <ul>
+          <li>Không gửi gì đi đâu cả — bạn tự gõ vào công cụ</li>
+          <li>Tắt công cụ nào trong Settings thì nó rời khỏi menu</li>
+        </ul>
+      </div>
+      <div class="ai-card">
+        <h3>Hỏi về đoạn văn bản đang chọn</h3>
+        <p>Chọn văn bản ở bất kỳ ứng dụng nào và nhấn một nút như <em>Fix spelling and grammar with Claude Code</em>. Copy câu trả lời, hoặc thay luôn đoạn đã chọn bằng nó.</p>
+        <ul>
+          <li>Claude Code chạy với mọi tool bị tắt; Codex chạy trong sandbox chỉ-đọc</li>
+          <li>Luôn cho xem văn bản và hỏi trước khi gửi, qua chính tài khoản của bạn</li>
+        </ul>
+        <div class="taskwin" aria-hidden="true">
+          <div class="tt">Fix spelling and grammar with Claude Code</div>
+          <div class="body"><s>Teh</s> <ins>The</ins> quick brown fox <s>jumpd</s> <ins>jumped</ins> over the <s>lazzy</s> <ins>lazy</ins> dog.</div>
+          <div class="acts"><span class="p">Replace selection</span><span>Copy</span><span>Close</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="privacy-title">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Quyền riêng tư</div>
+      <h2 id="privacy-title">Lặng lẽ từ thiết kế.</h2>
+      <p>Nó chỉ chờ đúng một cử chỉ chuột, và chỉ có vậy.</p>
+    </div>
+    <div class="pillars">
+      <div class="pillar"><h3>Không thu thập dữ liệu</h3><p>Không dữ liệu sử dụng, không log hoạt động. Click, cử chỉ hay thao tác đều không bị ghi lại.</p></div>
+      <div class="pillar"><h3>File của bạn, trên máy bạn</h3><p>Nút, profile và cài đặt là các file thông thường trong <code>%LOCALAPPDATA%\ActionWheel</code>.</p></div>
+      <div class="pillar"><h3>Một lần kiểm tra nhỏ</h3><p>App hỏi GitHub xem có bản mới không, tối đa khoảng mỗi ngày một lần. Ngoài ra không gì lên mạng.</p></div>
+      <div class="pillar"><h3>AI chỉ khi bạn yêu cầu</h3><p>Văn bản chỉ tới công cụ AI khi bạn nhấn nút tác vụ, và sau khi bạn đã xem qua.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="download" class="band" aria-labelledby="download-title">
+  <div class="wrap dl">
+    <div class="dl-card">
+      <h2 id="download-title">Tải Action Wheel</h2>
+      <p>Miễn phí và mã nguồn mở. Một file .zip chạy ngay — không cần cài, .NET đã có sẵn bên trong.</p>
+      <a class="btn btn-primary" data-download href="https://github.com/cmm-cmm/Action-Wheel/releases/latest">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+        <span>Tải <span data-version>v2.11.0</span><small>Windows 10 (1809) trở lên · x64 · <span data-size>108 MB</span></small></span>
+      </a>
+      <div class="dl-meta">
+        <a data-sha href="https://github.com/cmm-cmm/Action-Wheel/releases/latest">Mã kiểm tra SHA-256</a>
+        <a href="https://github.com/cmm-cmm/Action-Wheel/releases">Mọi phiên bản</a>
+        <a href="https://github.com/cmm-cmm/Action-Wheel">Mã nguồn</a>
+      </div>
+    </div>
+    <div class="dl-steps">
+      <ol>
+        <li><b>Tải</b> file .zip ở trên.</li>
+        <li><b>Giải nén</b> vào bất kỳ đâu, ví dụ <code>C:\Tools\Action Wheel</code>.</li>
+        <li><b>Chạy <code>Action Wheel.exe</code>.</b> App nằm gọn trong khay hệ thống — rồi click chuột giữa ở bất kỳ đâu.</li>
+      </ol>
+      <div class="note"><b>Giữ nguyên tên file.</b> Nếu đổi tên <code>Action Wheel.exe</code>, app sẽ không khởi động được, nên hãy chạy đúng file lấy ra từ zip.</div>
+      <div class="note"><b>Chưa được ký số.</b> Lần đầu chạy, Windows SmartScreen có thể cảnh báo. Chọn <em>More info → Run anyway</em>, hoặc kiểm tra mã SHA-256 trước.</div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" aria-labelledby="faq-title">
+  <div class="wrap">
+    <div class="section-head"><div class="kicker">Hỏi đáp</div><h2 id="faq-title">Câu hỏi thường gặp.</h2></div>
+    <div class="faq">
+      <details><summary>Action Wheel có miễn phí không?</summary><p>Có. App là mã nguồn mở theo giấy phép MIT, không có bản trả phí, không quảng cáo. Mã nguồn ở trên <a href="https://github.com/cmm-cmm/Action-Wheel">GitHub</a>.</p></details>
+      <details><summary>Chuột của tôi không có nút giữa, hoặc tôi đang dùng nó vào việc khác.</summary><p>Chọn trigger khác trong Settings: giữ chuột phải rồi nhấn chuột trái (hoặc ngược lại), hay dùng nút bên hông. <code>Ctrl+Alt+Space</code> lúc nào cũng mở được vòng.</p></details>
+      <details><summary>Sao Windows cảnh báo khi tôi chạy lần đầu?</summary><p>File tải về chưa được ký số, nên SmartScreen chưa nhận ra nhà phát hành. Chọn <em>More info → Run anyway</em> nếu bạn tin file này, hoặc đối chiếu file zip với mã SHA-256 đăng kèm trên trang phát hành.</p></details>
+      <details><summary>App có dùng được trong mọi ứng dụng không?</summary><p>Mọi ứng dụng bình thường thì có. Windows chặn phím giả lập gửi vào ứng dụng đang chạy quyền administrator, nên phím tắt nhắm vào ứng dụng đó sẽ không tới — Action Wheel báo cho bạn biết thay vì lặng lẽ thất bại.</p></details>
+      <details><summary>App hỗ trợ công cụ AI nào, và gửi những gì?</summary><p>Claude Code, Codex CLI, OpenCode, Gemini CLI, GitHub Copilot CLI, Antigravity, Cursor, Windsurf và Claude desktop — công cụ nào đã cài thì có. Mở công cụ thì không gửi gì cả. Tác vụ trên đoạn văn bản đang chọn chỉ chạy với Claude Code hoặc Codex, luôn cho bạn xem văn bản trước, và đi qua chính tài khoản của bạn.</p></details>
+      <details><summary>Gỡ app thế nào?</summary><p>Tắt <em>Start with Windows</em>, thoát từ icon trên khay rồi xoá thư mục. Muốn xoá luôn cài đặt thì xoá thêm <code>%LOCALAPPDATA%\ActionWheel</code>.</p></details>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <span>Action Wheel · Giấy phép MIT · Built with ❤️ by KonexForge</span>
+    <nav aria-label="Chân trang">
+      <a href="https://github.com/cmm-cmm/Action-Wheel">GitHub</a>
+      <a href="https://github.com/cmm-cmm/Action-Wheel/releases">Các phiên bản</a>
+      <a href="https://github.com/cmm-cmm/Action-Wheel/issues">Báo lỗi</a>
+      <a href="/" lang="en">English</a>
+    </nav>
+  </div>
+</footer>
+
+<script type="application/json" id="wheel-strings">
+{
+  "menuLabel": "Action Wheel",
+  "actions": [
+    { "label": "Đóng menu", "does": "đóng vòng tròn." },
+    { "label": "Copy", "does": "gửi Ctrl+C tới ứng dụng bạn đang dùng." },
+    { "label": "Paste", "does": "gửi Ctrl+V tới ứng dụng bạn đang dùng." },
+    { "label": "Cut", "does": "gửi Ctrl+X tới ứng dụng bạn đang dùng." },
+    { "label": "Chụp màn hình", "does": "mở thanh chụp màn hình của Windows (Win+Shift+S)." },
+    { "label": "Settings", "does": "mở cài đặt của Action Wheel." },
+    { "label": "Task View", "does": "hiện mọi cửa sổ đang mở." },
+    { "label": "File Explorer", "does": "mở một cửa sổ File Explorer mới." },
+    { "label": "Khoá màn hình", "does": "khoá máy tính." }
+  ]
+}
+</script>
+<script src="/assets/wheel.js" defer></script>
+</body>
+</html>

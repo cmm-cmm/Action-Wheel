@@ -1,0 +1,13 @@
+# The website, https://actionwheel.konexforge.com/ - static files in site/, served by a
+# Cloudflare Worker with static assets, like the other KonexForge sites. No build step: the
+# folder is uploaded as it is. Deploy with:  npx wrangler deploy
+name = "action-wheel"
+compatibility_date = "2026-10-01"
+workers_dev = false
+
+[[custom_domains]]
+pattern = "actionwheel.konexforge.com"
+
+[assets]
+directory = "./site"
+not_found_handling = "404-page"

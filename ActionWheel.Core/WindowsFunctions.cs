@@ -145,6 +145,48 @@ namespace Action_Wheel.Core
             }
         }
 
+        /// <summary>
+        /// Points every "switch to profile <paramref name="oldName"/>" reference in
+        /// <paramref name="actions"/> - primary or hold action, top-level or group child - at
+        /// <paramref name="newName"/> instead. Renaming a profile used to leave those buttons naming
+        /// a profile that no longer existed, so they failed at click time.
+        /// </summary>
+        public static IReadOnlyList<ActionItem> RenameProfileReferences(
+            IReadOnlyList<ActionItem> actions, string oldName, string newName, out bool changed)
+        {
+            bool any = false;
+            var renamed = new List<ActionItem>(actions.Count);
+            foreach (var action in actions)
+                renamed.Add(Rename(action, ref any));
+
+            changed = any;
+            return renamed;
+
+            ActionItem Rename(ActionItem action, ref bool anyChanged)
+            {
+                var result = action;
+                if (result.Kind == ActionKind.Function && Refers(result.Value))
+                    result = result with { Value = ProfileChoice(newName).Id };
+                if (result.HoldKind == ActionKind.Function && Refers(result.HoldValue))
+                    result = result with { HoldValue = ProfileChoice(newName).Id };
+
+                bool childChanged = false;
+                var children = new List<ActionItem>(result.GroupChildren.Count);
+                foreach (var child in result.GroupChildren)
+                    children.Add(Rename(child, ref childChanged));
+                if (childChanged)
+                    result = result with { GroupChildren = children };
+
+                if (!ReferenceEquals(result, action))
+                    anyChanged = true;
+                return result;
+            }
+
+            bool Refers(string id) =>
+                TryGetProfileName(id, out string name)
+                && string.Equals(name, oldName.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
+
         public static bool IsKnown(string id)
         {
             if (TryGetProfileName(id, out _))

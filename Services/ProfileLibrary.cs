@@ -110,13 +110,30 @@ namespace Action_Wheel.Services
 
             try
             {
+                string source = PathFor(oldName);
                 string destination = PathFor(safe);
+
+                // "work" -> "Work" names the same file on a case-insensitive file system, so the
+                // exists check below used to reject it as a clash with itself. Going through a
+                // temporary name makes the new casing stick.
+                if (string.Equals(source, destination, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!string.Equals(source, destination, StringComparison.Ordinal))
+                    {
+                        string temporary = $"{destination}.{Guid.NewGuid():N}.tmp";
+                        File.Move(source, temporary);
+                        File.Move(temporary, destination);
+                    }
+                    error = string.Empty;
+                    return true;
+                }
+
                 if (File.Exists(destination))
                 {
                     error = "A profile with that name already exists.";
                     return false;
                 }
-                File.Move(PathFor(oldName), destination);
+                File.Move(source, destination);
                 error = string.Empty;
                 return true;
             }

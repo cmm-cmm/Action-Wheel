@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Action_Wheel.Core;
 using Action_Wheel.Services;
@@ -134,25 +135,81 @@ namespace Action_Wheel.ViewModels
                 return;
             }
 
-            string? renameWarning = null;
+            var warnings = new List<string>();
+            bool reloadLauncher = false;
             if (string.Equals(oldName, _activeProfileName, StringComparison.OrdinalIgnoreCase))
             {
                 if (!ActiveProfileSettings.Save(newName, out string labelError))
                 {
-                    renameWarning = $"The active profile label could not be updated: {labelError}";
+                    warnings.Add($"The active profile label could not be updated: {labelError}");
                 }
                 else
                 {
                     SetActiveProfile(newName);
-                    ActionsSaved?.Invoke(this, EventArgs.Empty);
+                    reloadLauncher = true;
                 }
             }
             RefreshProfiles();
+
+            // After RefreshProfiles, so the rebuilt rows can offer the new name as a function choice.
+            reloadLauncher |= RenameProfileReferences(oldName, newName, warnings);
+
+            if (reloadLauncher)
+                ActionsSaved?.Invoke(this, EventArgs.Empty);
+
             SelectedProfile = newName;
-            if (renameWarning == null)
+            if (warnings.Count == 0)
                 ShowStatus(InfoBarSeverity.Success, "Profile renamed", newName);
             else
-                ShowStatus(InfoBarSeverity.Warning, "Profile renamed with an error", renameWarning);
+                ShowStatus(InfoBarSeverity.Warning, "Profile renamed with an error", string.Join("  •  ", warnings));
+        }
+
+        /// <summary>
+        /// Points buttons that switch to the renamed profile at its new name: in actions.json, in
+        /// every saved profile, and in the rows being edited. Without this, a rename silently broke
+        /// every such button. Returns true if actions.json changed and the ring has to reload.
+        /// </summary>
+        private bool RenameProfileReferences(string oldName, string newName, List<string> warnings)
+        {
+            if (_profileLibrary.TryList(out var names, out string listError))
+            {
+                foreach (string name in names)
+                {
+                    if (!_profileLibrary.TryLoad(name, out var profileActions, out _))
+                        continue; // Unreadable already; rewriting it would not make it readable.
+
+                    var renamed = WindowsFunctions.RenameProfileReferences(profileActions, oldName, newName, out bool changed);
+                    if (changed && !_profileLibrary.TrySave(name, renamed, out string saveError))
+                        warnings.Add($"Profile '{name}' still switches to '{oldName}': {saveError}");
+                }
+            }
+            else
+            {
+                warnings.Add($"Other profiles could not be checked for buttons that switch to '{oldName}': {listError}");
+            }
+
+            bool configChanged = false;
+            var config = ActionConfig.LoadDetailed();
+            if (config.Status != ConfigStatus.Rejected)
+            {
+                var renamed = WindowsFunctions.RenameProfileReferences(config.Actions, oldName, newName, out bool changed);
+                if (changed)
+                {
+                    if (ActionConfig.Save(renamed, out string configError))
+                        configChanged = true;
+                    else
+                        warnings.Add($"The ring still has buttons that switch to '{oldName}': {configError}");
+                }
+            }
+
+            // The rows and the saved snapshot are renamed together, so a rename neither invents nor
+            // hides unsaved changes.
+            var rows = WindowsFunctions.RenameProfileReferences(Snapshot(), oldName, newName, out bool rowsChanged);
+            if (rowsChanged)
+                LoadItems(rows);
+            _savedActions = WindowsFunctions.RenameProfileReferences(_savedActions, oldName, newName, out _).ToList();
+
+            return configChanged;
         }
 
         private void SetActiveProfile(string name)

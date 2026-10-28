@@ -69,7 +69,7 @@ namespace Action_Wheel.Core
                 watcher.Created += OnFileEvent;
                 watcher.Deleted += OnFileEvent;
                 watcher.Renamed += OnFileEvent;
-                watcher.Error += (s, e) => Dispose();
+                watcher.Error += (s, e) => OnWatcherError(watcher);
                 watcher.EnableRaisingEvents = true;
 
                 _watchers.Add(watcher);
@@ -101,6 +101,33 @@ namespace Action_Wheel.Core
                 // Restart the countdown rather than adding to it, so a long burst still results in
                 // exactly one reload, fired once the writing has actually stopped.
                 _timer.Change(Debounce, Timeout.InfiniteTimeSpan);
+            }
+        }
+
+        /// <summary>
+        /// An error (most often a buffer overflow) means events may have been lost. This used to
+        /// dispose every watcher, which silently ended external-edit detection for the rest of the
+        /// session. Now it schedules a reload to catch up on whatever was missed and re-arms the
+        /// watcher. If re-arming fails, only that one watcher stops.
+        /// </summary>
+        private void OnWatcherError(FileSystemWatcher watcher)
+        {
+            lock (_gate)
+            {
+                if (_disposed)
+                    return;
+
+                _timer.Change(Debounce, Timeout.InfiniteTimeSpan);
+            }
+
+            try
+            {
+                watcher.EnableRaisingEvents = false;
+                watcher.EnableRaisingEvents = true;
+            }
+            catch (Exception)
+            {
+                // The directory may be gone. The tray menu's Reload still works without it.
             }
         }
 

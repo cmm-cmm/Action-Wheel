@@ -1,6 +1,10 @@
 # AI assistants on the ring
 
-**Status:** Phases 1 and 2 are implemented. Phase 3 is proposed and not implemented yet.
+**Status:** Phases 1 and 2 are implemented. Phase 3 is under way:
+- **Done.** The Copilot launcher detection fix.
+- **Researched, kept off by decision.** OpenCode and Copilot CLI tasks.
+- **Dropped for now.** LM Studio and Ollama.
+- **Still proposed.** MSIX apps and a web fallback.
 
 ## Context
 
@@ -21,7 +25,7 @@ Probed on the development machine. Only executables, the registry and `--help` o
 | Codex CLI 0.165.0 | PATH: `%LOCALAPPDATA%\Programs\OpenAI\Codex\bin\codex.exe` | `codex exec -s read-only --ephemeral --skip-git-repo-check -o <file>`; prompt from stdin |
 | OpenCode 1.19.4 | PATH: npm shim `%APPDATA%\npm\opencode.cmd` | `opencode run`, **but the built-in agents `build` and `plan` both start with `"permission": "*", "action": "allow"`** |
 | Antigravity | **Uninstalled.** `HKCR\antigravity\shell\open\command` still points at `%LOCALAPPDATA%\Programs\antigravity\Antigravity.exe`, which no longer exists | n/a (IDE) |
-| GitHub Copilot CLI | PATH: shim shipped with VS Code (`...\Microsoft VS Code\bin\copilot-shim\copilot.exe`) | not evaluated |
+| GitHub Copilot CLI | PATH, **twice**: first VS Code's "GitHub Copilot CLI launcher" (`...\Microsoft VS Code\bin\copilot-shim\copilot.exe`), then the real CLI (`%LOCALAPPDATA%\Microsoft\WinGet\Links\copilot.exe`, WinGet) | `copilot -p`, **but it requires `--allow-all-tools`**; see phase 3 |
 | LM Studio | Uninstall entry, `lms` on PATH | `lms chat <model> -p <prompt>`, prompt on the command line only. **Not supported for now** (see below). |
 
 Findings that shape the design:
@@ -33,6 +37,10 @@ Findings that shape the design:
    - In print mode, Claude Code skips the workspace trust dialog, so it must run with tools disabled and in an empty folder.
    - Codex has an explicit `read-only` sandbox.
    - OpenCode has no verified read-only agent, so it is not used unattended.
+5. **The first PATH hit can be a stand-in.** VS Code installs a Copilot CLI launcher that only installs the real CLI on first run, and it sits on PATH ahead of the real one.
+   - **Detection looks at every PATH hit, not just the first** (`CommandResolver.ResolveAll`). A path matching the tool's `LauncherMarkers` (`\copilot-shim\`) never counts as installed.
+   - **Real CLI present:** the launcher is skipped and the real CLI is used.
+   - **Launcher only:** the tool shows as **LauncherOnly** and is not offered, because a button must never start an installer.
 
 ## Design
 
@@ -122,8 +130,20 @@ Fixed safety rules:
 - **For the record.** `lms chat -p` takes the prompt only on the command line, which breaks the stdin rule. Even `lms ls` starts LM Studio's background service.
 - **If they come back.** The local server's HTTP API, with an explicit opt-in to starting it, is the route to evaluate.
 
-- **GitHub Copilot CLI.** Evaluate its one-shot mode first.
-- **OpenCode one-shot.** Only with a verified read-only agent.
+- **GitHub Copilot CLI tasks. Researched from `--help` only, not enabled.**
+  - **Why it is off.** Non-interactive `-p` is documented as *requiring* `--allow-all-tools`, a permission-widening flag the fixed safety rules forbid.
+  - **What else it does by default.** With `--share`, the session goes to `./copilot-session-<id>.md`.
+  - **What to evaluate before enabling it.** Combine `-p --allow-all-tools` with `--available-tools` set to nothing and `--disable-builtin-mcps`, run in an empty temp folder. It has to be verified with a real file-creation test, which needs the user's go-ahead because it uses their Copilot quota.
+- **OpenCode one-shot. Researched, not enabled.** The user's decision on 2026-10-28.
+  - **What works.** An agent injected through the environment, not the user's config files, has every tool off:
+    ```
+    OPENCODE_CONFIG_CONTENT={"agent":{"actionwheel-readonly":{"mode":"primary","permission":{"*":"deny"}}}}
+    ```
+    `opencode debug agent actionwheel-readonly` shows `* * deny` after the built-in rules and every tool `false`.
+  - **How a run goes.** `opencode run --agent actionwheel-readonly --pure --format json` takes the prompt on stdin. It returns `step_start` / `text` / `step_finish` events and a `sessionID`. There is no ephemeral flag, so the session has to be removed afterwards with `opencode session delete <id>`; that was tested and works.
+  - **Safety test.** Asked to create a file, it made no tool call and no file appeared. The model still claimed "WROTE", so an answer is never evidence.
+  - **Why it stays off.** On the dev machine OpenCode's configured model is `ollama/qwen2.5-coder:7b`, so a task would really run on Ollama, which is not supported for now. It is also slow: 45–86 s per run.
+  - **To enable it later.** Use the agent and cleanup above. Decide what to do when the configured model is a local runner: refuse, or pass `-m`.
 - **MSIX apps** such as the ChatGPT desktop app, through `PackageManager.FindPackagesForUser` and `shell:AppsFolder\<AUMID>`.
 - **Web fallback**: open `claude.ai/new?q=…` or `chatgpt.com/?q=…`. The text then lands in browser history and is length-limited, so it is labelled as such.
 

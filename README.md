@@ -133,12 +133,14 @@ Self-contained publishes are large (roughly 250–300 MB). That is normal for a 
 
 - **Only found tools are offered.** An installed tool that is switched on appears in the Windows function picker as **AI · Open …**.
 - **Leftover registrations are not trusted.** A tool whose registration outlived its program shows as **Registered, but its program is missing**, and is not offered.
+- **Installer launchers are not the tool.** VS Code puts a GitHub Copilot CLI *launcher* on PATH, which only installs the real CLI the first time it runs. If the real CLI is installed too, it is the one used. If only the launcher is there, the tool shows as **Not installed, only a launcher that would install it**, and is not offered: a button never starts an installer.
 - **Existing buttons keep working.** A button made for a tool that is later removed still loads, and reports the problem when clicked.
 - **Opening a tool sends it nothing.** You type into its own window.
 
 **Prompt templates**, in the same section, turn a button into an AI task. Four come built in: Explain, Fix spelling and grammar, Translate to English and Summarize. Add your own, or edit a prompt; `{selection}` marks where the selected text goes. Each installed task-capable tool then offers **AI · <template> with <tool>** in the function picker.
 
 - **What runs.** Only Claude Code and Codex run tasks, each in a mode that can neither run commands nor change files: Claude Code with every tool off, Codex in its read-only sandbox. Each runs in an empty temporary folder.
+- **What can be opened but not run tasks.** OpenCode and GitHub Copilot CLI. OpenCode's built-in agents allow every tool by default, and Copilot CLI's one-shot mode requires allowing every tool, so neither gets your text unattended. Local model runners such as LM Studio and Ollama are not supported for now.
 - **What is asked first.** A task shows the text and asks before sending it, unless its template says not to. It always asks when nothing was selected and the clipboard's text would be used instead.
 - **Terminals.** In a terminal window the selection is not copied with Ctrl+C, which would stop the running program. The clipboard is used instead.
 - **Sign-in and keys.** The text goes through your own sign-in with that tool. Action Wheel never sees or stores a key.
@@ -281,7 +283,7 @@ The code is in two assemblies. **`ActionWheel.Core`** is the business logic and 
 | `Services/StartupManager.cs` | The per-user Run key entry behind "Start with Windows" |
 | `Services/StartHiddenSettings.cs` | Whether a launch shows only the tray icon, in `start-hidden.txt` |
 | `Services/CommandResolver.cs` | Finds what a bare command like `chrome.exe` starts: PATH, then App Paths, as ShellExecute does |
-| `Services/AiToolDetector.cs` | Finds each catalog AI tool on this machine; a registration whose program is gone counts as missing |
+| `Services/AiToolDetector.cs` | Finds each catalog AI tool on this machine, looking past stand-in launchers on PATH; a registration whose program is gone counts as missing |
 | `Services/AiLauncher.cs` / `Services/ExplorerFolder.cs` | Opens an AI tool in a terminal or as an app, in the folder of the File Explorer window that was in front |
 | `Services/AiAssistantSettings.cs` | Which AI tools are switched off, in `ai-assistants.json` |
 | `Services/SelectionCapture.cs` / `Services/AiCliRunner.cs` | Copies the selection for an AI task (never Ctrl+C into a terminal); runs the CLI with the prompt on stdin |
@@ -329,6 +331,12 @@ Both hooks are installed together or not at all. If only one goes in, the other 
 **The buttons went back to the defaults** — `actions.json` was rejected. The main window shows which file and why, and offers to restore the backup. Loading leaves the rejected file exactly as it is. If you save from Settings anyway, the rejected file is kept as `actions.json.invalid` and the last good `actions.json.bak` is left alone, so the backup is still there to restore. A missing icon file is never a reason to reject the file: that button just shows its glyph instead, and Settings warns about it when you save.
 
 **No tray icon** — the app falls back to exiting when the main window closes, so it can't become unquittable.
+
+**An AI tool is missing from the function picker** — open Settings → **AI assistants** and read its row. Only tools found on this computer and switched on are offered. After installing one, press **Scan again**.
+
+**An AI button says the tool is not installed, or the template no longer exists** — the button keeps working once the tool is installed again or the template is restored. Until then, pick another function for it. Save in Settings lists every such button.
+
+**An AI task says nothing was selected** — the app copies the selection with Ctrl+C in the window that was in front when the ring opened. In a terminal it does not press Ctrl+C, because that would stop the running program. Copy the text there first, and the task asks before using the clipboard.
 
 ## Contributing
 

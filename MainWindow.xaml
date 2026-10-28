@@ -118,6 +118,14 @@
                             OffContent="Off"
                             IsOn="{Binding StartWithWindows, Mode=TwoWay}"/>
 
+                        <!-- Applies to every launch, not only the one at sign-in: the app is meant
+                             to live in the tray, and this window is the way back in from there. -->
+                        <ToggleSwitch
+                            Header="Start hidden in the notification area"
+                            OnContent="On"
+                            OffContent="Off"
+                            IsOn="{Binding StartHidden, Mode=TwoWay}"/>
+
                         <InfoBar
                             IsOpen="{Binding HasStartupError, Mode=OneWay}"
                             IsClosable="True"

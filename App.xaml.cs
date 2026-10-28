@@ -89,9 +89,14 @@ namespace Action_Wheel
             viewModel.SettingsRequested += (s, e) => ShowSettings();
 
             _window = new MainWindow(viewModel);
-            _window.Activate();
 
+            // The tray icon comes before the window now, because whether the window is shown at
+            // all depends on it: "Start hidden" is honoured only when there is a tray icon to bring
+            // the window back from. Without one, a hidden window would leave the app running with
+            // nothing on screen and no way to reach or quit it.
             SetUpTrayIcon();
+            if (_trayIcon == null || !StartHiddenSettings.Load())
+                _window.Activate();
 
             _ = CheckForUpdatesAsync(viewModel);
         }

@@ -224,6 +224,37 @@ namespace Action_Wheel.ViewModels
             _suppressStartupWrite = true;
             StartWithWindows = StartupManager.IsEnabled;
             _suppressStartupWrite = false;
+
+            // The tray menu can toggle this one too while the window is hidden.
+            _startHidden = StartHiddenSettings.Load();
+            Raise(nameof(StartHidden));
+        }
+
+        private bool _startHidden;
+
+        /// <summary>
+        /// Bound two-way to the "Start hidden" toggle. Same write-then-snap-back handling as
+        /// <see cref="StartWithWindows"/>, sharing its error bar since both are startup settings.
+        /// </summary>
+        public bool StartHidden
+        {
+            get => _startHidden;
+            set
+            {
+                if (_startHidden == value)
+                    return;
+
+                if (StartHiddenSettings.Save(value, out string error))
+                {
+                    StartupError = string.Empty;
+                    Set(ref _startHidden, value);
+                    return;
+                }
+
+                StartupError = error;
+                _startHidden = StartHiddenSettings.Load();
+                Raise(nameof(StartHidden));
+            }
         }
 
         #endregion
@@ -286,6 +317,7 @@ namespace Action_Wheel.ViewModels
                 .Add("Keyboard hook", Status.KeyboardHookInstalled)
                 .Add("Hook error", Status.Error)
                 .Add("Start with Windows", StartupManager.IsEnabled)
+                .Add("Start hidden", StartHiddenSettings.Load())
                 .AddSection("Last unexpected exit", CrashReport.TryLoad())
                 .Build();
 

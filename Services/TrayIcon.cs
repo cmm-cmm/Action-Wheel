@@ -131,6 +131,7 @@ namespace Action_Wheel.Services
         private const int MenuIdReload = 4;
         private const int MenuIdStartup = 5;
         private const int MenuIdExit = 6;
+        private const int MenuIdStartHidden = 7;
 
         /// <summary>
         /// First command ID handed to a profile row; the rest follow in <see cref="_menuProfiles"/>
@@ -158,7 +159,10 @@ namespace Action_Wheel.Services
         public event EventHandler? SettingsRequested;
         public event EventHandler? ReloadRequested;
 
-        /// <summary>Raised after the tray menu toggled the startup entry, so open windows can refresh.</summary>
+        /// <summary>
+        /// Raised after the tray menu toggled "Start with Windows" or "Start hidden", so open
+        /// windows can refresh.
+        /// </summary>
         public event EventHandler? StartupChanged;
         public event EventHandler? ExitRequested;
 
@@ -277,6 +281,8 @@ namespace Action_Wheel.Services
                 // entry off behind the app's back, and a cached flag would then show a stale tick.
                 AppendMenu(menu, MF_STRING | (StartupManager.IsEnabled ? MF_CHECKED : 0),
                     MenuIdStartup, "Start with Windows");
+                AppendMenu(menu, MF_STRING | (StartHiddenSettings.Load() ? MF_CHECKED : 0),
+                    MenuIdStartHidden, "Start hidden");
 
                 AppendMenu(menu, MF_SEPARATOR, 0, null);
                 AppendMenu(menu, MF_STRING, MenuIdExit, "Exit");
@@ -368,6 +374,11 @@ namespace Action_Wheel.Services
                     // because the tick it is showing is now wrong.
                     StartupManager.SetEnabled(!StartupManager.IsEnabled, out _);
 
+                    StartupChanged?.Invoke(this, EventArgs.Empty);
+                    break;
+
+                case MenuIdStartHidden:
+                    StartHiddenSettings.Save(!StartHiddenSettings.Load(), out _);
                     StartupChanged?.Invoke(this, EventArgs.Empty);
                     break;
 

@@ -83,8 +83,28 @@ namespace Action_Wheel.Settings
                 VirtualKey.Right => "Right",
                 VirtualKey.Down => "Down",
                 VirtualKey.Snapshot => "PrintScreen",
-                _ => null,
+                _ => PunctuationName((int)key),
             };
         }
+
+        /// <summary>
+        /// The VK_OEM_* punctuation keys, which VirtualKey has no members for. They are written by
+        /// name, not character, so a recording never contains a bare "+" that reads as a separator.
+        /// </summary>
+        private static string? PunctuationName(int virtualKey) => virtualKey switch
+        {
+            0xBA => "Semicolon",
+            0xBB => "Plus",
+            0xBC => "Comma",
+            0xBD => "Minus",
+            0xBE => "Period",
+            0xBF => "Slash",
+            0xC0 => "Backtick",
+            0xDB => "OpenBracket",
+            0xDC => "Backslash",
+            0xDD => "CloseBracket",
+            0xDE => "Quote",
+            _ => null,
+        };
     }
 }

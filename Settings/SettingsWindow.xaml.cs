@@ -340,6 +340,10 @@ namespace Action_Wheel.Settings
                     "Esc (Escape), Tab, Enter (Return), Space, Backspace, Delete (Del), "
                     + "Insert (Ins), Home, End, PageUp (PgUp), PageDown (PgDn), Left, Up, Right, "
                     + "Down, PrintScreen (PrtSc)"),
+                ("Punctuation (US keyboard positions)",
+                    "Plus (=), Minus (-), Comma (,), Period (.), Slash (/), Backtick (`), "
+                    + "Semicolon (;), Quote ('), OpenBracket ([), CloseBracket (]), Backslash (\\). "
+                    + "Ctrl++ also means Ctrl+Plus."),
                 ("Media and volume",
                     "PlayPause (MediaPlayPause), MediaNext, MediaPrev (MediaPrevious), MediaStop, "
                     + "VolumeUp, VolumeDown, Mute (VolumeMute)"),

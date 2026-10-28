@@ -242,9 +242,11 @@ namespace Action_Wheel.Services
                 // Half a chord is never sent, so an unrecognised key name means the button does
                 // nothing at all. Naming the key is the difference between "this button is broken"
                 // and "I typed Cmd instead of Ctrl".
-                Fail(action, unknownKey.Length > 0
-                    ? $"'{unknownKey}' is not a key name this app knows (shortcut '{action.Value}')."
-                    : $"the shortcut '{action.Value}' is empty.");
+                Fail(action, unknownKey == ShortcutKeys.MissingKey
+                    ? $"the shortcut '{action.Value}' has a + with no key next to it."
+                    : unknownKey.Length > 0
+                        ? $"'{unknownKey}' is not a key name this app knows (shortcut '{action.Value}')."
+                        : $"the shortcut '{action.Value}' is empty.");
                 return;
             }
 

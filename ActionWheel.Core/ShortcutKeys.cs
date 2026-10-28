@@ -32,9 +32,25 @@ namespace Action_Wheel.Core
             if (string.IsNullOrWhiteSpace(shortcut))
                 return result;
 
-            foreach (var raw in shortcut.Split('+', StringSplitOptions.RemoveEmptyEntries))
+            // "+" both separates keys and names one, so "Ctrl++" means Ctrl plus the Plus key.
+            // Every other empty part ("Ctrl+", "+A", "Ctrl++S") is a mistake, and it is rejected.
+            // Empty parts used to be dropped instead, so "Ctrl++" passed validation and then sent
+            // Ctrl alone.
+            string text = shortcut.Trim();
+            if (text == "+")
+                text = "Plus";
+            else if (text.EndsWith("++", StringComparison.Ordinal))
+                text = text[..^1] + "Plus";
+
+            foreach (var raw in text.Split('+'))
             {
                 var name = raw.Trim();
+                if (name.Length == 0)
+                {
+                    unknownKey = MissingKey;
+                    return new List<ushort>();
+                }
+
                 var vk = ToVirtualKey(name);
                 if (vk == 0)
                 {
@@ -47,6 +63,9 @@ namespace Action_Wheel.Core
 
             return result;
         }
+
+        /// <summary>What <see cref="Parse(string, out string)"/> reports for a "+" with no key beside it.</summary>
+        public const string MissingKey = "(nothing between two +)";
 
         /// <inheritdoc cref="Parse(string, out string)"/>
         public static IReadOnlyList<ushort> Parse(string shortcut) => Parse(shortcut, out _);
@@ -84,6 +103,10 @@ namespace Action_Wheel.Core
                 char c = char.ToUpperInvariant(name[0]);
                 if (c is >= 'A' and <= 'Z' or >= '0' and <= '9')
                     return c;
+
+                ushort punctuation = PunctuationKey(c);
+                if (punctuation != 0)
+                    return punctuation;
             }
 
             if (name.Length is 2 or 3 && (name[0] == 'F' || name[0] == 'f')
@@ -121,8 +144,42 @@ namespace Action_Wheel.Core
                 "mediaprev" or "mediaprevious" => 0xB1,
                 "mediastop" => 0xB2,
                 "mediaplaypause" or "playpause" => 0xB3,
+                "plus" or "equals" => 0xBB,
+                "minus" => 0xBD,
+                "comma" => 0xBC,
+                "period" => 0xBE,
+                "slash" => 0xBF,
+                "backtick" or "grave" => 0xC0,
+                "semicolon" => 0xBA,
+                "quote" => 0xDE,
+                "openbracket" => 0xDB,
+                "closebracket" => 0xDD,
+                "backslash" => 0xDC,
                 _ => 0,
             };
         }
+
+        /// <summary>
+        /// The punctuation keys, typed as the character on the key itself. Both characters on a
+        /// key name the same key, so "Ctrl+=" and "Ctrl+Plus" are one shortcut; Shift is a separate
+        /// part of the chord. The codes are the VK_OEM_* positions of a US layout. On other layouts
+        /// the same position can carry different characters, which is how Windows itself treats
+        /// these keys.
+        /// </summary>
+        private static ushort PunctuationKey(char c) => c switch
+        {
+            ';' or ':' => 0xBA,
+            '=' => 0xBB,
+            ',' or '<' => 0xBC,
+            '-' or '_' => 0xBD,
+            '.' or '>' => 0xBE,
+            '/' or '?' => 0xBF,
+            '`' or '~' => 0xC0,
+            '[' or '{' => 0xDB,
+            '\\' or '|' => 0xDC,
+            ']' or '}' => 0xDD,
+            '\'' or '"' => 0xDE,
+            _ => 0,
+        };
     }
 }

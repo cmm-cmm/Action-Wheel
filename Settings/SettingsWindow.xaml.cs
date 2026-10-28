@@ -1094,6 +1094,11 @@ namespace Action_Wheel.Settings
                 if (ConfigBackup.TryImport(path, out string importError))
                 {
                     ViewModel.ReloadFromDisk();
+
+                    // The file watcher only sees actions.json. A backup without one still restores
+                    // preferences.json, and the ring would keep the old trigger and size until the
+                    // next reload without this.
+                    ActionsSaved?.Invoke(this, EventArgs.Empty);
                     ViewModel.ShowStatus(InfoBarSeverity.Success, "Backup restored",
                         "Every row, profile and appearance setting below now reflects the backup.");
                 }

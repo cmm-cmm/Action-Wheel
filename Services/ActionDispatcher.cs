@@ -161,6 +161,12 @@ namespace Action_Wheel.Services
         public static event EventHandler<string>? ProfileRequested;
 
         /// <summary>
+        /// Raised, off the UI thread, when an AI task button runs. A task needs windows (the
+        /// confirmation and the answer), so <see cref="LauncherService"/> takes it from here.
+        /// </summary>
+        public static event EventHandler<AiTaskRequest>? AiTaskRequested;
+
+        /// <summary>
         /// The window the user was working in when the menu opened, for the window functions
         /// (minimise, maximise, close).
         /// </summary>
@@ -308,8 +314,17 @@ namespace Action_Wheel.Services
 
             if (AiTools.TryParse(action.Value, out string toolId, out string task))
             {
-                if (!AiLauncher.TryRun(toolId, task, targetWindow, out string aiError))
+                if (AiTools.TryGetTemplateId(task, out string templateId))
+                {
+                    if (AiTaskRequested == null)
+                        Fail(action, "AI tasks are not available right now.");
+                    else
+                        AiTaskRequested(null, new AiTaskRequest(toolId, templateId, targetWindow));
+                }
+                else if (!AiLauncher.TryRun(toolId, task, targetWindow, out string aiError))
+                {
                     Fail(action, aiError);
+                }
                 return;
             }
 
@@ -469,6 +484,23 @@ namespace Action_Wheel.Services
 
         private static void SendBuiltInShortcut(ActionItem source, string shortcut) =>
             SendShortcut(new ActionItem { Label = source.Label, Kind = ActionKind.Keys, Value = shortcut });
+
+        /// <summary>
+        /// Presses <paramref name="shortcut"/> on the foreground window, for Action Wheel's own use:
+        /// copying a selection for an AI task, pasting its answer back. A failure is reported under
+        /// <paramref name="label"/> like any button's.
+        /// </summary>
+        internal static void SendKeys(string shortcut, string label)
+        {
+            try
+            {
+                SendShortcut(new ActionItem { Label = label, Kind = ActionKind.Keys, Value = shortcut });
+            }
+            catch (Exception ex)
+            {
+                ActionFailed?.Invoke(null, $"'{label}' failed: {ex.Message}");
+            }
+        }
 
         private static void LaunchBuiltIn(ActionItem source, string target) =>
             Launch(new ActionItem { Label = source.Label, Kind = ActionKind.Launch, Value = target });

@@ -5,13 +5,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using Action_Wheel.Services;
 using Action_Wheel.Settings;
+using Microsoft.UI.Dispatching;
 using InfoBarSeverity = Action_Wheel.ViewModels.StatusLevel;
 
 namespace Action_Wheel.ViewModels
 {
     /// <summary>
-    /// The AI assistants section: which AI tools this machine has, and which of them the function
-    /// picker offers. See Doc/ai-assistants.md.
+    /// The AI assistants section: which AI tools this machine has, the prompt templates, and which
+    /// AI functions the picker offers. See Doc/ai-assistants.md.
     /// </summary>
     public sealed partial class SettingsViewModel
     {
@@ -19,8 +20,13 @@ namespace Action_Wheel.ViewModels
         private HashSet<string> _aiDisabled = new(StringComparer.OrdinalIgnoreCase);
         private string _aiScanStatus = "Looking for AI tools…";
         private RelayCommand? _rescanAiToolsCommand;
+        private RelayCommand? _addAiTemplateCommand;
+        private RelayCommand? _restoreAiTemplatesCommand;
+        private DispatcherQueueTimer? _aiTemplateSaveTimer;
 
         public ObservableCollection<AiToolRow> AiToolRows { get; } = new();
+
+        public ObservableCollection<AiTemplateRow> AiTemplateRows { get; } = new();
 
         public string AiScanStatus
         {
@@ -29,6 +35,10 @@ namespace Action_Wheel.ViewModels
         }
 
         public RelayCommand RescanAiToolsCommand => _rescanAiToolsCommand ??= new RelayCommand(ScanAiTools);
+
+        public RelayCommand AddAiTemplateCommand => _addAiTemplateCommand ??= new RelayCommand(AddAiTemplate);
+
+        public RelayCommand RestoreAiTemplatesCommand => _restoreAiTemplatesCommand ??= new RelayCommand(RestoreAiTemplates);
 
         /// <summary>
         /// Looks for the tools off the UI thread, then fills the section and the function picker.
@@ -88,19 +98,141 @@ namespace Action_Wheel.ViewModels
             !_aiDisabled.Contains(tool.Id)
             && _aiDetections.Any(d => d.Tool.Id == tool.Id && d.IsInstalled);
 
+        #region Prompt templates
+
+        private IReadOnlyList<AiTaskTemplate> CurrentAiTemplates() =>
+            AiTemplateRows.Select(row => row.ToTemplate()).ToArray();
+
+        /// <summary>Loaded before the rows are built, so the picker can name a button's template from the start.</summary>
+        private void LoadAiTemplates()
+        {
+            // A pending save of the old rows would otherwise overwrite what was just read, such as a
+            // file a backup restore has put back.
+            _aiTemplateSaveTimer?.Stop();
+            AiTemplateRows.Clear();
+            foreach (var template in AiTaskTemplates.Load())
+                AiTemplateRows.Add(NewTemplateRow(template));
+        }
+
+        private AiTemplateRow NewTemplateRow(AiTaskTemplate template) =>
+            new(template, ScheduleAiTemplateSave, DeleteAiTemplate);
+
+        private void AddAiTemplate()
+        {
+            string id = AiTaskTemplates.NewId("New task", AiTemplateRows.Select(row => row.Id));
+            AiTemplateRows.Add(NewTemplateRow(new AiTaskTemplate(id, "New task",
+                "Do something useful with the following text.\n\n" + AiTaskTemplates.Placeholder)));
+            ScheduleAiTemplateSave();
+        }
+
         /// <summary>
-        /// Every function the picker offers: the built-ins, one per saved profile, and one per AI
-        /// tool that is installed and switched on. An AI tool that is not available is still listed,
-        /// labelled "(not available)", when <paramref name="inUse"/> already refers to it. Otherwise
-        /// that button's function box would go blank.
+        /// Deleting is allowed even when buttons use the template: those buttons keep their value, the
+        /// picker shows them as "(not available)", and Save warns about them.
+        /// </summary>
+        private void DeleteAiTemplate(AiTemplateRow row)
+        {
+            AiTemplateRows.Remove(row);
+            ScheduleAiTemplateSave();
+        }
+
+        /// <summary>Puts the four built-in templates back, keeping any of the user's own that have other ids.</summary>
+        private void RestoreAiTemplates()
+        {
+            var own = AiTemplateRows.Select(row => row.ToTemplate())
+                .Where(t => AiTaskTemplates.Find(AiTaskTemplates.Defaults(), t.Id) == null)
+                .ToList();
+
+            AiTemplateRows.Clear();
+            foreach (var template in AiTaskTemplates.Defaults().Concat(own))
+                AiTemplateRows.Add(NewTemplateRow(template));
+            ScheduleAiTemplateSave();
+        }
+
+        /// <summary>
+        /// Templates save on their own, a moment after the last keystroke, like the tool switches:
+        /// they describe the AI functions on offer, not what a button does, so they are not part of
+        /// Save and Undo.
+        /// </summary>
+        private void ScheduleAiTemplateSave()
+        {
+            if (_aiTemplateSaveTimer == null)
+            {
+                _aiTemplateSaveTimer = _dispatcher.CreateTimer();
+                _aiTemplateSaveTimer.Interval = TimeSpan.FromMilliseconds(600);
+                _aiTemplateSaveTimer.IsRepeating = false;
+                _aiTemplateSaveTimer.Tick += (s, e) => SaveAiTemplates();
+            }
+
+            _aiTemplateSaveTimer.Stop();
+            _aiTemplateSaveTimer.Start();
+        }
+
+        private void SaveAiTemplates()
+        {
+            if (_disposed)
+                return;
+
+            if (!AiTaskTemplates.Save(CurrentAiTemplates(), out string error))
+            {
+                ShowStatus(InfoBarSeverity.Error, "Could not save the prompt templates", error);
+                return;
+            }
+
+            RefreshAllFunctionChoices();
+        }
+
+        /// <summary>Writes a pending template edit now. Called when the window closes.</summary>
+        private void FlushAiTemplates()
+        {
+            if (_aiTemplateSaveTimer?.IsRunning == true)
+            {
+                _aiTemplateSaveTimer.Stop();
+                SaveAiTemplates();
+            }
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Every function the picker offers: the built-ins, one per saved profile, and for each AI tool
+        /// that is installed and switched on, "open" plus one entry per prompt template if the tool can
+        /// run tasks. An AI function that is not available (missing tool, switched off, deleted
+        /// template) is still listed, labelled "(not available)", when <paramref name="inUse"/> already
+        /// refers to it. Otherwise that button's function box would go blank.
         /// </summary>
         private IEnumerable<WindowsFunction> FunctionChoices(IEnumerable<ActionItem> inUse)
         {
-            var used = new HashSet<string>(AiToolIdsIn(inUse), StringComparer.OrdinalIgnoreCase);
+            var templates = CurrentAiTemplates();
+            var ai = new List<WindowsFunction>();
+            var listed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            var ai = AiTools.All
-                .Where(tool => IsAiToolAvailable(tool) || used.Contains(tool.Id))
-                .Select(tool => AiTools.Choice(tool, IsAiToolAvailable(tool)));
+            void Add(WindowsFunction choice)
+            {
+                if (listed.Add(choice.Id))
+                    ai.Add(choice);
+            }
+
+            foreach (var tool in AiTools.All.Where(IsAiToolAvailable))
+            {
+                Add(AiTools.Choice(tool));
+                if (tool.SupportsTasks)
+                {
+                    foreach (var template in templates)
+                        Add(AiTools.TaskChoice(tool, template.Id, template.Name, available: true));
+                }
+            }
+
+            foreach (string id in AiFunctionIdsIn(inUse))
+            {
+                if (listed.Contains(id) || !AiTools.TryParse(id, out string toolId, out string task)
+                    || AiTools.Find(toolId) is not AiTool tool)
+                    continue;
+
+                if (AiTools.TryGetTemplateId(task, out string templateId))
+                    Add(AiTools.TaskChoice(tool, templateId, AiTaskTemplates.Find(templates, templateId)?.Name, available: false));
+                else
+                    Add(AiTools.Choice(tool, available: false));
+            }
 
             return WindowsFunctions.Choices
                 .Concat(Profiles.Select(WindowsFunctions.ProfileChoice))
@@ -115,35 +247,41 @@ namespace Action_Wheel.ViewModels
                 item.RefreshFunctionChoices(choices);
         }
 
-        /// <summary>The AI tool ids a set of actions refers to, primary or hold, group children included.</summary>
-        private static IEnumerable<string> AiToolIdsIn(IEnumerable<ActionItem> actions)
+        /// <summary>The AI Function ids a set of actions uses, primary or hold, group children included.</summary>
+        private static IEnumerable<string> AiFunctionIdsIn(IEnumerable<ActionItem> actions)
         {
             foreach (var action in actions)
             {
-                if (action.Kind == ActionKind.Function && AiTools.TryParse(action.Value, out string toolId, out _))
-                    yield return toolId;
-                if (action.HoldKind == ActionKind.Function && AiTools.TryParse(action.HoldValue, out string holdToolId, out _))
-                    yield return holdToolId;
+                if (action.Kind == ActionKind.Function && AiTools.TryParse(action.Value, out _, out _))
+                    yield return action.Value;
+                if (action.HoldKind == ActionKind.Function && AiTools.TryParse(action.HoldValue, out _, out _))
+                    yield return action.HoldValue;
 
-                foreach (string childToolId in AiToolIdsIn(action.GroupChildren))
-                    yield return childToolId;
+                foreach (string childId in AiFunctionIdsIn(action.GroupChildren))
+                    yield return childId;
             }
         }
 
         /// <summary>
-        /// Save warnings for buttons whose AI tool is missing or switched off. Legal, since a tool
-        /// can be installed later, but the button reports an error until then. Skipped until the
-        /// first scan has finished, so a save right after opening the window cannot report every
-        /// AI button as missing.
+        /// Save warnings for AI buttons that cannot run: the tool is missing or switched off, or the
+        /// template was deleted. Legal, since either can come back, but the button reports an error
+        /// until then. Tool checks wait for the first scan, so a save right after opening the window
+        /// cannot report every AI button as missing.
         /// </summary>
         private IEnumerable<string> AiToolWarnings()
         {
-            if (_aiDetections.Count == 0)
-                yield break;
+            var templates = CurrentAiTemplates();
+            var warnedTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (string toolId in AiToolIdsIn(Snapshot()).Distinct(StringComparer.OrdinalIgnoreCase))
+            foreach (string id in AiFunctionIdsIn(Snapshot()).Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                if (AiTools.Find(toolId) is not AiTool tool || IsAiToolAvailable(tool))
+                if (!AiTools.TryParse(id, out string toolId, out string task) || AiTools.Find(toolId) is not AiTool tool)
+                    continue;
+
+                if (AiTools.TryGetTemplateId(task, out string templateId) && AiTaskTemplates.Find(templates, templateId) == null)
+                    yield return $"The prompt template '{templateId}' no longer exists, so its buttons report an error";
+
+                if (_aiDetections.Count == 0 || IsAiToolAvailable(tool) || !warnedTools.Add(tool.Id))
                     continue;
 
                 yield return _aiDisabled.Contains(tool.Id)

@@ -17,6 +17,8 @@ using Action_Wheel.Core;
 // 5. A profile or backup from somewhere else could launch any command line, unlisted.
 // 6. AI function ids must be valid by the static catalog alone, so a button for a tool that is
 //    not installed still loads (see Doc/ai-assistants.md).
+// 7. AI tasks: template ids, prompt building, the template file, and the fixed command lines,
+//    which must never carry a permission-widening flag.
 //
 // There is deliberately no test project (see CLAUDE.md); run this by hand after touching
 // ActionsValidator, ActionConfig.SaveTo, WindowsFunctions.RenameProfileReferences,
@@ -211,6 +213,52 @@ try
         Check("ai: tools are found case-insensitively", tool.Id == "claude");
         Check("ai: an unavailable tool's picker entry says so", AiTools.Choice(tool, available: false).Name.Contains("(not available)"));
         Check("ai: picker entries fall in the AI category", AiTools.Choice(tool).Category == "AI");
+    }
+
+    // 7. AI tasks: template ids are static too, and the command lines stay locked down.
+    {
+        string task = AiTools.TaskFunctionId("claude", "explain");
+        Check("tasks: the id has the documented shape", task == "action-wheel.ai:claude/task:explain");
+        Check("tasks: a task id for a task-capable tool is known", WindowsFunctions.IsKnown(task));
+        Check("tasks: a task id for a deleted template is still known", WindowsFunctions.IsKnown(AiTools.TaskFunctionId("codex", "no-such-template")));
+        Check("tasks: OpenCode cannot run tasks", !WindowsFunctions.IsKnown(AiTools.TaskFunctionId("opencode", "explain")));
+        Check("tasks: an invalid template id is not known", !WindowsFunctions.IsKnown("action-wheel.ai:claude/task:Bad Id"));
+
+        foreach (var taskTool in AiTools.All.Where(t => t.SupportsTasks))
+        {
+            var arguments = AiTools.TaskArguments(taskTool, @"C:\temp\answer.txt");
+            string joined = string.Join(" ", arguments);
+            Check($"tasks: {taskTool.Name} never gets a permission-widening flag",
+                !joined.Contains("dangerously", StringComparison.OrdinalIgnoreCase)
+                && !joined.Contains("bypassPermissions", StringComparison.OrdinalIgnoreCase)
+                && !joined.Contains("danger-full-access", StringComparison.OrdinalIgnoreCase)
+                && !joined.Contains("full-auto", StringComparison.OrdinalIgnoreCase));
+        }
+        var claudeArgs = AiTools.TaskArguments(AiTools.Find("claude")!, "x");
+        Check("tasks: Claude Code runs with every tool disabled",
+            claudeArgs.Contains("-p") && claudeArgs.SkipWhile(a => a != "--tools").Skip(1).FirstOrDefault() == "");
+        var codexArgs = AiTools.TaskArguments(AiTools.Find("codex")!, "x");
+        Check("tasks: Codex runs in the read-only sandbox, prompt from stdin",
+            codexArgs.SkipWhile(a => a != "-s").Skip(1).FirstOrDefault() == "read-only" && codexArgs[^1] == "-");
+
+        var template = new AiTaskTemplate("t", "T", "Explain:\n\n{selection}\n\nThanks");
+        Check("tasks: the placeholder is replaced", AiTaskTemplates.BuildPrompt(template, "HELLO") == "Explain:\n\nHELLO\n\nThanks");
+        Check("tasks: without a placeholder the text is appended",
+            AiTaskTemplates.BuildPrompt(template with { Prompt = "Explain this." }, "HELLO") == "Explain this.\n\nHELLO");
+
+        Check("tasks: a new id is a clean slug", AiTaskTemplates.NewId("Dịch sang tiếng Anh!", Array.Empty<string>()) == "d-ch-sang-ti-ng-anh");
+        Check("tasks: a new id never collides", AiTaskTemplates.NewId("Explain", new[] { "explain", "explain-2" }) == "explain-3");
+        Check("tasks: an empty name still gets an id", AiTaskTemplates.IsValidId(AiTaskTemplates.NewId("???", Array.Empty<string>())));
+
+        var defaultsBack = AiTaskTemplates.Parse(AiTaskTemplates.ToJson(AiTaskTemplates.Defaults()));
+        Check("tasks: templates round-trip through JSON", defaultsBack.SequenceEqual(AiTaskTemplates.Defaults()));
+        Check("tasks: built-in templates all ask before sending", AiTaskTemplates.Defaults().All(t => t.Confirm));
+        Check("tasks: built-in template ids are valid", AiTaskTemplates.Defaults().All(t => AiTaskTemplates.IsValidId(t.Id)));
+
+        bool rejected;
+        try { AiTaskTemplates.Parse("{\"templates\":[{\"id\":\"a\"},{\"id\":\"A\"}]}"); rejected = false; }
+        catch (FormatException) { rejected = true; }
+        Check("tasks: duplicate template ids are rejected", rejected);
     }
 }
 finally

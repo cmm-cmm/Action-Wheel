@@ -4,6 +4,10 @@ using System.IO;
 
 namespace Action_Wheel.Services
 {
+    /// <summary>An AI task button was clicked: run template <paramref name="TemplateId"/> with the tool.</summary>
+    /// <param name="TargetWindow">The window that was in front when the ring opened, holding the selection.</param>
+    public sealed record AiTaskRequest(string ToolId, string TemplateId, IntPtr TargetWindow);
+
     /// <summary>
     /// Runs an <c>action-wheel.ai:</c> Function. Phase 1 has one task, <see cref="AiTools.OpenTask"/>:
     /// start the tool where the user is working. See Doc/ai-assistants.md.

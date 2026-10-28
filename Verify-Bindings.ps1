@@ -43,6 +43,7 @@ $scopes = @(
             'GlyphChoiceTemplate'        = @('Settings\GlyphChoice.cs')
             'FunctionSuggestionTemplate' = @('ActionWheel.Core\WindowsFunctions.cs')
             'AiToolRowTemplate'          = @('Settings\AiToolRow.cs')
+            'AiTemplateRowTemplate'      = @('Settings\AiTemplateRow.cs')
         }
     }
 )

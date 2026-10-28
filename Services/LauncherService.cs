@@ -78,6 +78,7 @@ namespace Action_Wheel.Services
             ActionDispatcher.SettingsRequested += OnSettingsRequested;
             ActionDispatcher.ReloadRequested += OnReloadRequested;
             ActionDispatcher.ProfileRequested += OnProfileRequested;
+            ActionDispatcher.AiTaskRequested += OnAiTaskRequested;
 
             // Picks up edits made with a text editor. The watcher fires on a thread-pool thread.
             _configWatcher = new ConfigWatcher();
@@ -232,6 +233,10 @@ namespace Action_Wheel.Services
 
         private void OnProfileRequested(object? sender, string profileName) =>
             _dispatcherQueue.TryEnqueue(() => SwitchProfile(profileName));
+
+        /// <summary>AI tasks open windows, so they run from the UI thread. See Overlay/AiTaskWindow.</summary>
+        private void OnAiTaskRequested(object? sender, AiTaskRequest request) =>
+            _dispatcherQueue.TryEnqueue(() => _ = AiTaskWindow.StartAsync(request));
 
         /// <summary>
         /// Switches to a saved profile by name, the same way a ring button's "switch profile"
@@ -551,6 +556,7 @@ namespace Action_Wheel.Services
             ActionDispatcher.SettingsRequested -= OnSettingsRequested;
             ActionDispatcher.ReloadRequested -= OnReloadRequested;
             ActionDispatcher.ProfileRequested -= OnProfileRequested;
+            ActionDispatcher.AiTaskRequested -= OnAiTaskRequested;
 
             Stop();
             _configWatcher.Dispose();

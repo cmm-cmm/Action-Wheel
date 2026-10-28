@@ -17,6 +17,7 @@ namespace Action_Wheel.Core
         public bool HasActions { get; init; }
         public bool HasPreferences { get; init; }
         public bool HasActiveProfile { get; init; }
+        public bool HasAiTasks { get; init; }
         public int ProfileCount { get; init; }
         public int IconCount { get; init; }
 
@@ -52,6 +53,7 @@ namespace Action_Wheel.Core
         private const string ActionsEntryName = "actions.json";
         private const string PreferencesEntryName = "preferences.json";
         private const string ActiveProfileEntryName = "active-profile.txt";
+        private const string AiTasksEntryName = AiTaskTemplates.FileName;
         private const string ProfilesEntryPrefix = "Profiles/";
         private const string IconsEntryPrefix = "Icons/";
 
@@ -104,6 +106,11 @@ namespace Action_Wheel.Core
 
                     if (File.Exists(ActiveProfilePath))
                         zip.CreateEntryFromFile(ActiveProfilePath, ActiveProfileEntryName);
+
+                    // The AI prompt templates are the user's own writing; the AI tool switches are
+                    // not exported, because they describe what this machine has installed.
+                    if (File.Exists(AiTaskTemplates.FilePath))
+                        zip.CreateEntryFromFile(AiTaskTemplates.FilePath, AiTasksEntryName);
 
                     if (Directory.Exists(ProfilesDirectory))
                     {
@@ -200,6 +207,7 @@ namespace Action_Wheel.Core
                     HasActions = zip.GetEntry(ActionsEntryName) != null,
                     HasPreferences = zip.GetEntry(PreferencesEntryName) != null,
                     HasActiveProfile = zip.GetEntry(ActiveProfileEntryName) != null,
+                    HasAiTasks = zip.GetEntry(AiTasksEntryName) != null,
                     ProfileCount = zip.Entries.Count(e => IsUnder(e.FullName, ProfilesEntryPrefix) && e.Name.Length > 0),
                     IconCount = zip.Entries.Count(e => IsUnder(e.FullName, IconsEntryPrefix) && e.Name.Length > 0),
                     LaunchCommands = launchCommands,
@@ -381,6 +389,16 @@ namespace Action_Wheel.Core
                     }
                 }
 
+                if (preview.HasAiTasks)
+                {
+                    try { AiTaskTemplates.Parse(File.ReadAllText(Path.Combine(staging, AiTasksEntryName))); }
+                    catch (Exception ex)
+                    {
+                        error = $"The backup's {AiTasksEntryName} is not valid: {ex.Message}";
+                        return false;
+                    }
+                }
+
                 var stagedProfiles = new List<(string Name, IReadOnlyList<ActionItem> Actions)>();
                 string stagedProfilesDir = Path.Combine(staging, "Profiles");
                 if (Directory.Exists(stagedProfilesDir))
@@ -414,6 +432,8 @@ namespace Action_Wheel.Core
                     targetPaths.Add(PreferencesPath);
                 if (preview.HasActiveProfile)
                     targetPaths.Add(ActiveProfilePath);
+                if (preview.HasAiTasks)
+                    targetPaths.Add(AiTaskTemplates.FilePath);
                 foreach (var (name, _) in stagedProfiles)
                     targetPaths.Add(Path.Combine(ProfilesDirectory, SafeFileName(name) + ".xml"));
 
@@ -433,6 +453,10 @@ namespace Action_Wheel.Core
 
                     if (preview.HasActiveProfile
                         && !AtomicFile.TryWriteText(ActiveProfilePath, File.ReadAllText(Path.Combine(staging, ActiveProfileEntryName)), out error))
+                        return false;
+
+                    if (preview.HasAiTasks
+                        && !AtomicFile.TryWriteText(AiTaskTemplates.FilePath, File.ReadAllText(Path.Combine(staging, AiTasksEntryName)), out error))
                         return false;
 
                     foreach (var (name, profileActions) in stagedProfiles)
@@ -535,7 +559,7 @@ namespace Action_Wheel.Core
         {
             string normalized = entryFullName.Replace('\\', '/');
 
-            if (normalized is ActionsEntryName or PreferencesEntryName or ActiveProfileEntryName)
+            if (normalized is ActionsEntryName or PreferencesEntryName or ActiveProfileEntryName or AiTasksEntryName)
                 return true;
 
             if (IsUnder(normalized, ProfilesEntryPrefix) && normalized.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))

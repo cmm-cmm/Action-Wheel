@@ -1176,6 +1176,8 @@ namespace Action_Wheel.Settings
             AddLine(preview.HasActions ? "Includes the active button configuration" : "Does not include a button configuration");
             AddLine(preview.HasPreferences ? "Includes the trigger and ring appearance settings" : "Does not include trigger/appearance settings");
             AddLine($"{preview.ProfileCount} saved profile(s)");
+            if (preview.HasAiTasks)
+                AddLine("Includes the AI prompt templates");
             AddLine($"{preview.IconCount} extracted icon(s)");
             AddLaunchCommands(summary, preview.LaunchCommands, preview.LaunchCommandsComplete);
             AddLine("Restoring replaces the matching files on this machine.");

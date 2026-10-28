@@ -77,6 +77,36 @@
                 </Border>
             </DataTemplate>
 
+            <!-- One prompt template in the AI assistants section (Settings/AiTemplateRow.cs). -->
+            <DataTemplate x:Key="AiTemplateRowTemplate">
+                <Border Padding="12" CornerRadius="6" Margin="0,0,0,8"
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" Header="Name"
+                                     Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <CheckBox Grid.Column="1" Content="Ask before sending" VerticalAlignment="Bottom"
+                                      IsChecked="{Binding Confirm, Mode=TwoWay}"
+                                      ToolTipService.ToolTip="Show the text and ask before it is sent. Always asked when the text comes from the clipboard."/>
+                            <Button Grid.Column="2" VerticalAlignment="Bottom" Command="{Binding DeleteCommand}"
+                                    AutomationProperties.Name="Delete template" ToolTipService.ToolTip="Delete this template">
+                                <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF1F8;" FontSize="14"/>
+                            </Button>
+                        </Grid>
+                        <TextBox Header="Prompt" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72" MaxHeight="200"
+                                 Text="{Binding Prompt, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="{Binding PlaceholderHint}" FontSize="11"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                    </StackPanel>
+                </Border>
+            </DataTemplate>
+
             <!--
                 Every FontIcon in this window draws from the shipped icon font, including this
                 window's own furniture - browse, record, undo, redo, the status marker. There are no
@@ -1000,6 +1030,26 @@
 
                                 <ItemsControl ItemsSource="{Binding AiToolRows}"
                                               ItemTemplate="{StaticResource AiToolRowTemplate}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Prompt templates" Style="{StaticResource SectionHeaderTextStyle}" FontSize="16"/>
+                                <TextBlock TextWrapping="Wrap" FontSize="12"
+                                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                           Text="A template turns a button into an AI task. Select text anywhere, open the ring and press the button: the text goes to the AI tool in place of {selection}, and the answer appears in a window where you can copy it or replace the selection with it. Tasks run with Claude Code or Codex only, each in a mode that can neither run commands nor change files. The text is sent through your own sign-in with that tool. Changes here are saved straight away."/>
+                                <ItemsControl ItemsSource="{Binding AiTemplateRows}"
+                                              ItemTemplate="{StaticResource AiTemplateRowTemplate}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Command="{Binding AddAiTemplateCommand}" AutomationProperties.Name="Add template">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF067;" FontSize="13"/>
+                                            <TextBlock Text="Add template" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Content="Restore the built-in templates" Command="{Binding RestoreAiTemplatesCommand}"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </StackPanel>

@@ -51,7 +51,8 @@ A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor wheneve
 - **Truly transparent** — per-pixel alpha, so only the buttons are drawn; the desktop shows through everywhere else.
 - **Buttons carry a drop shadow** — they stay readable over a white window underneath, which matters because the overlay is genuinely transparent.
 - **Picks up edits to `actions.json` on its own** — the file is watched in both locations it can live in.
-- **AI assistants** — a button can open Claude Code, Codex, OpenCode, Gemini CLI or GitHub Copilot CLI in a terminal, in the folder of the File Explorer window you were using. It can also open Antigravity, Cursor or Windsurf on that folder, or start the Claude desktop app or LM Studio. Only tools found on this computer are offered, and Settings shows what was found and how. See [Doc/ai-assistants.md](Doc/ai-assistants.md).
+- **AI assistants** — a button can open Claude Code, Codex, OpenCode, Gemini CLI or GitHub Copilot CLI in a terminal, in the folder of the File Explorer window you were using. It can also open Antigravity, Cursor or Windsurf on that folder, or start the Claude desktop app or LM Studio. Only tools found on this computer are offered, and Settings shows what was found and how.
+- **AI tasks on selected text** — select text in any app, then use a button such as "Fix spelling and grammar with Claude Code". The text goes to Claude Code or Codex with your prompt template, and the answer opens in a window where you can copy it or replace the selection with it. See [Doc/ai-assistants.md](Doc/ai-assistants.md).
 
 ### 📁 Profiles & backup
 
@@ -133,7 +134,14 @@ Self-contained publishes are large (roughly 250–300 MB). That is normal for a 
 - **Only found tools are offered.** An installed tool that is switched on appears in the Windows function picker as **AI · Open …**.
 - **Leftover registrations are not trusted.** A tool whose registration outlived its program shows as **Registered, but its program is missing**, and is not offered.
 - **Existing buttons keep working.** A button made for a tool that is later removed still loads, and reports the problem when clicked.
-- **Nothing is sent to any AI service.** Opening a tool sends it nothing; you type into its own window.
+- **Opening a tool sends it nothing.** You type into its own window.
+
+**Prompt templates**, in the same section, turn a button into an AI task. Four come built in: Explain, Fix spelling and grammar, Translate to English and Summarize. Add your own, or edit a prompt; `{selection}` marks where the selected text goes. Each installed task-capable tool then offers **AI · <template> with <tool>** in the function picker.
+
+- **What runs.** Only Claude Code and Codex run tasks, each in a mode that can neither run commands nor change files: Claude Code with every tool off, Codex in its read-only sandbox. Each runs in an empty temporary folder.
+- **What is asked first.** A task shows the text and asks before sending it, unless its template says not to. It always asks when nothing was selected and the clipboard's text would be used instead.
+- **Terminals.** In a terminal window the selection is not copied with Ctrl+C, which would stop the running program. The clipboard is used instead.
+- **Sign-in and keys.** The text goes through your own sign-in with that tool. Action Wheel never sees or stores a key.
 
 A **live preview** in the Buttons section shows the ring as your unsaved edits will leave it, and **undo/redo** in the bottom bar step through those edits (typing is coalesced, so undo does not go one keystroke at a time). The bottom bar and its Save button are reachable from every section.
 
@@ -223,7 +231,7 @@ A button's **Windows function** type can switch or open a profile by name (`acti
 
 ### Backup and restore
 
-**Backup all…**, in the Profiles & backup section, saves everything into one `.zip`: `actions.json`, `preferences.json` (the trigger and ring appearance), every saved profile, and the icons extracted from applications. **Restore backup…** shows what a backup file contains — when it was made, which app version, how many profiles and icons, and every program, file or URL its buttons can launch — before touching anything, then replaces the matching files on this machine. The running ring and an open Settings window both pick up a restore immediately.
+**Backup all…**, in the Profiles & backup section, saves everything into one `.zip`: `actions.json`, `preferences.json` (the trigger and ring appearance), the AI prompt templates, every saved profile, and the icons extracted from applications. **Restore backup…** shows what a backup file contains — when it was made, which app version, how many profiles and icons, and every program, file or URL its buttons can launch — before touching anything, then replaces the matching files on this machine. The running ring and an open Settings window both pick up a restore immediately.
 
 ## How it works
 
@@ -254,7 +262,8 @@ The code is in two assemblies. **`ActionWheel.Core`** is the business logic and 
 | `DiagnosticsReport.cs` | The text behind "Copy diagnostics" |
 | `CrashReport.cs` | The one most recent unhandled exception, in `last-crash.txt`, for "Copy diagnostics" and the one-time notice after a crash |
 | `LaunchSummary.cs` | Lists every program, file or URL a set of actions can launch, for the import and restore prompts |
-| `AiTools.cs` | The catalog of AI tools (how to find each one, how it opens) and the `action-wheel.ai:<tool>/<task>` function ids |
+| `AiTools.cs` | The catalog of AI tools (how to find each one, how it opens, the fixed task command lines) and the `action-wheel.ai:<tool>/<task>` function ids |
+| `AiTaskTemplates.cs` | The AI prompt templates in `ai-tasks.json`: defaults, ids, prompt building |
 
 **`Action Wheel`** — the WinUI 3 app:
 
@@ -275,6 +284,8 @@ The code is in two assemblies. **`ActionWheel.Core`** is the business logic and 
 | `Services/AiToolDetector.cs` | Finds each catalog AI tool on this machine; a registration whose program is gone counts as missing |
 | `Services/AiLauncher.cs` / `Services/ExplorerFolder.cs` | Opens an AI tool in a terminal or as an app, in the folder of the File Explorer window that was in front |
 | `Services/AiAssistantSettings.cs` | Which AI tools are switched off, in `ai-assistants.json` |
+| `Services/SelectionCapture.cs` / `Services/AiCliRunner.cs` | Copies the selection for an AI task (never Ctrl+C into a terminal); runs the CLI with the prompt on stdin |
+| `Overlay/AiTaskWindow.cs` | An AI task's confirm, busy and answer window, including Replace selection |
 | `Services/ShellCommands.cs` | Opening a folder in Explorer and putting text on the clipboard |
 | `Services/ProfileLibrary.cs` | Save/load/rename/delete a named profile; lists profiles by recency for the tray menu |
 | `Services/ActiveProfileSettings.cs` | Which profile's name is currently shown as active |
@@ -290,7 +301,7 @@ The code is in two assemblies. **`ActionWheel.Core`** is the business logic and 
 | `Settings/RingPreview.cs` | Draws the live ring preview and replays its opening animation |
 | `Settings/GlyphChoice.cs` | The icon picker's entries: a named, curated set plus every glyph the font reports |
 | `Settings/ShortcutRecorder.cs` | Turns a live keypress + modifier state into a `"Ctrl+Shift+S"`-style string |
-| `Settings/AiToolRow.cs` | One row of the AI assistants section |
+| `Settings/AiToolRow.cs` / `Settings/AiTemplateRow.cs` | One AI tool, and one prompt template, in the AI assistants section |
 | `MainWindow.xaml(.cs)` | Status window; closing it hides to the tray |
 
 A few implementation details are easy to break and worth knowing about:

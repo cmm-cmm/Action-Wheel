@@ -31,6 +31,9 @@ namespace Action_Wheel.Core
             WindowsFunctions.ActionSwitchProfile => "Switch to the next saved profile.",
             _ when WindowsFunctions.TryGetProfileName(Id, out string profileName)
                 => $"Load the saved profile '{profileName}' and make it active immediately.",
+            _ when AiTools.TryParse(Id, out string taskToolId, out string task)
+                && AiTools.TryGetTemplateId(task, out _) && AiTools.Find(taskToolId) is AiTool taskTool
+                => $"Send the selected text to {taskTool.Name} with this prompt, and show the answer. Asks first unless the template says not to.",
             _ when AiTools.TryParse(Id, out string toolId, out _) && AiTools.Find(toolId) is AiTool tool
                 => tool.Kind == AiToolKind.Cli
                     ? $"Start {tool.Name} in a terminal, in the folder of the File Explorer window you were using."

@@ -114,6 +114,8 @@ namespace Action_Wheel.ViewModels
 
             Items.CollectionChanged += OnItemsCollectionChanged;
 
+            // Before the rows, so a button that runs a template shows its name in the picker.
+            LoadAiTemplates();
             LoadFromDisk();
 
             // Fills the AI assistants section and adds installed AI tools to the function picker
@@ -156,6 +158,8 @@ namespace Action_Wheel.ViewModels
         /// </summary>
         public void ReloadFromDisk()
         {
+            // A restore can bring back ai-tasks.json too.
+            LoadAiTemplates();
             LoadFromDisk();
 
             Raise(nameof(ConfigPath));
@@ -1016,6 +1020,9 @@ namespace Action_Wheel.ViewModels
         {
             if (_disposed)
                 return;
+
+            // Before _disposed is set, which would make the save a no-op.
+            FlushAiTemplates();
 
             _disposed = true;
 

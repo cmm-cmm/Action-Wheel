@@ -1,6 +1,6 @@
 # AI assistants on the ring
 
-**Status:** Phase 1 is implemented. Phases 2 and 3 are proposed and not implemented yet.
+**Status:** Phases 1 and 2 are implemented. Phase 3 is proposed and not implemented yet.
 
 ## Context
 
@@ -71,24 +71,49 @@ How `open` behaves:
 
 Phase 1 sends no text anywhere. Everything the tool receives is typed by the user into its own window.
 
-### Phase 2: tasks on the selected text (proposed)
+### Phase 2: tasks on the selected text (implemented)
 
-Prompt templates such as "Explain", "Fix grammar", "Translate to …" and "Summarize" use a `{selection}` placeholder. They live in `ai-tasks.json` and are edited in the AI section. The id is `action-wheel.ai:<tool>/task:<templateId>`.
+Decided with the user:
 
-1. Copy the selection: send Ctrl+C to the target window and wait for `GetClipboardSequenceNumber` to change, with a timeout.
-2. Pass the prompt **on stdin**, never on the command line. The command line is readable by other processes, is length-limited, and is open to quoting injection.
-   - Claude: `claude -p --tools "" --output-format text`.
-   - Codex: `codex exec -s read-only --ephemeral --skip-git-repo-check -o <tmp> -`.
-   - Both run in a fresh empty temp folder.
-3. Show the result in a small window near the cursor, with Copy, Replace selection and Continue in terminal. It shows a busy state and a Cancel button, and enforces a timeout.
+- **The answer goes in a window**, with Copy, Replace selection (only when the text really came from a selection) and Close.
+- **Asking before sending is on by default.** Each template can switch it off. It is always asked when nothing was selected and the clipboard's text is used instead, because the user may not remember what is there.
+
+Prompt templates have a stable slug id, a name, a prompt with `{selection}`, and a confirm flag. They live in `ai-tasks.json`.
+
+- **Where they come from.** Four built-ins ship: Explain, Fix spelling and grammar, Translate to English, Summarize. Templates are edited in the AI section and saved straight away.
+- **They travel in backups.** They are the user's own writing, unlike the tool switches.
+- **How a button names one.** The Function id is `action-wheel.ai:<tool>/task:<templateId>`. The id is valid for any task-capable tool and any well-formed template id. A deleted template, like an uninstalled tool, is reported when the button is clicked and warned about on Save, and never rejects `actions.json`.
+
+| File | Role |
+|---|---|
+| `ActionWheel.Core/AiTaskTemplates.cs` | The template model, the defaults, slug ids, prompt building, the JSON file |
+| `ActionWheel.Core/AiTools.cs` | `SupportsTasks` (Claude Code and Codex only), task ids, and `TaskArguments`: the fixed command lines |
+| `Services/SelectionCapture.cs` | Copies the selection (see below) |
+| `Services/AiCliRunner.cs` | Runs the CLI hidden, prompt on stdin, in a fresh empty temp folder that is deleted afterwards. 3-minute timeout, Cancel kills the process tree. |
+| `Overlay/AiTaskWindow.cs` | The confirm, busy, answer and error states, and Replace selection. Built in code. |
+| `Services/ActionDispatcher.cs`, `Services/LauncherService.cs` | `AiTaskRequested` carries a task from dispatch, which is off the UI thread, to `AiTaskWindow.StartAsync` on the UI thread |
+| `ViewModels/SettingsViewModel.Ai.cs`, `Settings/AiTemplateRow.cs` | The "Prompt templates" card. The picker lists "AI · <template> with <tool>" for each available task-capable tool. |
+| `ActionWheel.Core/ConfigBackup.cs` | `ai-tasks.json` is exported, validated and restored like the other files |
+
+The command lines are fixed in code, not configurable. They were checked against each tool's `--help`.
+
+- **Claude Code:** `claude -p --tools "" --strict-mcp-config --no-session-persistence --output-format text`. Every built-in tool is off, no MCP server is loaded from the user's configuration, and the session is not saved.
+- **Codex:** `codex exec -s read-only --ephemeral --skip-git-repo-check --color never -o <answer file> -`. This is the read-only sandbox, the session is not saved, the prompt comes from stdin, and only the final message is written to the answer file.
+
+How the flow goes, and why in this order:
+
+1. **The selection is copied before any window opens.** The task window takes the focus when it is activated, and Ctrl+C would then go to it instead of the app the user selected text in.
+   - Copying means waiting for Ctrl, Alt, Shift and Win to be released, since the emergency trigger is Ctrl+Alt+Space. Then Ctrl+C goes to the target, and the clipboard sequence number is watched for 900 ms.
+   - **A terminal never gets Ctrl+C**, because there it interrupts the running program. This covers the console host, Windows Terminal, the pseudo-console, mintty and VirtualConsoleClass. The clipboard is used as is.
+2. Then come the checks: tool, template, the tool's switch, detection, empty text, and a length cap of 100,000 characters. A cap rather than cutting the text off, because an answer about half a document reads as an answer about all of it.
+3. Then the confirmation, the run, and the answer.
+4. **Replace selection** puts the answer on the clipboard, hands the foreground back to the target window, and sends Ctrl+V.
 
 Fixed safety rules:
 
-- Never pass `bypassPermissions`, `danger-full-access` or any `--dangerously-*` flag.
-- OpenCode is excluded until a read-only mode can be verified.
-- Each template asks for confirmation before text leaves the machine. This is on by default and can be switched off per template.
-
-Open decisions for the user: where results go (window, clipboard or replace), and the default for that confirmation.
+- Never pass `bypassPermissions`, `danger-full-access` or any `--dangerously-*` flag. `ConfigSaveCheck` asserts this for every task-capable tool.
+- OpenCode is excluded from tasks until a read-only mode can be verified.
+- Action Wheel never sees, stores or sends a key. The tools use the user's own sign-in.
 
 ### Phase 3: more tools (proposed)
 
@@ -104,6 +129,16 @@ Open decisions for the user: where results go (window, clipboard or replace), an
 - Detection against the real machine was run through a scratch harness that compiles `AiToolDetector.cs` with its dependencies:
   - Claude Code, Codex and OpenCode are found.
   - Antigravity is reported as Stale.
+- Phase 2, on the dev machine, 2026-10-28:
+  - **Real one-shot runs.** Claude Code answered in 3 s and Codex in 6 s. Quotes, `&`, `<xml>` and accented text went through stdin intact, and no temp folder was left behind.
+  - **Safety check.** Each tool was asked to create a file at a given path. Both answered "CANNOT", and no file appeared.
+  - **End to end through the real app, driven by UI Automation:**
+    1. A misspelt sentence was selected in a test window.
+    2. The ring's drag gesture ran a "Fix spelling and grammar with Claude Code" button.
+    3. The confirmation showed the sentence, marked as coming from the selection.
+    4. The answer came back corrected.
+    5. Replace selection wrote it back into the test window.
+  - **Terminal protection.** In an earlier attempt the test window failed to come to the front and Windows Terminal stayed foreground. Action Wheel sent no Ctrl+C there and used the clipboard instead, as designed.
 - By hand:
   - Open a CLI tool from the ring while an Explorer window is in front, and check the terminal starts in that folder.
   - Do the same with no Explorer window, and check it starts in the profile folder.

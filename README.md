@@ -121,7 +121,7 @@ Self-contained publishes are large (roughly 250–300 MB). That is normal for a 
 - a **hold action** — a second, optional action for the same button, with its own type, value and arguments
 - an **Edit group…** button when the type is Group, opening a dialog to pick up to 8 child buttons, each with its own icon, name and type (everything except Group itself)
 - **reset** and **test** buttons — test runs the action immediately, without saving or opening the ring
-- a **live status marker** next to the value: green when a launch target was found (on disk, on PATH, or a well-formed URL), amber when it was not or when another button uses the same shortcut, red when the shortcut contains a key that cannot be sent
+- a **live status marker** next to the value: green when a launch target was found (on disk, on PATH, registered under App Paths the way Chrome, Edge and Office are, or a well-formed URL), amber when it was not or when another button uses the same shortcut, red when the shortcut contains a key that cannot be sent
 
 **Appearance & trigger** holds the mouse trigger (which gesture opens the ring, and the chord timing/movement limits) and the ring's own size, orbit distance and opening animation, each with a live preview.
 
@@ -200,17 +200,22 @@ Use the **Propo** cut, not the plain one. In the plain cut an icon keeps the mon
 
 **There is no compatibility path from the old icon font.** A `glyph` the shipped font has no icon for draws nothing — no substitute, and no notdef box, which would read as a rendering fault rather than a setting to change. The settings window reports those rows as a warning after a save instead of blocking it, since a button with no picture still works.
 
-Recognised key names: `Ctrl`, `Alt`, `Shift`, `Win`, `A`–`Z`, `0`–`9`, `F1`–`F24`, `Esc`, `Tab`, `Enter`, `Space`, `Backspace`, `Delete`, `Insert`, `Home`, `End`, `PageUp`, `PageDown`, arrow keys, `PrintScreen`, and the media keys (`PlayPause`, `MediaNext`, `MediaPrev`, `MediaStop`, `VolumeUp`, `VolumeDown`, `Mute`).
+Recognised key names: `Ctrl`, `Alt`, `Shift`, `Win`, `A`–`Z`, `0`–`9`, `F1`–`F24`, `Esc`, `Tab`, `Enter`, `Space`, `Backspace`, `Delete`, `Insert`, `Home`, `End`, `PageUp`, `PageDown`, arrow keys, `PrintScreen`, the media keys (`PlayPause`, `MediaNext`, `MediaPrev`, `MediaStop`, `VolumeUp`, `VolumeDown`, `Mute`), and the punctuation keys, by name or as the character itself: `Plus` (`=`), `Minus` (`-`), `Comma` (`,`), `Period` (`.`), `Slash` (`/`), `Backtick` (`` ` ``), `Semicolon` (`;`), `Quote` (`'`), `OpenBracket` (`[`), `CloseBracket` (`]`), `Backslash` (`\`).
+
+- **`Ctrl++` means Ctrl plus the Plus key.** The same goes for any shortcut ending in `++`.
+- **Any other empty part is an error.** That includes `Ctrl+`, `+A` and `Ctrl++S`. Earlier versions quietly dropped the empty part, so `Ctrl++` sent Ctrl alone; such a shortcut is now reported instead.
+- **Punctuation keys follow the US keyboard layout.** On other layouts, the same physical key can carry a different character, which is how Windows itself treats these keys.
+- **Recording captures punctuation keys too.** They are written by name, such as `Ctrl+Minus`.
 
 ### Profiles
 
-A **profile** is a named, saved copy of all nine buttons, stored as its own file at `%LOCALAPPDATA%\ActionWheel\Profiles\<name>.xml` — `actions.json` remains the one file the running ring actually reads; **Load** copies a profile's contents into it. Manage profiles from the **Profiles & backup** section: save the current buttons under a name, load, rename or delete a saved one, or **Import XML** / **Export XML** a profile file directly from the bottom command bar (independent of the active configuration, so a profile can be shared or checked into version control on its own).
+A **profile** is a named, saved copy of all nine buttons, stored as its own file at `%LOCALAPPDATA%\ActionWheel\Profiles\<name>.xml` — `actions.json` remains the one file the running ring actually reads; **Load** copies a profile's contents into it. Manage profiles from the **Profiles & backup** section: save the current buttons under a name, load, rename or delete a saved one, or **Import XML** / **Export XML** a profile file directly from the bottom command bar (independent of the active configuration, so a profile can be shared or checked into version control on its own). Importing a profile whose buttons launch anything lists those programs, files and URLs, with their arguments, and asks before loading it. A launch target can be any command line, so read that list before accepting a profile from someone else.
 
 A button's **Windows function** type can switch or open a profile by name (`action-wheel.profile:<name>`), and the tray icon's right-click menu lists recently-used profiles for switching without opening Settings at all. Renaming a profile updates every button that switches to it: in `actions.json`, in the other saved profiles, and in the rows being edited.
 
 ### Backup and restore
 
-**Backup all…**, in the Profiles & backup section, saves everything into one `.zip`: `actions.json`, `preferences.json` (the trigger and ring appearance), every saved profile, and the icons extracted from applications. **Restore backup…** shows what a backup file contains — when it was made, which app version, how many profiles and icons — before touching anything, then replaces the matching files on this machine. The running ring and an open Settings window both pick up a restore immediately.
+**Backup all…**, in the Profiles & backup section, saves everything into one `.zip`: `actions.json`, `preferences.json` (the trigger and ring appearance), every saved profile, and the icons extracted from applications. **Restore backup…** shows what a backup file contains — when it was made, which app version, how many profiles and icons, and every program, file or URL its buttons can launch — before touching anything, then replaces the matching files on this machine. The running ring and an open Settings window both pick up a restore immediately.
 
 ## How it works
 
@@ -239,7 +244,8 @@ The code is in two assemblies. **`ActionWheel.Core`** is the business logic and 
 | `UndoHistory.cs` | The settings window's undo/redo stack |
 | `AppDataPaths.cs` | The shared `%LOCALAPPDATA%\ActionWheel` configuration location; it stores settings, not activity history |
 | `DiagnosticsReport.cs` | The text behind "Copy diagnostics" |
-| `CrashReport.cs` | The one most recent unhandled exception, in `last-crash.txt`, for "Copy diagnostics" |
+| `CrashReport.cs` | The one most recent unhandled exception, in `last-crash.txt`, for "Copy diagnostics" and the one-time notice after a crash |
+| `LaunchSummary.cs` | Lists every program, file or URL a set of actions can launch, for the import and restore prompts |
 
 **`Action Wheel`** — the WinUI 3 app:
 
@@ -256,6 +262,7 @@ The code is in two assemblies. **`ActionWheel.Core`** is the business logic and 
 | `Services/IconFont.cs` | The bundled icon font: the family string for a `FontIcon`, and which glyphs it has |
 | `Services/StartupManager.cs` | The per-user Run key entry behind "Start with Windows" |
 | `Services/StartHiddenSettings.cs` | Whether a launch shows only the tray icon, in `start-hidden.txt` |
+| `Services/CommandResolver.cs` | Finds what a bare command like `chrome.exe` starts: PATH, then App Paths, as ShellExecute does |
 | `Services/ShellCommands.cs` | Opening a folder in Explorer and putting text on the clipboard |
 | `Services/ProfileLibrary.cs` | Save/load/rename/delete a named profile; lists profiles by recency for the tray menu |
 | `Services/ActiveProfileSettings.cs` | Which profile's name is currently shown as active |
@@ -287,7 +294,7 @@ A few implementation details are easy to break and worth knowing about:
 
 ## Troubleshooting
 
-The main window carries **Copy diagnostics**. It copies environment, configuration and hook status only when the user explicitly asks; it contains no activity history. If the app has crashed before, the last crash's error text is included at the end.
+The main window carries **Copy diagnostics**. It copies environment, configuration and hook status only when the user explicitly asks; it contains no activity history. If the app has crashed before, the last crash's error text is included at the end. After a crash, the main window says so once on the next launch, with a shortcut to the same button; closing that notice marks the crash as seen.
 
 **Menu doesn't appear** — the main window says so directly, in red. It is often security software blocking `SetWindowsHookEx`.
 

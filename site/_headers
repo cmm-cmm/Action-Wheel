@@ -1,8 +1,15 @@
+# Cloudflare adds two scripts of its own to every HTML page on the konexforge.com zone:
+#  - JavaScript Detections (Bot Fight Mode), an inline script that changes on every request, so
+#    it cannot be allowed by hash. Cloudflare copies the nonce below onto it, which is the
+#    approach Cloudflare recommends over 'unsafe-inline'. The site itself has no inline scripts,
+#    so nothing of ours uses the nonce.
+#  - Web Analytics, loaded from static.cloudflareinsights.com. It reports to /cdn-cgi/rum on
+#    this origin, which connect-src 'self' already covers.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.github.com; frame-ancestors 'none'; base-uri 'self'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-Z0JOOATnXM76pr/+96jM/mx+' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.github.com; frame-ancestors 'none'; base-uri 'self'; form-action 'none'
 
 /*.html
   Cache-Control: public, max-age=0, must-revalidate

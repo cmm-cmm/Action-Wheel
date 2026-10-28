@@ -19,6 +19,18 @@ namespace Action_Wheel.Core
         public bool HasActiveProfile { get; init; }
         public int ProfileCount { get; init; }
         public int IconCount { get; init; }
+
+        /// <summary>
+        /// Every program, file or URL the backup's buttons can start (see <see cref="LaunchSummary"/>),
+        /// so the restore prompt can show it before anything is replaced.
+        /// </summary>
+        public IReadOnlyList<string> LaunchCommands { get; init; } = Array.Empty<string>();
+
+        /// <summary>
+        /// False when some of the backup's actions could not be read for the list above. They are
+        /// too large or malformed, and the restore would then reject them anyway.
+        /// </summary>
+        public bool LaunchCommandsComplete { get; init; } = true;
     }
 
     /// <summary>
@@ -178,6 +190,8 @@ namespace Action_Wheel.Core
                 string appVersion = root.TryGetProperty("appVersion", out var appVersionProp)
                     ? appVersionProp.GetString() ?? string.Empty : string.Empty;
 
+                var (launchCommands, launchCommandsComplete) = ReadLaunchCommands(zip);
+
                 preview = new BackupPreview
                 {
                     ManifestVersion = version,
@@ -188,6 +202,8 @@ namespace Action_Wheel.Core
                     HasActiveProfile = zip.GetEntry(ActiveProfileEntryName) != null,
                     ProfileCount = zip.Entries.Count(e => IsUnder(e.FullName, ProfilesEntryPrefix) && e.Name.Length > 0),
                     IconCount = zip.Entries.Count(e => IsUnder(e.FullName, IconsEntryPrefix) && e.Name.Length > 0),
+                    LaunchCommands = launchCommands,
+                    LaunchCommandsComplete = launchCommandsComplete,
                 };
                 return true;
             }
@@ -196,6 +212,80 @@ namespace Action_Wheel.Core
                 error = ex.Message;
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Real actions.json and profile files are a few kilobytes. The preview reads them into
+        /// memory, so it stops well short of the extraction limits TryImport applies.
+        /// </summary>
+        private const long MaxPreviewEntryBytes = 4L * 1024 * 1024;
+
+        /// <summary>
+        /// Reads actions.json and every profile straight out of the ZIP, in memory, and lists what
+        /// their buttons launch. Nothing is extracted to disk: this runs before the user has agreed
+        /// to anything. An entry that cannot be read only marks the list incomplete.
+        /// </summary>
+        private static (IReadOnlyList<string> Commands, bool Complete) ReadLaunchCommands(ZipArchive zip)
+        {
+            var actions = new List<ActionItem>();
+            bool complete = true;
+
+            var entries = zip.Entries
+                .Where(e => e.FullName == ActionsEntryName
+                    || (IsUnder(e.FullName, ProfilesEntryPrefix) && e.Name.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)))
+                .Take(MaxEntryCount);
+
+            foreach (var entry in entries)
+            {
+                try
+                {
+                    byte[]? bytes = ReadBounded(entry, MaxPreviewEntryBytes);
+                    if (bytes == null)
+                    {
+                        complete = false;
+                        continue;
+                    }
+
+                    if (entry.FullName == ActionsEntryName)
+                    {
+                        actions.AddRange(ActionConfig.Parse(Encoding.UTF8.GetString(bytes)));
+                    }
+                    else
+                    {
+                        using var stream = new MemoryStream(bytes);
+                        if (ProfileXml.TryLoad(stream, out var profileActions, out _))
+                            actions.AddRange(profileActions);
+                        else
+                            complete = false;
+                    }
+                }
+                catch (Exception)
+                {
+                    complete = false;
+                }
+            }
+
+            return (LaunchSummary.Commands(actions), complete);
+        }
+
+        /// <summary>The entry's bytes, or null if it decompresses to more than <paramref name="maxBytes"/>.</summary>
+        private static byte[]? ReadBounded(ZipArchiveEntry entry, long maxBytes)
+        {
+            if (entry.Length > maxBytes)
+                return null;
+
+            using var source = entry.Open();
+            using var buffer = new MemoryStream();
+            var chunk = new byte[81920];
+            int read;
+            while ((read = source.Read(chunk, 0, chunk.Length)) > 0)
+            {
+                if (buffer.Length + read > maxBytes)
+                    return null;
+                buffer.Write(chunk, 0, read);
+            }
+
+            return buffer.ToArray();
         }
 
         /// <summary>

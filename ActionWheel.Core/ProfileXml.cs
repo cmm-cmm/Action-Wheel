@@ -98,6 +98,25 @@ namespace Action_Wheel.Core
 
         public static bool TryLoad(string path, out IReadOnlyList<ActionItem> actions, out string error)
         {
+            try
+            {
+                using var stream = File.OpenRead(path);
+                return TryLoad(stream, out actions, out error);
+            }
+            catch (Exception ex)
+            {
+                actions = Array.Empty<ActionItem>();
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// <see cref="TryLoad(string, out IReadOnlyList{ActionItem}, out string)"/>, from a stream:
+        /// lets a backup's preview read a profile straight out of the ZIP without extracting it.
+        /// </summary>
+        public static bool TryLoad(Stream stream, out IReadOnlyList<ActionItem> actions, out string error)
+        {
             actions = Array.Empty<ActionItem>();
             error = string.Empty;
 
@@ -110,7 +129,7 @@ namespace Action_Wheel.Core
                 };
 
                 XDocument document;
-                using (var reader = XmlReader.Create(path, readerSettings))
+                using (var reader = XmlReader.Create(stream, readerSettings))
                     document = XDocument.Load(reader, LoadOptions.None);
 
                 var root = document.Root;

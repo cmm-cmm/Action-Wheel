@@ -984,9 +984,109 @@ namespace Action_Wheel.Settings
 
         private async void ImportProfile_Click(object sender, RoutedEventArgs e)
         {
+            if (_dialogOpen || Content is not FrameworkElement root)
+                return;
+
             var file = await PickFileAsync(".xml");
-            if (file != null)
-                ViewModel.ImportProfile(file);
+            if (file == null)
+                return;
+
+            // A profile that cannot be read goes straight to ImportProfile, which reports why.
+            // Only one that would load, and that launches something, needs a look first.
+            if (ProfileXml.TryLoad(file, out var actions, out _))
+            {
+                var commands = LaunchSummary.Commands(actions);
+                if (commands.Count > 0)
+                {
+                    var content = new StackPanel { Spacing = 6 };
+                    content.Children.Add(new TextBlock
+                    {
+                        Text = "Nothing is applied until you press Save, and Undo reverses the import.",
+                        TextWrapping = TextWrapping.Wrap,
+                    });
+                    AddLaunchCommands(content, commands, complete: true);
+
+                    var dialog = new ContentDialog
+                    {
+                        XamlRoot = root.XamlRoot,
+                        RequestedTheme = root.RequestedTheme,
+                        Title = "Import this profile?",
+                        Content = content,
+                        PrimaryButtonText = "Import",
+                        CloseButtonText = "Cancel",
+                        DefaultButton = ContentDialogButton.Close,
+                    };
+
+                    _dialogOpen = true;
+                    try
+                    {
+                        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+                            return;
+                    }
+                    finally
+                    {
+                        _dialogOpen = false;
+                    }
+                }
+            }
+
+            ViewModel.ImportProfile(file);
+        }
+
+        /// <summary>
+        /// Lists what a profile or backup from elsewhere will be able to start. A launch target can
+        /// be any command line, so this is the part worth reading before accepting it. Selectable,
+        /// so a long command can be copied out and checked.
+        /// </summary>
+        private static void AddLaunchCommands(Panel panel, IReadOnlyList<string> commands, bool complete)
+        {
+            if (commands.Count == 0 && complete)
+            {
+                panel.Children.Add(new TextBlock { Text = "No button launches a program, file or URL", TextWrapping = TextWrapping.Wrap });
+                return;
+            }
+
+            panel.Children.Add(new TextBlock
+            {
+                Text = commands.Count == 1
+                    ? "One button can launch this:"
+                    : $"Buttons can launch these {commands.Count} programs, files or URLs:",
+                TextWrapping = TextWrapping.Wrap,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Margin = new Thickness(0, 6, 0, 0),
+                Visibility = commands.Count > 0 ? Visibility.Visible : Visibility.Collapsed,
+            });
+
+            var list = new StackPanel { Spacing = 2 };
+            foreach (string command in commands)
+            {
+                list.Children.Add(new TextBlock
+                {
+                    Text = command,
+                    TextWrapping = TextWrapping.Wrap,
+                    IsTextSelectionEnabled = true,
+                    FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"),
+                });
+            }
+
+            if (commands.Count > 0)
+            {
+                panel.Children.Add(new ScrollViewer
+                {
+                    Content = list,
+                    MaxHeight = 160,
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                });
+            }
+
+            if (!complete)
+            {
+                panel.Children.Add(new TextBlock
+                {
+                    Text = "Some of its buttons could not be read to list here. Restoring would reject those files anyway.",
+                    TextWrapping = TextWrapping.Wrap,
+                });
+            }
         }
 
         private async void ExportProfile_Click(object sender, RoutedEventArgs e)
@@ -1076,6 +1176,7 @@ namespace Action_Wheel.Settings
             AddLine(preview.HasPreferences ? "Includes the trigger and ring appearance settings" : "Does not include trigger/appearance settings");
             AddLine($"{preview.ProfileCount} saved profile(s)");
             AddLine($"{preview.IconCount} extracted icon(s)");
+            AddLaunchCommands(summary, preview.LaunchCommands, preview.LaunchCommandsComplete);
             AddLine("Restoring replaces the matching files on this machine.");
 
             var dialog = new ContentDialog

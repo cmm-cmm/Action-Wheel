@@ -769,7 +769,7 @@ namespace Action_Wheel.Overlay
         ///
         /// Every satellite is painted in <paramref name="parentAction"/>'s own background, foreground
         /// and shadow - not its own slot's default colour, and not anything a child itself carries -
-        /// so a group reads as one cohesive control fanning out from its parent rather than five
+        /// so a group reads as one cohesive control fanning out from its parent rather than a set of
         /// independently-coloured buttons. Only the icon (glyph or SVG) stays per-child; that is the
         /// one thing each button in the group actually needs to differ by.
         /// </remarks>

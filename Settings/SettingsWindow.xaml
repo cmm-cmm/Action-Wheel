@@ -160,7 +160,7 @@
                                                 <ComboBoxItem Content="Send shortcut"/>
                                                 <ComboBoxItem Content="Open app / file"/>
                                                 <ComboBoxItem Content="Windows function"/>
-                                                <ComboBoxItem Content="Group (up to 5 buttons)" IsEnabled="{Binding CanBeGroup, Mode=OneWay}"
+                                                <ComboBoxItem Content="Group (up to 8 buttons)" IsEnabled="{Binding CanBeGroup, Mode=OneWay}"
                                                               ToolTipService.ToolTip="The centre button cannot be a group."/>
                                             </ComboBox>
                                         </StackPanel>
@@ -219,7 +219,7 @@
                                                 Click="EditGroup_Click"
                                                 AutomationProperties.Name="Edit group"
                                                 Visibility="{Binding IsGroup, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                ToolTipService.ToolTip="Choose this group's up to 5 buttons">
+                                                ToolTipService.ToolTip="Choose this group's up to 8 buttons">
                                             <StackPanel Orientation="Horizontal" Spacing="4">
                                                 <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF045;" FontSize="13"/>
                                                 <TextBlock Text="{Binding EditGroupText, Mode=OneWay}" FontSize="12" VerticalAlignment="Center"/>

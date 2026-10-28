@@ -45,7 +45,7 @@ A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor wheneve
 ### 🎨 Customization
 
 - **Configurable buttons** — 8 outer buttons plus a centre button. Each can send a keyboard shortcut, launch a program/file/URL, run a built-in Windows function (lock, sleep, snap, show desktop, switch profile, ...), or reveal a group. Edit them in the built-in settings window, or by hand in `actions.json`.
-- **Group buttons** — turn any outer button into a small satellite ring of up to 5 more buttons. They fan out on hover from that button's own position, sized and coloured to match it, so a group reads as one control rather than a separate menu.
+- **Group buttons** — turn any outer button into a small satellite ring of up to 8 more buttons. They fan out on hover from that button's own position, sized and coloured to match it, so a group reads as one control rather than a separate menu.
 - **Ring size, distance and animation are all adjustable** — button size and orbit radius have a live preview, and there are 7 opening animations to choose from (fade and scale, pop, radiate from centre, converge from outside, clockwise/counter-clockwise sweep, or none), each with its own effect duration.
 - **Truly transparent** — per-pixel alpha, so only the buttons are drawn; the desktop shows through everywhere else.
 - **Buttons carry a drop shadow** — they stay readable over a white window underneath, which matters because the overlay is genuinely transparent.
@@ -117,7 +117,7 @@ Self-contained publishes are large (roughly 250–300 MB). That is normal for a 
 - **icon colour**, **button colour**, **shadow colour** and shadow opacity/blur/offset, and an icon **scale** from 0.25× to 3× with its own horizontal/vertical offset
 - a **tint** switch for file icons: on, an `.svg` is recoloured to the icon colour; off, it keeps the colours it was drawn with. A `.png` or `.ico` always keeps its own colours.
 - a **hold action** — a second, optional action for the same button, with its own type, value and arguments
-- an **Edit group…** button when the type is Group, opening a dialog to pick up to 5 child buttons, each with its own icon, name and type (everything except Group itself)
+- an **Edit group…** button when the type is Group, opening a dialog to pick up to 8 child buttons, each with its own icon, name and type (everything except Group itself)
 - **reset** and **test** buttons — test runs the action immediately, without saving or opening the ring
 - a **live status marker** next to the value: green when a launch target was found (on disk, on PATH, or a well-formed URL), amber when it was not or when another button uses the same shortcut, red when the shortcut contains a key that cannot be sent
 
@@ -184,7 +184,7 @@ A file that cannot be read is reported directly in the main window. The built-in
 | `background` | button colour, same format |
 | `shadow`, `shadowEnabled`, `shadowOpacity`, `shadowBlur`, `shadowOffsetX`, `shadowOffsetY` | the button's own drop shadow — colour, on/off, and the same shadow parameters any design tool exposes |
 | `holdType`, `holdValue`, `holdArguments` | a second action for the same button, run on press-and-hold instead of click; same vocabulary as `type`/`value`/`arguments`, and a button needs none of them to skip having a hold action |
-| `group` | for `type: "group"` only — an array of up to 5 child actions (same shape as a top-level action, minus `tag`'s ring meaning: a child's `tag` is just its position among its siblings). A child cannot itself be a group. |
+| `group` | for `type: "group"` only — an array of up to 8 child actions (same shape as a top-level action, minus `tag`'s ring meaning: a child's `tag` is just its position among its siblings). A child cannot itself be a group. |
 
 Every field after `value` is optional; leaving one out uses the built-in default — a config written before `iconTint` existed therefore gets tinting, which is what a single-colour pictogram wants. Only a vector icon can be recoloured: a `.png` or `.ico` is drawn as-is whatever `iconTint` says, and `background` applies either way.
 

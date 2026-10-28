@@ -15,7 +15,7 @@ namespace Action_Wheel.Core
         /// <summary>Run one of Action Wheel's built-in Windows functions.</summary>
         Function,
         /// <summary>
-        /// Reveals up to 5 child actions on a second ring, concentric with and outside the main one,
+        /// Reveals up to <see cref="ActionItem.MaxGroupChildren"/> (8) child actions on a second ring, concentric with and outside the main one,
         /// instead of dispatching anything itself. Selecting it never closes the menu.
         /// </summary>
         Group,

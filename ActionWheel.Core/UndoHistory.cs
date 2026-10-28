@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -25,6 +26,27 @@ namespace Action_Wheel.Core
             _redo.Clear();
             _current = next;
             return true;
+        }
+
+        /// <summary>
+        /// Rewrites every snapshot (current, undo and redo) with <paramref name="map"/>, keeping
+        /// their order. For a change that has to reach history too, such as a profile rename:
+        /// without it, Undo brought the old name back onto the buttons.
+        /// </summary>
+        public void Map(Func<IReadOnlyList<T>, IReadOnlyList<T>> map)
+        {
+            _current = map(_current);
+            Rebuild(_undo);
+            Rebuild(_redo);
+
+            void Rebuild(Stack<IReadOnlyList<T>> stack)
+            {
+                // A stack enumerates top first; reversing gives the order to push back in.
+                var mapped = stack.Reverse().Select(map).ToArray();
+                stack.Clear();
+                foreach (var snapshot in mapped)
+                    stack.Push(snapshot);
+            }
         }
 
         public bool TryUndo(out IReadOnlyList<T> values)

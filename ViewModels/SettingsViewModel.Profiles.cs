@@ -202,12 +202,13 @@ namespace Action_Wheel.ViewModels
                 }
             }
 
-            // The rows and the saved snapshot are renamed together, so a rename neither invents nor
-            // hides unsaved changes.
+            // The rows, the saved snapshot and the undo history are renamed together, so a rename
+            // neither invents nor hides unsaved changes, and Undo never brings the old name back.
             var rows = WindowsFunctions.RenameProfileReferences(Snapshot(), oldName, newName, out bool rowsChanged);
             if (rowsChanged)
                 LoadItems(rows);
             _savedActions = WindowsFunctions.RenameProfileReferences(_savedActions, oldName, newName, out _).ToList();
+            _history?.Map(snapshot => WindowsFunctions.RenameProfileReferences(snapshot, oldName, newName, out _));
 
             return configChanged;
         }

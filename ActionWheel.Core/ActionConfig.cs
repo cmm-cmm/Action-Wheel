@@ -331,7 +331,12 @@ namespace Action_Wheel.Core
 
                 if (File.Exists(path))
                 {
-                    File.Copy(path, BackupPathFor(path), overwrite: true);
+                    // Only a file that would load is worth keeping as the .bak. Saving over a
+                    // rejected file (the settings window and a profile switch both do) used to copy
+                    // the broken file over the last good backup, leaving nothing to restore. The
+                    // rejected file goes to .invalid instead, the same place RestoreBackup puts it.
+                    string previous = IsLoadable(path) ? BackupPathFor(path) : path + ".invalid";
+                    File.Copy(path, previous, overwrite: true);
                     File.Move(temporaryPath, path, overwrite: true);
                 }
                 else
@@ -360,6 +365,18 @@ namespace Action_Wheel.Core
                         // Preserve the original save error; an orphaned temp file is recoverable.
                     }
                 }
+            }
+        }
+
+        private static bool IsLoadable(string path)
+        {
+            try
+            {
+                return TryValidate(Parse(File.ReadAllText(path)), out _);
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
 

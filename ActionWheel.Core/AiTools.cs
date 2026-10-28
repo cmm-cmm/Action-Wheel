@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Action_Wheel.Core
 {
@@ -25,6 +26,11 @@ namespace Action_Wheel.Core
     /// <see cref="AiTools.TaskArguments"/>). Only tools whose "no tools / read-only" mode was checked
     /// against their own --help qualify.
     /// </param>
+    /// <param name="LauncherMarkers">
+    /// Path fragments that mark a stand-in launcher rather than the tool itself, such as
+    /// <c>\copilot-shim\</c>: VS Code puts a "GitHub Copilot CLI launcher" on PATH that only installs
+    /// the real CLI on first run. Such a hit never counts as installed.
+    /// </param>
     public sealed record AiTool(
         string Id,
         string Name,
@@ -33,7 +39,13 @@ namespace Action_Wheel.Core
         IReadOnlyList<string> KnownPaths,
         IReadOnlyList<string> Protocols,
         bool OpensFolder = false,
-        bool SupportsTasks = false);
+        bool SupportsTasks = false,
+        IReadOnlyList<string>? LauncherMarkers = null)
+    {
+        /// <summary>True when <paramref name="path"/> is one of this tool's stand-in launchers.</summary>
+        public bool IsLauncher(string path) =>
+            LauncherMarkers?.Any(marker => path.Contains(marker, StringComparison.OrdinalIgnoreCase)) == true;
+    }
 
     /// <summary>
     /// The AI tools a ring button can reach, and the Function ids that name them
@@ -61,7 +73,8 @@ namespace Action_Wheel.Core
             // read-only mode could be verified.
             new AiTool("opencode", "OpenCode", AiToolKind.Cli, new[] { "opencode" }, None, None),
             new AiTool("gemini", "Gemini CLI", AiToolKind.Cli, new[] { "gemini" }, None, None),
-            new AiTool("copilot", "GitHub Copilot CLI", AiToolKind.Cli, new[] { "copilot" }, None, None),
+            new AiTool("copilot", "GitHub Copilot CLI", AiToolKind.Cli, new[] { "copilot" }, None, None,
+                LauncherMarkers: new[] { @"\copilot-shim\" }),
             new AiTool("antigravity", "Antigravity", AiToolKind.App, new[] { "antigravity" },
                 new[] { @"%LOCALAPPDATA%\Programs\Antigravity\Antigravity.exe" },
                 new[] { "antigravity" }, OpensFolder: true),

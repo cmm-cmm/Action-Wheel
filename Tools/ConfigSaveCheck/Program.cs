@@ -213,6 +213,17 @@ try
         Check("ai: tools are found case-insensitively", tool.Id == "claude");
         Check("ai: an unavailable tool's picker entry says so", AiTools.Choice(tool, available: false).Name.Contains("(not available)"));
         Check("ai: picker entries fall in the AI category", AiTools.Choice(tool).Category == "AI");
+
+        // VS Code puts a "GitHub Copilot CLI launcher" on PATH ahead of the real CLI. Detection must
+        // skip it, or the real CLI is never found and a missing one looks installed.
+        var copilot = AiTools.Find("copilot")!;
+        Check("ai: VS Code's Copilot launcher is recognised",
+            copilot.IsLauncher(@"C:\Program Files\Microsoft VS Code\bin\copilot-shim\copilot.exe"));
+        Check("ai: the real Copilot CLI is not taken for a launcher",
+            !copilot.IsLauncher(@"C:\Users\x\AppData\Local\Microsoft\WinGet\Links\copilot.exe"));
+        Check("ai: tools without launcher markers have no launchers", !tool.IsLauncher(@"C:\anything\copilot-shim\claude.exe"));
+        Check("ai: Copilot CLI cannot run tasks (its one-shot mode needs --allow-all-tools)",
+            !copilot.SupportsTasks && !WindowsFunctions.IsKnown(AiTools.TaskFunctionId("copilot", "explain")));
     }
 
     // 7. AI tasks: template ids are static too, and the command lines stay locked down.

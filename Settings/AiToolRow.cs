@@ -32,6 +32,7 @@ namespace Action_Wheel.Settings
         {
             AiToolState.Installed => "Installed",
             AiToolState.Stale => "Registered, but its program is missing",
+            AiToolState.LauncherOnly => "Not installed, only a launcher that would install it",
             _ => "Not found",
         };
 
@@ -39,7 +40,7 @@ namespace Action_Wheel.Settings
         public string StatusGlyph => Detection.State switch
         {
             AiToolState.Installed => "",
-            AiToolState.Stale => "",
+            AiToolState.Stale or AiToolState.LauncherOnly => "",
             _ => "",
         };
 
@@ -47,6 +48,7 @@ namespace Action_Wheel.Settings
         {
             AiToolState.Installed => $"{Detection.Path} (found through {Detection.Source})",
             AiToolState.Stale => $"A {Detection.Source} still points at {Detection.Path}, which no longer exists. Reinstall it, or ignore this.",
+            AiToolState.LauncherOnly => $"{Detection.Path} is a launcher that installs {Detection.Tool.Name} the first time it runs, so it is not offered. Install {Detection.Tool.Name}, then press Scan again.",
             _ => "Install it, then press Scan again.",
         };
 

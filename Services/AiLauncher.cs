@@ -41,9 +41,12 @@ namespace Action_Wheel.Services
             var found = AiToolDetector.Detect(tool);
             if (!found.IsInstalled)
             {
-                error = found.State == AiToolState.Stale
-                    ? $"{tool.Name} is no longer installed ({found.Path} is missing)."
-                    : $"{tool.Name} was not found on this computer.";
+                error = found.State switch
+                {
+                    AiToolState.Stale => $"{tool.Name} is no longer installed ({found.Path} is missing).",
+                    AiToolState.LauncherOnly => $"{tool.Name} is not installed. {found.Path} is only a launcher that would install it.",
+                    _ => $"{tool.Name} was not found on this computer.",
+                };
                 return false;
             }
 

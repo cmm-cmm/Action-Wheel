@@ -14,6 +14,11 @@ namespace Action_Wheel.Services
         Missing,
         /// <summary>Something still points at it, typically a protocol handler, but the file is gone.</summary>
         Stale,
+        /// <summary>
+        /// Only a stand-in launcher was found, one that would install the tool on first run (see
+        /// <see cref="AiTool.LauncherMarkers"/>). Not installed: a button must not start an installer.
+        /// </summary>
+        LauncherOnly,
     }
 
     /// <param name="Path">The executable that was found, or for <see cref="AiToolState.Stale"/> the one that is gone.</param>
@@ -52,11 +57,22 @@ namespace Action_Wheel.Services
         public static AiToolDetection Detect(AiTool tool)
         {
             string? stale = null;
+            string? launcher = null;
 
+            // Every hit, not just the first: a stand-in launcher can sit on PATH ahead of the real
+            // tool, and the real one must still win when both are there.
             foreach (string command in tool.Commands)
             {
-                if (CommandResolver.Resolve(command) is string resolved)
+                foreach (string resolved in CommandResolver.ResolveAll(command))
+                {
+                    if (tool.IsLauncher(resolved))
+                    {
+                        launcher ??= resolved;
+                        continue;
+                    }
+
                     return new AiToolDetection(tool, AiToolState.Installed, resolved, $"the {command} command");
+                }
             }
 
             foreach (string known in tool.KnownPaths)
@@ -76,6 +92,9 @@ namespace Action_Wheel.Services
 
                 stale ??= target;
             }
+
+            if (launcher != null)
+                return new AiToolDetection(tool, AiToolState.LauncherOnly, launcher, "launcher");
 
             return stale != null
                 ? new AiToolDetection(tool, AiToolState.Stale, stale, "protocol handler")

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Microsoft.Win32;
 
 namespace Action_Wheel.Services
@@ -22,20 +24,31 @@ namespace Action_Wheel.Services
         /// The full path <paramref name="command"/> resolves to, or null. Only bare names are
         /// resolved; anything with a directory in it is the caller's to check directly.
         /// </summary>
-        public static string? Resolve(string command)
+        public static string? Resolve(string command) => ResolveAll(command).FirstOrDefault();
+
+        /// <summary>
+        /// Every file <paramref name="command"/> could resolve to, in the order the shell would try
+        /// them: each PATH hit, then App Paths. For a caller that has to look past the first hit,
+        /// such as VS Code's Copilot launcher that sits on PATH ahead of the real CLI.
+        /// </summary>
+        public static IEnumerable<string> ResolveAll(string command)
         {
             if (string.IsNullOrWhiteSpace(command)
                 || Path.IsPathRooted(command) || command.Contains(Path.DirectorySeparatorChar))
-                return null;
+                yield break;
 
-            return OnPath(command) ?? InAppPaths(command);
+            foreach (string candidate in OnPath(command))
+                yield return candidate;
+
+            if (InAppPaths(command) is string registered)
+                yield return registered;
         }
 
-        private static string? OnPath(string command)
+        private static IEnumerable<string> OnPath(string command)
         {
             var directories = Environment.GetEnvironmentVariable("PATH");
             if (string.IsNullOrEmpty(directories))
-                return null;
+                yield break;
 
             // A bare name may omit the extension, exactly as it may on a command line.
             var extensions = string.IsNullOrEmpty(Path.GetExtension(command))
@@ -46,20 +59,22 @@ namespace Action_Wheel.Services
             {
                 foreach (var extension in extensions)
                 {
+                    string? candidate = null;
                     try
                     {
-                        string candidate = Path.Combine(directory.Trim(), command + extension);
-                        if (File.Exists(candidate))
-                            return candidate;
+                        string path = Path.Combine(directory.Trim(), command + extension);
+                        if (File.Exists(path))
+                            candidate = path;
                     }
                     catch (ArgumentException)
                     {
                         // A malformed PATH entry - skip it rather than give up on the rest.
                     }
+
+                    if (candidate != null)
+                        yield return candidate;
                 }
             }
-
-            return null;
         }
 
         /// <summary>

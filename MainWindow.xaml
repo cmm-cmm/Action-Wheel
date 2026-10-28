@@ -89,6 +89,18 @@
                         </InfoBar.ActionButton>
                     </InfoBar>
 
+                    <!-- Shown once per crash: closing it marks that crash as seen. -->
+                    <InfoBar
+                        IsOpen="{Binding CrashNoticeOpen, Mode=TwoWay}"
+                        IsClosable="True"
+                        Severity="Warning"
+                        Title="Action Wheel closed unexpectedly last time"
+                        Message="{Binding CrashNoticeMessage}">
+                        <InfoBar.ActionButton>
+                            <Button Content="Copy diagnostics" Command="{Binding CopyDiagnosticsCommand}"/>
+                        </InfoBar.ActionButton>
+                    </InfoBar>
+
                     <InfoBar
                         IsOpen="{Binding HasActionError, Mode=OneWay}"
                         IsClosable="True"

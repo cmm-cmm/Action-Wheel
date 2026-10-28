@@ -35,6 +35,7 @@ namespace Action_Wheel.ViewModels
 
             RefreshStartup();
             RefreshConfiguration();
+            _crashNoticeOpen = _unseenCrashTime != null;
         }
 
         /// <summary>Raised when the user asks for the settings window; App owns that window.</summary>
@@ -308,6 +309,30 @@ namespace Action_Wheel.ViewModels
         }
 
         public bool HasActionError => _actionError.Length > 0;
+
+        // Read once: the notice is about the previous run, and nothing in this one changes it.
+        private readonly DateTime? _unseenCrashTime = CrashReport.UnseenCrashTime();
+        private bool _crashNoticeOpen;
+
+        /// <summary>
+        /// Bound two-way to the crash InfoBar's IsOpen. Closing it marks that crash as seen, so the
+        /// notice shows once per crash rather than on every launch. The details stay in Copy
+        /// diagnostics.
+        /// </summary>
+        public bool CrashNoticeOpen
+        {
+            get => _crashNoticeOpen;
+            set
+            {
+                if (_crashNoticeOpen && !value)
+                    CrashReport.MarkSeen();
+                Set(ref _crashNoticeOpen, value);
+            }
+        }
+
+        public string CrashNoticeMessage => _unseenCrashTime is DateTime time
+            ? $"It closed on {time:g}. Copy diagnostics includes the error details, if you want to report it."
+            : string.Empty;
 
         private void CopyDiagnostics()
         {

@@ -39,6 +39,47 @@ namespace Action_Wheel.Core
             }
         }
 
+        /// <summary>
+        /// Remembers which crash the main window has already told the user about: the write time of
+        /// <see cref="FilePath"/> when the notice was dismissed. A newer crash rewrites the file
+        /// with a new write time, so it is announced again.
+        /// </summary>
+        private static string SeenPath => Path.Combine(AppDataPaths.DirectoryPath, "last-crash.seen");
+
+        /// <summary>When the recorded crash happened, if there is one nobody has dismissed yet.</summary>
+        public static DateTime? UnseenCrashTime()
+        {
+            try
+            {
+                if (!File.Exists(FilePath))
+                    return null;
+
+                DateTime written = File.GetLastWriteTimeUtc(FilePath);
+                bool seen = File.Exists(SeenPath)
+                    && long.TryParse(File.ReadAllText(SeenPath).Trim(), out long ticks)
+                    && ticks == written.Ticks;
+                return seen ? null : written.ToLocalTime();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>Marks the recorded crash as announced. The crash itself stays for diagnostics.</summary>
+        public static void MarkSeen()
+        {
+            try
+            {
+                if (File.Exists(FilePath))
+                    File.WriteAllText(SeenPath, File.GetLastWriteTimeUtc(FilePath).Ticks.ToString());
+            }
+            catch (Exception)
+            {
+                // Worst case the notice shows once more on the next launch.
+            }
+        }
+
         /// <summary>The recorded crash, or null if there is none.</summary>
         public static string? TryLoad()
         {

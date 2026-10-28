@@ -41,9 +41,7 @@ namespace Action_Wheel.ViewModels
             }
             Raise(nameof(ProfileCountText));
 
-            var functionChoices = WindowsFunctions.Choices.Concat(Profiles.Select(WindowsFunctions.ProfileChoice)).ToArray();
-            foreach (var item in Items)
-                item.RefreshFunctionChoices(functionChoices);
+            RefreshAllFunctionChoices();
         }
 
         private void SaveNamedProfile()

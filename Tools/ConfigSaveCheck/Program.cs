@@ -15,6 +15,8 @@ using Action_Wheel.Core;
 //
 // 4. "Ctrl++" passed validation and then sent Ctrl alone; punctuation keys had no names at all.
 // 5. A profile or backup from somewhere else could launch any command line, unlisted.
+// 6. AI function ids must be valid by the static catalog alone, so a button for a tool that is
+//    not installed still loads (see Doc/ai-assistants.md).
 //
 // There is deliberately no test project (see CLAUDE.md); run this by hand after touching
 // ActionsValidator, ActionConfig.SaveTo, WindowsFunctions.RenameProfileReferences,
@@ -176,6 +178,39 @@ try
         Check("launches: a group child's launch is listed", commands.Contains("powershell.exe -File evil.ps1"));
         Check("launches: duplicates are listed once", commands.Count == 3);
         Check("launches: built-in functions and shortcuts are not listed", LaunchSummary.Commands(defaults).Count == 0);
+    }
+
+    // 6. AI function ids are decided by the static catalog, never by what is installed.
+    {
+        string open = AiTools.FunctionId("claude");
+        Check("ai: the id has the documented shape", open == "action-wheel.ai:claude/open");
+        Check("ai: it parses back to its tool and task",
+            AiTools.TryParse(open, out string toolId, out string task) && toolId == "claude" && task == AiTools.OpenTask);
+        Check("ai: a catalog tool's open id is known", WindowsFunctions.IsKnown(open));
+        Check("ai: an unknown tool is not known", !WindowsFunctions.IsKnown("action-wheel.ai:no-such-tool/open"));
+        Check("ai: an unknown task is not known", !WindowsFunctions.IsKnown("action-wheel.ai:claude/explode"));
+        Check("ai: malformed ids are not known",
+            !WindowsFunctions.IsKnown("action-wheel.ai:claude") && !WindowsFunctions.IsKnown("action-wheel.ai:/open")
+            && !WindowsFunctions.IsKnown("action-wheel.ai:claude/"));
+        Check("ai: catalog ids are unique",
+            AiTools.All.Select(t => t.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() == AiTools.All.Count);
+        Check("ai: every catalog tool has a way to be found",
+            AiTools.All.All(t => t.Commands.Count + t.KnownPaths.Count + t.Protocols.Count > 0));
+
+        // The case the design exists for: a button for a tool that is not installed (Windsurf is
+        // not on the development machine) must not reject the configuration.
+        var withAi = defaults.Select(a => a.Tag switch
+        {
+            1 => a with { Kind = ActionKind.Function, Value = AiTools.FunctionId("windsurf") },
+            2 => a with { HoldKind = ActionKind.Function, HoldValue = AiTools.FunctionId("antigravity") },
+            _ => a,
+        }).ToList();
+        Check("ai: a config with AI buttons validates whatever is installed", ActionConfig.TryValidate(withAi, out _));
+
+        var tool = AiTools.Find("CLAUDE")!;
+        Check("ai: tools are found case-insensitively", tool.Id == "claude");
+        Check("ai: an unavailable tool's picker entry says so", AiTools.Choice(tool, available: false).Name.Contains("(not available)"));
+        Check("ai: picker entries fall in the AI category", AiTools.Choice(tool).Category == "AI");
     }
 }
 finally

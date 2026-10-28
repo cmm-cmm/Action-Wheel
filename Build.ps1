@@ -31,7 +31,8 @@
     VerifyConfigSave - regression-check that a missing icon never rejects actions.json, that a save
                       over a rejected file keeps the good .bak, that renaming a profile renames the
                       buttons that switch to it (Undo included), that a shortcut never sends less
-                      than it says, and that every launch target is listed for import/restore
+                      than it says, that every launch target is listed for import/restore, and
+                      that AI function ids are valid whether or not the tool is installed
     Clean           - delete bin\ and obj\
     All             - Restore, VerifyBindings, VerifyRoundTrip, VerifyChordGate, VerifyVersionSync,
                       VerifyFormat, VerifyConfigBackup, VerifyConfigSave, Debug, Release, Publish

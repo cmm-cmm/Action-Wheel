@@ -115,6 +115,10 @@ namespace Action_Wheel.ViewModels
             Items.CollectionChanged += OnItemsCollectionChanged;
 
             LoadFromDisk();
+
+            // Fills the AI assistants section and adds installed AI tools to the function picker
+            // once it finishes, without delaying the window.
+            ScanAiTools();
         }
 
         /// <summary>
@@ -288,11 +292,10 @@ namespace Action_Wheel.ViewModels
                     .GroupBy(action => action.Tag)
                     .ToDictionary(group => group.Key, group => group.First());
 
+                var functionChoices = FunctionChoices(actions);
                 for (int tag = 0; tag <= 8; tag++)
                 {
                     var source = byTag.GetValueOrDefault(tag) ?? new ActionItem { Tag = tag };
-                    var functionChoices = WindowsFunctions.Choices.Concat(
-                        Profiles.Select(WindowsFunctions.ProfileChoice));
                     var model = new ActionEditModel(source, functionChoices) { Tag = tag };
 
                     // Closures over the row, so the template can bind a parameterless command and
@@ -828,6 +831,8 @@ namespace Action_Wheel.ViewModels
             // save would strand anyone whose configuration predates the current icon font.
             foreach (var item in Items.Where(i => !i.HasValidGlyph))
                 warnings.Add($"{item.PositionName}: icon code \"{item.Glyph}\" is not in the icon font, so that button shows no picture");
+
+            warnings.AddRange(AiToolWarnings());
 
             // Not a blocking error: see ActionsValidator for why a missing icon file never rejects
             // the configuration. Group children are checked too, since they keep their own icons.

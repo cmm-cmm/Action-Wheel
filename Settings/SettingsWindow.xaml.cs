@@ -118,6 +118,7 @@ namespace Action_Wheel.Settings
             ButtonsSection.Visibility = tag == "Buttons" ? Visibility.Visible : Visibility.Collapsed;
             AppearanceSection.Visibility = tag == "Appearance" ? Visibility.Visible : Visibility.Collapsed;
             ProfilesSection.Visibility = tag == "Profiles" ? Visibility.Visible : Visibility.Collapsed;
+            AiSection.Visibility = tag == "Ai" ? Visibility.Visible : Visibility.Collapsed;
         }
 
         #region Icon picker

@@ -42,6 +42,41 @@
                     </StackPanel>
                 </Grid>
             </DataTemplate>
+            <!-- One AI tool in the AI assistants section (Settings/AiToolRow.cs). -->
+            <DataTemplate x:Key="AiToolRowTemplate">
+                <Border Padding="12,10" CornerRadius="6" Margin="0,0,0,6"
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="24"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Grid.Column="0" FontFamily="{StaticResource IconFontFamily}"
+                                  Glyph="{Binding StatusGlyph}" FontSize="14" VerticalAlignment="Top" Margin="0,3,0,0"/>
+                        <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock FontWeight="SemiBold">
+                                <Run Text="{Binding Name}"/>
+                                <Run Text=" · " Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                <Run Text="{Binding StatusText}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            </TextBlock>
+                            <TextBlock Text="{Binding KindText}" FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock Text="{Binding DetailText}" FontSize="11" TextWrapping="Wrap"
+                                       IsTextSelectionEnabled="True"
+                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                        </StackPanel>
+                        <!-- Only an installed tool can be switched on; the rest show why not. -->
+                        <ToggleSwitch Grid.Column="2" VerticalAlignment="Center" MinWidth="0"
+                                      OnContent="On" OffContent="Off"
+                                      AutomationProperties.Name="{Binding Name}"
+                                      IsEnabled="{Binding IsInstalled}"
+                                      IsOn="{Binding IsEnabled, Mode=TwoWay}"/>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+
             <!--
                 Every FontIcon in this window draws from the shipped icon font, including this
                 window's own furniture - browse, record, undo, redo, the status marker. There are no
@@ -605,6 +640,11 @@
                         <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF019;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <NavigationViewItem Content="AI assistants" Tag="Ai">
+                    <NavigationViewItem.Icon>
+                        <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF0D0;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
             </NavigationView.MenuItems>
 
             <Grid>
@@ -923,6 +963,43 @@
                                         </StackPanel>
                                     </Button>
                                 </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- ============================= AI assistants ============================= -->
+                <!-- See Doc/ai-assistants.md. Only tools found on this machine reach the function
+                     picker; the list below shows the rest and why they are not offered. -->
+                <ScrollViewer x:Name="AiSection" Visibility="Collapsed"
+                              VerticalScrollBarVisibility="Auto" Padding="20,12,20,20">
+                    <StackPanel Spacing="16" MaxWidth="900">
+                        <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="AI assistants" Style="{StaticResource SectionHeaderTextStyle}" FontSize="16"/>
+                                <TextBlock TextWrapping="Wrap" FontSize="12"
+                                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                           Text="Tools found on this computer can be put on a button: choose the Windows function type, then an &quot;AI · Open …&quot; entry. A command-line tool opens in a terminal in the folder of the File Explorer window you were using; an editor opens that folder. Nothing is sent to any AI service by Action Wheel itself: you type into the tool's own window."/>
+
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding AiScanStatus, Mode=OneWay}" TextWrapping="Wrap"
+                                               VerticalAlignment="Center"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <Button Grid.Column="1" Command="{Binding RescanAiToolsCommand}"
+                                            AutomationProperties.Name="Scan again">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon FontFamily="{StaticResource IconFontFamily}" Glyph="&#xF021;" FontSize="13"/>
+                                            <TextBlock Text="Scan again" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+
+                                <ItemsControl ItemsSource="{Binding AiToolRows}"
+                                              ItemTemplate="{StaticResource AiToolRowTemplate}"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>

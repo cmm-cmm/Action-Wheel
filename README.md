@@ -51,6 +51,7 @@ A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor wheneve
 - **Truly transparent** — per-pixel alpha, so only the buttons are drawn; the desktop shows through everywhere else.
 - **Buttons carry a drop shadow** — they stay readable over a white window underneath, which matters because the overlay is genuinely transparent.
 - **Picks up edits to `actions.json` on its own** — the file is watched in both locations it can live in.
+- **AI assistants** — a button can open Claude Code, Codex, OpenCode, Gemini CLI or GitHub Copilot CLI in a terminal, in the folder of the File Explorer window you were using. It can also open Antigravity, Cursor or Windsurf on that folder, or start the Claude desktop app or LM Studio. Only tools found on this computer are offered, and Settings shows what was found and how. See [Doc/ai-assistants.md](Doc/ai-assistants.md).
 
 ### 📁 Profiles & backup
 
@@ -108,7 +109,7 @@ Self-contained publishes are large (roughly 250–300 MB). That is normal for a 
 
 ### Settings window
 
-**Open button settings** — from the main window, or **Settings…** in the tray icon's right-click menu. It is organised the way Windows' own Settings app is: a left-hand rail with three sections.
+**Open button settings** — from the main window, or **Settings…** in the tray icon's right-click menu. It is organised the way Windows' own Settings app is: a left-hand rail with four sections.
 
 **Buttons** (the default section) is master-detail: a compact, one-line-per-button list on the left — drag a row to move that button around the ring, the first row is the centre button and the rest go clockwise from the top — and a detail panel on the right for whichever button is selected (click a row, or click a button in the live preview above the panel), with:
 
@@ -126,6 +127,13 @@ Self-contained publishes are large (roughly 250–300 MB). That is normal for a 
 **Appearance & trigger** holds the mouse trigger (which gesture opens the ring, and the chord timing/movement limits) and the ring's own size, orbit distance and opening animation, each with a live preview.
 
 **Profiles & backup** holds saving/loading/renaming/deleting named profiles, the active profile indicator, the "Recognised key names" reference, and the one-file backup/restore.
+
+**AI assistants** lists every AI tool Action Wheel knows. For each one it shows whether it was found on this computer, where, and how: through its command, its install folder or its URL protocol. It also has a switch to stop offering it, and **Scan again** after installing something.
+
+- **Only found tools are offered.** An installed tool that is switched on appears in the Windows function picker as **AI · Open …**.
+- **Leftover registrations are not trusted.** A tool whose registration outlived its program shows as **Registered, but its program is missing**, and is not offered.
+- **Existing buttons keep working.** A button made for a tool that is later removed still loads, and reports the problem when clicked.
+- **Nothing is sent to any AI service.** Opening a tool sends it nothing; you type into its own window.
 
 A **live preview** in the Buttons section shows the ring as your unsaved edits will leave it, and **undo/redo** in the bottom bar step through those edits (typing is coalesced, so undo does not go one keystroke at a time). The bottom bar and its Save button are reachable from every section.
 
@@ -246,6 +254,7 @@ The code is in two assemblies. **`ActionWheel.Core`** is the business logic and 
 | `DiagnosticsReport.cs` | The text behind "Copy diagnostics" |
 | `CrashReport.cs` | The one most recent unhandled exception, in `last-crash.txt`, for "Copy diagnostics" and the one-time notice after a crash |
 | `LaunchSummary.cs` | Lists every program, file or URL a set of actions can launch, for the import and restore prompts |
+| `AiTools.cs` | The catalog of AI tools (how to find each one, how it opens) and the `action-wheel.ai:<tool>/<task>` function ids |
 
 **`Action Wheel`** — the WinUI 3 app:
 
@@ -263,13 +272,16 @@ The code is in two assemblies. **`ActionWheel.Core`** is the business logic and 
 | `Services/StartupManager.cs` | The per-user Run key entry behind "Start with Windows" |
 | `Services/StartHiddenSettings.cs` | Whether a launch shows only the tray icon, in `start-hidden.txt` |
 | `Services/CommandResolver.cs` | Finds what a bare command like `chrome.exe` starts: PATH, then App Paths, as ShellExecute does |
+| `Services/AiToolDetector.cs` | Finds each catalog AI tool on this machine; a registration whose program is gone counts as missing |
+| `Services/AiLauncher.cs` / `Services/ExplorerFolder.cs` | Opens an AI tool in a terminal or as an app, in the folder of the File Explorer window that was in front |
+| `Services/AiAssistantSettings.cs` | Which AI tools are switched off, in `ai-assistants.json` |
 | `Services/ShellCommands.cs` | Opening a folder in Explorer and putting text on the clipboard |
 | `Services/ProfileLibrary.cs` | Save/load/rename/delete a named profile; lists profiles by recency for the tray menu |
 | `Services/ActiveProfileSettings.cs` | Which profile's name is currently shown as active |
 | `Services/TriggerSettings.cs` | Loads/saves the trigger kind, chord timing and `RingAppearance` together in `preferences.json` |
 | `Services/WindowSizing.cs` | Sizes and centres a window on the display it opened on, in physical pixels |
 | `ViewModels/MainViewModel.cs` | Everything the main window shows and does |
-| `ViewModels/SettingsViewModel*.cs` | The settings window's rows, undo/redo, validation and saving (`.Appearance.cs` and `.Profiles.cs` are partials of the same class) |
+| `ViewModels/SettingsViewModel*.cs` | The settings window's rows, undo/redo, validation and saving (`.Appearance.cs`, `.Profiles.cs` and `.Ai.cs` are partials of the same class) |
 | `Overlay/ButtonShadow.cs` | The composition drop shadow behind each ring button, including a group's satellites |
 | `Overlay/RingOpenAnimation.cs` | The seven opening-animation presets, driving only `Opacity` and a `RenderTransform` |
 | `Overlay/RadialMenu.xaml(.cs)` | The overlay window: transparency, positioning, layout, hit-testing, and a Group button's satellite ring |
@@ -278,6 +290,7 @@ The code is in two assemblies. **`ActionWheel.Core`** is the business logic and 
 | `Settings/RingPreview.cs` | Draws the live ring preview and replays its opening animation |
 | `Settings/GlyphChoice.cs` | The icon picker's entries: a named, curated set plus every glyph the font reports |
 | `Settings/ShortcutRecorder.cs` | Turns a live keypress + modifier state into a `"Ctrl+Shift+S"`-style string |
+| `Settings/AiToolRow.cs` | One row of the AI assistants section |
 | `MainWindow.xaml(.cs)` | Status window; closing it hides to the tray |
 
 A few implementation details are easy to break and worth knowing about:

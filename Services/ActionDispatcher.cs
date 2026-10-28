@@ -306,6 +306,13 @@ namespace Action_Wheel.Services
                 return;
             }
 
+            if (AiTools.TryParse(action.Value, out string toolId, out string task))
+            {
+                if (!AiLauncher.TryRun(toolId, task, targetWindow, out string aiError))
+                    Fail(action, aiError);
+                return;
+            }
+
             switch (action.Value.ToLowerInvariant())
             {
                 case WindowsFunctions.Lock:

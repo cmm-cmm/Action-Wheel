@@ -31,6 +31,12 @@ namespace Action_Wheel.Core
             WindowsFunctions.ActionSwitchProfile => "Switch to the next saved profile.",
             _ when WindowsFunctions.TryGetProfileName(Id, out string profileName)
                 => $"Load the saved profile '{profileName}' and make it active immediately.",
+            _ when AiTools.TryParse(Id, out string toolId, out _) && AiTools.Find(toolId) is AiTool tool
+                => tool.Kind == AiToolKind.Cli
+                    ? $"Start {tool.Name} in a terminal, in the folder of the File Explorer window you were using."
+                    : tool.OpensFolder
+                        ? $"Start {tool.Name} on the folder of the File Explorer window you were using."
+                        : $"Start {tool.Name}.",
             _ => "Open or invoke this built-in Windows feature.",
         };
 
@@ -44,6 +50,7 @@ namespace Action_Wheel.Core
             "System" => "\uF011",       // power
             "Media" => "\uF04B",        // play
             "Action Wheel" => "\uF013",  // settings
+            "AI" => "\uF0D0",           // magic wand
             _ => "\uF114",              // folder
         };
     }
@@ -189,7 +196,7 @@ namespace Action_Wheel.Core
 
         public static bool IsKnown(string id)
         {
-            if (TryGetProfileName(id, out _))
+            if (TryGetProfileName(id, out _) || AiTools.IsKnown(id))
                 return true;
             foreach (var function in Choices)
             {

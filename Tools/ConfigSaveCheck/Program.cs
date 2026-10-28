@@ -222,6 +222,11 @@ try
         Check("ai: the real Copilot CLI is not taken for a launcher",
             !copilot.IsLauncher(@"C:\Users\x\AppData\Local\Microsoft\WinGet\Links\copilot.exe"));
         Check("ai: tools without launcher markers have no launchers", !tool.IsLauncher(@"C:\anything\copilot-shim\claude.exe"));
+        Check("ai: every Store app id has the PackageFamilyName!AppId shape",
+            AiTools.All.SelectMany(t => t.AppUserModelIds ?? Array.Empty<string>())
+                .All(id => id.IndexOf('!') > 0 && id.Contains('_') && AiTool.PackageFamilyOf(id).Length < id.Length));
+        Check("ai: a package family is split off correctly",
+            AiTool.PackageFamilyOf("Claude_pzs8sxrjxfjjc!Claude") == "Claude_pzs8sxrjxfjjc");
         Check("ai: Copilot CLI cannot run tasks (its one-shot mode needs --allow-all-tools)",
             !copilot.SupportsTasks && !WindowsFunctions.IsKnown(AiTools.TaskFunctionId("copilot", "explain")));
     }

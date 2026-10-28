@@ -33,6 +33,7 @@ namespace Action_Wheel.Settings
             AiToolState.Installed => "Installed",
             AiToolState.Stale => "Registered, but its program is missing",
             AiToolState.LauncherOnly => "Not installed, only a launcher that would install it",
+            AiToolState.NeedsRepair => "Installed, but Windows reports it as damaged",
             _ => "Not found",
         };
 
@@ -40,7 +41,7 @@ namespace Action_Wheel.Settings
         public string StatusGlyph => Detection.State switch
         {
             AiToolState.Installed => "",
-            AiToolState.Stale or AiToolState.LauncherOnly => "",
+            AiToolState.Stale or AiToolState.LauncherOnly or AiToolState.NeedsRepair => "",
             _ => "",
         };
 
@@ -49,6 +50,7 @@ namespace Action_Wheel.Settings
             AiToolState.Installed => $"{Detection.Path} (found through {Detection.Source})",
             AiToolState.Stale => $"A {Detection.Source} still points at {Detection.Path}, which no longer exists. Reinstall it, or ignore this.",
             AiToolState.LauncherOnly => $"{Detection.Path} is a launcher that installs {Detection.Tool.Name} the first time it runs, so it is not offered. Install {Detection.Tool.Name}, then press Scan again.",
+            AiToolState.NeedsRepair => $"The Microsoft Store package at {Detection.Path} needs repair, so it is not offered. Repair or reinstall it from Windows Settings > Apps, then press Scan again.",
             _ => "Install it, then press Scan again.",
         };
 

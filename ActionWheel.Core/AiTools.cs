@@ -31,6 +31,11 @@ namespace Action_Wheel.Core
     /// <c>\copilot-shim\</c>: VS Code puts a "GitHub Copilot CLI launcher" on PATH that only installs
     /// the real CLI on first run. Such a hit never counts as installed.
     /// </param>
+    /// <param name="AppUserModelIds">
+    /// For a Microsoft Store (MSIX) app: its <c>PackageFamilyName!AppId</c>. Detection asks Windows
+    /// whether the package is installed for this user, and the app is started through
+    /// <c>shell:AppsFolder</c>. Only identities confirmed from more than one source are listed.
+    /// </param>
     public sealed record AiTool(
         string Id,
         string Name,
@@ -40,8 +45,16 @@ namespace Action_Wheel.Core
         IReadOnlyList<string> Protocols,
         bool OpensFolder = false,
         bool SupportsTasks = false,
-        IReadOnlyList<string>? LauncherMarkers = null)
+        IReadOnlyList<string>? LauncherMarkers = null,
+        IReadOnlyList<string>? AppUserModelIds = null)
     {
+        /// <summary>The package family an <c>PackageFamilyName!AppId</c> id belongs to.</summary>
+        public static string PackageFamilyOf(string appUserModelId)
+        {
+            int bang = appUserModelId.IndexOf('!');
+            return bang > 0 ? appUserModelId[..bang] : appUserModelId;
+        }
+
         /// <summary>True when <paramref name="path"/> is one of this tool's stand-in launchers.</summary>
         public bool IsLauncher(string path) =>
             LauncherMarkers?.Any(marker => path.Contains(marker, StringComparison.OrdinalIgnoreCase)) == true;
@@ -84,9 +97,13 @@ namespace Action_Wheel.Core
             new AiTool("windsurf", "Windsurf", AiToolKind.App, None,
                 new[] { @"%LOCALAPPDATA%\Programs\Windsurf\Windsurf.exe" },
                 new[] { "windsurf" }, OpensFolder: true),
+            // Two ways it is distributed: the older per-user installer, and the Microsoft Store /
+            // MSIX package. The MSIX identity (publisher "Anthropic, PBC") is the one deployment
+            // guides and several bug reports agree on.
             new AiTool("claude-desktop", "Claude (desktop app)", AiToolKind.App, None,
                 new[] { @"%LOCALAPPDATA%\AnthropicClaude\claude.exe" },
-                new[] { "claude" }),
+                new[] { "claude" },
+                AppUserModelIds: new[] { "Claude_pzs8sxrjxfjjc!Claude" }),
             // Local model runners (LM Studio, Ollama) are deliberately not listed, for now: a
             // decision with the user, see Doc/ai-assistants.md.
         };

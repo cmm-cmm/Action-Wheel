@@ -19,11 +19,14 @@ namespace Action_Wheel.Services
         /// <see cref="AiTool.LauncherMarkers"/>). Not installed: a button must not start an installer.
         /// </summary>
         LauncherOnly,
+        /// <summary>A Microsoft Store package is installed, but Windows reports it as damaged.</summary>
+        NeedsRepair,
     }
 
     /// <param name="Path">The executable that was found, or for <see cref="AiToolState.Stale"/> the one that is gone.</param>
     /// <param name="Source">How it was found, for the settings row: "PATH", "App Paths", a known folder, a protocol.</param>
-    public sealed record AiToolDetection(AiTool Tool, AiToolState State, string Path, string Source)
+    /// <param name="AppUserModelId">Set when it is a Microsoft Store app, which starts through this id rather than <paramref name="Path"/>.</param>
+    public sealed record AiToolDetection(AiTool Tool, AiToolState State, string Path, string Source, string? AppUserModelId = null)
     {
         public bool IsInstalled => State == AiToolState.Installed;
     }
@@ -82,6 +85,15 @@ namespace Action_Wheel.Services
                     return new AiToolDetection(tool, AiToolState.Installed, path, "install folder");
             }
 
+            foreach (string appUserModelId in tool.AppUserModelIds ?? Array.Empty<string>())
+            {
+                if (StorePackage(AiTool.PackageFamilyOf(appUserModelId)) is (string location, bool healthy))
+                {
+                    return new AiToolDetection(tool, healthy ? AiToolState.Installed : AiToolState.NeedsRepair,
+                        location, "Microsoft Store package", appUserModelId);
+                }
+            }
+
             foreach (string protocol in tool.Protocols)
             {
                 if (ProtocolTarget(protocol) is not string target)
@@ -125,6 +137,29 @@ namespace Action_Wheel.Services
                 {
                     // A key locked by policy is "not registered here".
                 }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Where a Microsoft Store package of <paramref name="family"/> is installed for this user, and
+        /// whether Windows considers it intact, or null. An empty user SID means "the current user",
+        /// which needs no elevation. A package can be registered yet damaged (reported for Claude's
+        /// MSIX, for one), and a button for it would then fail to start anything.
+        /// </summary>
+        private static (string Location, bool Healthy)? StorePackage(string family)
+        {
+            try
+            {
+                var manager = new Windows.Management.Deployment.PackageManager();
+                foreach (var package in manager.FindPackagesForUser(string.Empty, family))
+                    return (package.InstalledLocation.Path, package.Status.VerifyIsOK());
+            }
+            catch (Exception)
+            {
+                // No package API (a stripped-down Windows) or a package that cannot be read:
+                // "not installed here", the same as a missing file.
             }
 
             return null;

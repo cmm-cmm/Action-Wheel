@@ -133,6 +133,7 @@ Self-contained publishes are large (roughly 250–300 MB). That is normal for a 
 
 - **Only found tools are offered.** An installed tool that is switched on appears in the Windows function picker as **AI · Open …**.
 - **Leftover registrations are not trusted.** A tool whose registration outlived its program shows as **Registered, but its program is missing**, and is not offered.
+- **Microsoft Store apps are found through Windows itself.** The Claude desktop app is found both from its classic installer and as a Microsoft Store package, and a Store package is started the way the Start menu starts it. A package Windows reports as damaged shows as **Installed, but Windows reports it as damaged** and is not offered.
 - **Installer launchers are not the tool.** VS Code puts a GitHub Copilot CLI *launcher* on PATH, which only installs the real CLI the first time it runs. If the real CLI is installed too, it is the one used. If only the launcher is there, the tool shows as **Not installed, only a launcher that would install it**, and is not offered: a button never starts an installer.
 - **Existing buttons keep working.** A button made for a tool that is later removed still loads, and reports the problem when clicked.
 - **Opening a tool sends it nothing.** You type into its own window.
@@ -140,7 +141,7 @@ Self-contained publishes are large (roughly 250–300 MB). That is normal for a 
 **Prompt templates**, in the same section, turn a button into an AI task. Four come built in: Explain, Fix spelling and grammar, Translate to English and Summarize. Add your own, or edit a prompt; `{selection}` marks where the selected text goes. Each installed task-capable tool then offers **AI · <template> with <tool>** in the function picker.
 
 - **What runs.** Only Claude Code and Codex run tasks, each in a mode that can neither run commands nor change files: Claude Code with every tool off, Codex in its read-only sandbox. Each runs in an empty temporary folder.
-- **What can be opened but not run tasks.** OpenCode and GitHub Copilot CLI. OpenCode's built-in agents allow every tool by default, and Copilot CLI's one-shot mode requires allowing every tool, so neither gets your text unattended. Local model runners such as LM Studio and Ollama are not supported for now.
+- **What can be opened but not run tasks.** OpenCode and GitHub Copilot CLI. OpenCode's built-in agents allow every tool by default, and Copilot CLI's one-shot mode requires allowing every tool, so neither gets your text unattended. Local model runners such as LM Studio and Ollama are not supported for now. There is no "open in the browser" fallback either: a tool has to be installed on this computer to be offered.
 - **What is asked first.** A task shows the text and asks before sending it, unless its template says not to. It always asks when nothing was selected and the clipboard's text would be used instead.
 - **Terminals.** In a terminal window the selection is not copied with Ctrl+C, which would stop the running program. The clipboard is used instead.
 - **Sign-in and keys.** The text goes through your own sign-in with that tool. Action Wheel never sees or stores a key.

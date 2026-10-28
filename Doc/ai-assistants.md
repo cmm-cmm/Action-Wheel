@@ -1,10 +1,9 @@
 # AI assistants on the ring
 
-**Status:** Phases 1 and 2 are implemented. Phase 3 is under way:
-- **Done.** The Copilot launcher detection fix.
-- **Researched, kept off by decision.** OpenCode and Copilot CLI tasks.
-- **Dropped for now.** LM Studio and Ollama.
-- **Still proposed.** MSIX apps and a web fallback.
+**Status:** Phases 1, 2 and 3 are done.
+- **Implemented in phase 3.** Detection of Microsoft Store apps (Claude desktop) and of stand-in launchers (Copilot).
+- **Researched, kept off.** OpenCode and Copilot CLI tasks.
+- **Not done, with reasons.** LM Studio and Ollama (user decision), the ChatGPT and Copilot apps (identities unconfirmed), and a web fallback.
 
 ## Context
 
@@ -144,8 +143,17 @@ Fixed safety rules:
   - **Safety test.** Asked to create a file, it made no tool call and no file appeared. The model still claimed "WROTE", so an answer is never evidence.
   - **Why it stays off.** On the dev machine OpenCode's configured model is `ollama/qwen2.5-coder:7b`, so a task would really run on Ollama, which is not supported for now. It is also slow: 45–86 s per run.
   - **To enable it later.** Use the agent and cleanup above. Decide what to do when the configured model is a local runner: refuse, or pass `-m`.
-- **MSIX apps** such as the ChatGPT desktop app, through `PackageManager.FindPackagesForUser` and `shell:AppsFolder\<AUMID>`.
-- **Web fallback**: open `claude.ai/new?q=…` or `chatgpt.com/?q=…`. The text then lands in browser history and is length-limited, so it is labelled as such.
+- **Microsoft Store (MSIX) apps. Implemented.**
+  - **How a tool declares one.** `AiTool.AppUserModelIds` lists `PackageFamilyName!AppId` entries.
+  - **Detection.** `AiToolDetector` asks `Windows.Management.Deployment.PackageManager.FindPackagesForUser("", family)` for the current user, which needs no elevation. It reports the install folder, and `Package.Status.VerifyIsOK()` decides between **Installed** and **NeedsRepair**. Damaged MSIX installs have been reported for Claude, and a damaged package is never offered.
+  - **Launch.** `explorer.exe shell:AppsFolder\<id>`, the way the Start menu starts it. A Store app's executable needs its package identity and cannot be started by path.
+  - **Listed.** Claude desktop: `Claude_pzs8sxrjxfjjc!Claude`, publisher "Anthropic, PBC". Deployment guides and several bug reports agree on that identity. The older per-user installer path is still checked first.
+  - **Not listed: ChatGPT desktop and the Microsoft Copilot app.** Their package identities could not be confirmed. Sources give two different Store ids for ChatGPT, and one says the current build is an EXE installer, not MSIX. A guessed identity would make detection silently wrong, so they stay out until one can be read from a real install with `Get-AppxPackage`.
+  - **Verified on the dev machine with Calculator as a stand-in** (`Microsoft.WindowsCalculator_8wekyb3d8bbwe!App`). It was detected as Installed with its WindowsApps folder in 207 ms (the first call initialises the package API, and detection runs off the UI thread). A made-up family was reported Missing. `shell:AppsFolder` started Calculator. Claude's MSIX is not on that machine, so its identity is verified only from those sources.
+- **Web fallback (`claude.ai/new?q=…`, `chatgpt.com/?q=…`). Not implemented, by design.**
+  - **The parameters are undocumented.** An issue report says Claude's stopped working, and sources disagree on whether it auto-submits.
+  - **The text would sit in a URL**, so it lands in browser history and possibly server logs.
+  - **It finds nothing on the machine.** That is the opposite of the user's requirement that only tools found on the machine are activated.
 
 ## Verification
 

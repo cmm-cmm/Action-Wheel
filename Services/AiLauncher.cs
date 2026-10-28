@@ -45,6 +45,7 @@ namespace Action_Wheel.Services
                 {
                     AiToolState.Stale => $"{tool.Name} is no longer installed ({found.Path} is missing).",
                     AiToolState.LauncherOnly => $"{tool.Name} is not installed. {found.Path} is only a launcher that would install it.",
+                    AiToolState.NeedsRepair => $"Windows reports the {tool.Name} package as damaged. Repair or reinstall it from Settings > Apps.",
                     _ => $"{tool.Name} was not found on this computer.",
                 };
                 return false;
@@ -56,7 +57,9 @@ namespace Action_Wheel.Services
 
             try
             {
-                if (tool.Kind == AiToolKind.Cli)
+                if (found.AppUserModelId != null)
+                    StartStoreApp(found.AppUserModelId);
+                else if (tool.Kind == AiToolKind.Cli)
                     StartInTerminal(found.Path, folder ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
                 else
                     StartApp(found.Path, folder);
@@ -107,6 +110,14 @@ namespace Action_Wheel.Services
             console.WorkingDirectory = folder;
             Process.Start(console)?.Dispose();
         }
+
+        /// <summary>
+        /// A Microsoft Store app cannot be started by its file path: its executable sits in the
+        /// protected WindowsApps folder and needs its package identity. <c>shell:AppsFolder\&lt;id&gt;</c>
+        /// is how the Start menu itself starts it.
+        /// </summary>
+        private static void StartStoreApp(string appUserModelId) =>
+            Process.Start(new ProcessStartInfo("explorer.exe", $@"shell:AppsFolder\{appUserModelId}") { UseShellExecute = true })?.Dispose();
 
         private static void StartApp(string executable, string? folder)
         {

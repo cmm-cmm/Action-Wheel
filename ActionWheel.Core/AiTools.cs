@@ -74,9 +74,8 @@ namespace Action_Wheel.Core
             new AiTool("claude-desktop", "Claude (desktop app)", AiToolKind.App, None,
                 new[] { @"%LOCALAPPDATA%\AnthropicClaude\claude.exe" },
                 new[] { "claude" }),
-            new AiTool("lmstudio", "LM Studio", AiToolKind.App, None,
-                new[] { @"%ProgramFiles%\LM Studio\LM Studio.exe", @"%LOCALAPPDATA%\Programs\LM Studio\LM Studio.exe" },
-                None),
+            // Local model runners (LM Studio, Ollama) are deliberately not listed, for now: a
+            // decision with the user, see Doc/ai-assistants.md.
         };
 
         public static AiTool? Find(string? id)

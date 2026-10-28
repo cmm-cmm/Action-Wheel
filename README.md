@@ -51,7 +51,7 @@ A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor wheneve
 - **Truly transparent** — per-pixel alpha, so only the buttons are drawn; the desktop shows through everywhere else.
 - **Buttons carry a drop shadow** — they stay readable over a white window underneath, which matters because the overlay is genuinely transparent.
 - **Picks up edits to `actions.json` on its own** — the file is watched in both locations it can live in.
-- **AI assistants** — a button can open Claude Code, Codex, OpenCode, Gemini CLI or GitHub Copilot CLI in a terminal, in the folder of the File Explorer window you were using. It can also open Antigravity, Cursor or Windsurf on that folder, or start the Claude desktop app or LM Studio. Only tools found on this computer are offered, and Settings shows what was found and how.
+- **AI assistants** — a button can open Claude Code, Codex, OpenCode, Gemini CLI or GitHub Copilot CLI in a terminal, in the folder of the File Explorer window you were using. It can also open Antigravity, Cursor or Windsurf on that folder, or start the Claude desktop app. Only tools found on this computer are offered, and Settings shows what was found and how.
 - **AI tasks on selected text** — select text in any app, then use a button such as "Fix spelling and grammar with Claude Code". The text goes to Claude Code or Codex with your prompt template, and the answer opens in a window where you can copy it or replace the selection with it. See [Doc/ai-assistants.md](Doc/ai-assistants.md).
 
 ### 📁 Profiles & backup

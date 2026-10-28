@@ -22,7 +22,7 @@ Probed on the development machine. Only executables, the registry and `--help` o
 | OpenCode 1.19.4 | PATH: npm shim `%APPDATA%\npm\opencode.cmd` | `opencode run`, **but the built-in agents `build` and `plan` both start with `"permission": "*", "action": "allow"`** |
 | Antigravity | **Uninstalled.** `HKCR\antigravity\shell\open\command` still points at `%LOCALAPPDATA%\Programs\antigravity\Antigravity.exe`, which no longer exists | n/a (IDE) |
 | GitHub Copilot CLI | PATH: shim shipped with VS Code (`...\Microsoft VS Code\bin\copilot-shim\copilot.exe`) | not evaluated |
-| LM Studio | Uninstall entry, `lms` on PATH | local models only |
+| LM Studio | Uninstall entry, `lms` on PATH | `lms chat <model> -p <prompt>`, prompt on the command line only. **Not supported for now** (see below). |
 
 Findings that shape the design:
 
@@ -67,7 +67,7 @@ How `open` behaves:
 
 - **CLI tools** start in a new Windows Terminal tab, `wt.exe -d <folder> <tool>`. Without Windows Terminal they start in a console window with that working folder. An npm `.cmd` shim runs through `cmd.exe /k`. The folder is the active Explorer window's folder, otherwise the user's profile folder.
 - **IDE apps** (Antigravity, Cursor, Windsurf) get the Explorer folder as their argument when there is one. Otherwise they just start.
-- **Desktop apps** (Claude desktop, LM Studio) just start.
+- **Desktop apps** (Claude desktop) just start.
 
 Phase 1 sends no text anywhere. Everything the tool receives is typed by the user into its own window.
 
@@ -117,7 +117,11 @@ Fixed safety rules:
 
 ### Phase 3: more tools (proposed)
 
-- **LM Studio `lms`.** Models run locally, so nothing leaves the machine. This is the natural default for sensitive text.
+**Local model runners such as LM Studio and Ollama are not supported for now.** That was the user's decision on 2026-10-28, so they are not in the catalog and must not be added back without asking.
+
+- **For the record.** `lms chat -p` takes the prompt only on the command line, which breaks the stdin rule. Even `lms ls` starts LM Studio's background service.
+- **If they come back.** The local server's HTTP API, with an explicit opt-in to starting it, is the route to evaluate.
+
 - **GitHub Copilot CLI.** Evaluate its one-shot mode first.
 - **OpenCode one-shot.** Only with a verified read-only agent.
 - **MSIX apps** such as the ChatGPT desktop app, through `PackageManager.FindPackagesForUser` and `shell:AppsFolder\<AUMID>`.

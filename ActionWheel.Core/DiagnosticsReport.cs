@@ -16,6 +16,7 @@ namespace Action_Wheel.Core
     public sealed class DiagnosticsReport
     {
         private readonly List<(string Name, string Value)> _facts = new();
+        private readonly List<(string Title, string Body)> _sections = new();
 
         public DiagnosticsReport Add(string name, string? value)
         {
@@ -24,6 +25,17 @@ namespace Action_Wheel.Core
         }
 
         public DiagnosticsReport Add(string name, bool value) => Add(name, value ? "yes" : "no");
+
+        /// <summary>
+        /// Adds a multi-line block after the one-line facts, such as a stack trace that would not
+        /// survive being padded into the name/value column. Skipped when there is nothing to show.
+        /// </summary>
+        public DiagnosticsReport AddSection(string title, string? body)
+        {
+            if (!string.IsNullOrWhiteSpace(body))
+                _sections.Add((title, body.Trim()));
+            return this;
+        }
 
         /// <summary>Adds the facts that are the same for every report.</summary>
         public DiagnosticsReport AddEnvironment()
@@ -53,6 +65,14 @@ namespace Action_Wheel.Core
 
             foreach (var (name, value) in _facts)
                 text.AppendLine($"{name.PadRight(width)} : {value}");
+
+            foreach (var (title, body) in _sections)
+            {
+                text.AppendLine();
+                text.AppendLine(title);
+                text.AppendLine(new string('-', title.Length));
+                text.AppendLine(body);
+            }
 
             return text.ToString();
         }

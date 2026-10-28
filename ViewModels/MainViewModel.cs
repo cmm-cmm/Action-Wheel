@@ -286,6 +286,7 @@ namespace Action_Wheel.ViewModels
                 .Add("Keyboard hook", Status.KeyboardHookInstalled)
                 .Add("Hook error", Status.Error)
                 .Add("Start with Windows", StartupManager.IsEnabled)
+                .AddSection("Last unexpected exit", CrashReport.TryLoad())
                 .Build();
 
             if (ShellCommands.CopyText(report, out string error))

@@ -26,12 +26,21 @@ namespace Action_Wheel
         {
             InitializeComponent();
 
+            // Recorded, not handled: the app still goes down exactly as before. UnhandledException
+            // covers the UI thread; the AppDomain event covers every other thread. See CrashReport
+            // for why this is not a log.
+            UnhandledException += (s, e) => CrashReport.Write(e.Exception, AppVersionText);
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+                CrashReport.Write(e.ExceptionObject as Exception, AppVersionText);
 
             // Note for anyone tempted to add DebugSettings.BindingFailed here to catch the silent
             // failures classic {Binding} produces: it does not fire in WinUI 3. Measured - the flag
             // reads back true, the handler attaches, and a deliberately misspelled binding path
             // still raises nothing. Verify-Bindings.ps1 checks the paths statically instead.
         }
+
+        private static string AppVersionText =>
+            typeof(App).Assembly.GetName().Version?.ToString(3) ?? "unknown";
 
         /// <summary>
         /// Invoked when the application is launched.

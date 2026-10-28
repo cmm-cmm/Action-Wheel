@@ -28,9 +28,12 @@
     VerifyFormat    - dotnet format --verify-no-changes against .editorconfig
     VerifyConfigBackup - regression-check ConfigBackup.TryImport's rejection paths (entry count,
                       entry size, unrecognised entry names, zip-slip)
+    VerifyConfigSave - regression-check that a missing icon never rejects actions.json, that a save
+                      over a rejected file keeps the good .bak, and that renaming a profile renames
+                      the buttons that switch to it
     Clean           - delete bin\ and obj\
     All             - Restore, VerifyBindings, VerifyRoundTrip, VerifyChordGate, VerifyVersionSync,
-                      VerifyFormat, VerifyConfigBackup, Debug, Release, Publish
+                      VerifyFormat, VerifyConfigBackup, VerifyConfigSave, Debug, Release, Publish
 
 .PARAMETER Platform
     x64 (default), x86 or ARM64. Sets both the MSBuild platform and the runtime identifier.
@@ -43,7 +46,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('Restore', 'Debug', 'Release', 'Publish', 'Package', 'Installer', 'VerifyBindings', 'VerifyRoundTrip', 'VerifyChordGate', 'VerifyVersionSync', 'VerifyFormat', 'VerifyConfigBackup', 'Clean', 'All')]
+    [ValidateSet('Restore', 'Debug', 'Release', 'Publish', 'Package', 'Installer', 'VerifyBindings', 'VerifyRoundTrip', 'VerifyChordGate', 'VerifyVersionSync', 'VerifyFormat', 'VerifyConfigBackup', 'VerifyConfigSave', 'Clean', 'All')]
     [string]$Task = 'Debug',
 
     [ValidateSet('x64', 'x86', 'ARM64')]
@@ -153,6 +156,12 @@ function Invoke-VerifyFormat {
 function Invoke-VerifyConfigBackup {
     Write-Step 'Verifying ConfigBackup.TryImport rejection paths'
     $tool = Join-Path $root 'Tools\ConfigBackupCheck\ConfigBackupCheck.csproj'
+    Invoke-Dotnet @('run', '--project', $tool, '--nologo')
+}
+
+function Invoke-VerifyConfigSave {
+    Write-Step 'Verifying config save, icon validation and profile-rename references'
+    $tool = Join-Path $root 'Tools\ConfigSaveCheck\ConfigSaveCheck.csproj'
     Invoke-Dotnet @('run', '--project', $tool, '--nologo')
 }
 
@@ -307,7 +316,8 @@ function Invoke-Clean {
         'bin', 'obj', 'ActionWheel.Core\bin', 'ActionWheel.Core\obj',
         'Tools\RoundTripCheck\bin', 'Tools\RoundTripCheck\obj',
         'Tools\ChordGateCheck\bin', 'Tools\ChordGateCheck\obj',
-        'Tools\ConfigBackupCheck\bin', 'Tools\ConfigBackupCheck\obj'
+        'Tools\ConfigBackupCheck\bin', 'Tools\ConfigBackupCheck\obj',
+        'Tools\ConfigSaveCheck\bin', 'Tools\ConfigSaveCheck\obj'
     )) {
         $path = Join-Path $root $directory
         if (Test-Path $path) {
@@ -330,6 +340,7 @@ switch ($Task) {
     'VerifyVersionSync' { Invoke-VerifyVersionSync }
     'VerifyFormat' { Invoke-VerifyFormat }
     'VerifyConfigBackup' { Invoke-VerifyConfigBackup }
+    'VerifyConfigSave' { Invoke-VerifyConfigSave }
     'Clean' { Invoke-Clean }
     'All' {
         Invoke-Restore
@@ -339,6 +350,7 @@ switch ($Task) {
         Invoke-VerifyVersionSync
         Invoke-VerifyFormat
         Invoke-VerifyConfigBackup
+        Invoke-VerifyConfigSave
         Invoke-Build 'Debug'
         Invoke-Build 'Release'
         Invoke-Publish

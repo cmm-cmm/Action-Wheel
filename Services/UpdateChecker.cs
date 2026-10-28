@@ -62,7 +62,7 @@ namespace Action_Wheel.Services
                     // Version.CompareTo treats an absent segment as -1 - comparing the raw parses
                     // would read an identical release as "older" than what is already running.
                     if (TryParseReleaseVersion(tag, out var latest) &&
-                        latest > Trim(currentVersion) && !string.IsNullOrEmpty(url))
+                        latest > Trim(currentVersion) && IsGitHubPage(url))
                     {
                         update = new UpdateInfo(latest, tag, url);
                     }
@@ -79,6 +79,16 @@ namespace Action_Wheel.Services
         }
 
         private static Version Trim(Version version) => new(version.Major, version.Minor, version.Build);
+
+        /// <summary>
+        /// "View release" hands this URL to the shell, which will open anything - a file path, a
+        /// custom protocol. Only an https page on github.com is something this check should ever
+        /// produce, so nothing else is accepted even if the response says otherwise.
+        /// </summary>
+        private static bool IsGitHubPage(string url) =>
+            Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            && uri.Scheme == Uri.UriSchemeHttps
+            && string.Equals(uri.Host, "github.com", StringComparison.OrdinalIgnoreCase);
 
         private static bool TryParseReleaseVersion(string tag, out Version version)
         {

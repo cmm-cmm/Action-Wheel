@@ -29,8 +29,9 @@
     VerifyConfigBackup - regression-check ConfigBackup.TryImport's rejection paths (entry count,
                       entry size, unrecognised entry names, zip-slip)
     VerifyConfigSave - regression-check that a missing icon never rejects actions.json, that a save
-                      over a rejected file keeps the good .bak, and that renaming a profile renames
-                      the buttons that switch to it
+                      over a rejected file keeps the good .bak, that renaming a profile renames the
+                      buttons that switch to it (Undo included), that a shortcut never sends less
+                      than it says, and that every launch target is listed for import/restore
     Clean           - delete bin\ and obj\
     All             - Restore, VerifyBindings, VerifyRoundTrip, VerifyChordGate, VerifyVersionSync,
                       VerifyFormat, VerifyConfigBackup, VerifyConfigSave, Debug, Release, Publish

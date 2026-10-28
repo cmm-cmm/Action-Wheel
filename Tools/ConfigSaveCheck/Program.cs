@@ -8,10 +8,17 @@ using Action_Wheel.Core;
 //    used only by a group child was deleted and then rejected the config on the next load.
 // 2. Saving over a rejected actions.json copied the broken file over the last good .bak, which
 //    left nothing to restore.
-// 3. Renaming a profile left every "switch to profile" button pointing at the old name.
+// 3. Renaming a profile left every "switch to profile" button pointing at the old name, and Undo
+//    brought the old name back.
+//
+// Plus two checks on what a configuration does once it loads:
+//
+// 4. "Ctrl++" passed validation and then sent Ctrl alone; punctuation keys had no names at all.
+// 5. A profile or backup from somewhere else could launch any command line, unlisted.
 //
 // There is deliberately no test project (see CLAUDE.md); run this by hand after touching
-// ActionsValidator, ActionConfig.SaveTo or WindowsFunctions.RenameProfileReferences, with:
+// ActionsValidator, ActionConfig.SaveTo, WindowsFunctions.RenameProfileReferences,
+// UndoHistory, ShortcutKeys or LaunchSummary, with:
 //   dotnet run --project Tools\ConfigSaveCheck\ConfigSaveCheck.csproj
 
 int failures = 0;
@@ -118,6 +125,57 @@ try
 
         WindowsFunctions.RenameProfileReferences(defaults, "Work", "Office", out bool unchanged);
         Check("rename: no reference means no change", !unchanged);
+
+        // Undo used to bring the old name back after a rename.
+        var history = new UndoHistory<ActionItem>(actions);
+        history.Capture(renamed);
+        history.Map(snapshot => WindowsFunctions.RenameProfileReferences(snapshot, "Work", "Office", out _));
+        history.TryUndo(out var undone);
+        Check("rename: undo after a rename keeps the new name", undone[1].Value == newId);
+        history.TryRedo(out var redone);
+        Check("rename: redo still works after mapping the history", redone[1].Value == newId && redone.Count == actions.Count);
+    }
+
+    // 4. A shortcut never sends less than it says. "Ctrl++" used to validate and send Ctrl alone.
+    {
+        IReadOnlyList<ushort> Keys(string shortcut) => ShortcutKeys.Parse(shortcut);
+
+        Check("shortcuts: Ctrl++ is Ctrl plus the Plus key", Keys("Ctrl++").SequenceEqual(new ushort[] { 0x11, 0xBB }));
+        Check("shortcuts: Ctrl+Plus is the same chord", Keys("Ctrl+Plus").SequenceEqual(Keys("Ctrl++")));
+        Check("shortcuts: Ctrl+= is the same chord", Keys("Ctrl+=").SequenceEqual(Keys("Ctrl++")));
+        Check("shortcuts: Ctrl+Shift++ keeps both modifiers", Keys("Ctrl+Shift++").SequenceEqual(new ushort[] { 0x11, 0x10, 0xBB }));
+        Check("shortcuts: Ctrl+- is Ctrl+Minus", Keys("Ctrl+-").SequenceEqual(Keys("Ctrl+Minus")) && Keys("Ctrl+-").Count == 2);
+        Check("shortcuts: Ctrl+/ and Ctrl+` are recognised", ShortcutKeys.IsValid("Ctrl+/") && ShortcutKeys.IsValid("Ctrl+`"));
+        Check("shortcuts: a trailing + is rejected", !ShortcutKeys.IsValid("Ctrl+"));
+        Check("shortcuts: a leading + is rejected", !ShortcutKeys.IsValid("+A"));
+        Check("shortcuts: a doubled + mid-chord is rejected", !ShortcutKeys.IsValid("Ctrl++S"));
+        ShortcutKeys.Parse("Ctrl+", out string missing);
+        Check("shortcuts: an empty part is reported as such", missing == ShortcutKeys.MissingKey);
+        Check("shortcuts: an ordinary chord is unchanged", Keys("Ctrl+Shift+S").SequenceEqual(new ushort[] { 0x11, 0x10, 0x53 }));
+    }
+
+    // 5. Everything a profile can launch is listed before it is imported or restored.
+    {
+        var child = new ActionItem
+        {
+            Tag = 0, Label = "Child", Kind = ActionKind.Launch, Value = "powershell.exe",
+            Arguments = "-File evil.ps1", Glyph = "F0C5",
+        };
+        var actions = defaults.Select(a => a.Tag switch
+        {
+            1 => a with { Kind = ActionKind.Launch, Value = "notepad.exe" },
+            2 => a with { HoldKind = ActionKind.Launch, HoldValue = "cmd.exe", HoldArguments = "/c del x" },
+            3 => a with { Kind = ActionKind.Launch, Value = "NOTEPAD.EXE" },
+            4 => a with { Kind = ActionKind.Group, Value = string.Empty, GroupChildren = new List<ActionItem> { child } },
+            _ => a,
+        }).ToList();
+
+        var commands = LaunchSummary.Commands(actions);
+        Check("launches: a primary launch is listed", commands.Contains("notepad.exe"));
+        Check("launches: a hold launch is listed with its arguments", commands.Contains("cmd.exe /c del x"));
+        Check("launches: a group child's launch is listed", commands.Contains("powershell.exe -File evil.ps1"));
+        Check("launches: duplicates are listed once", commands.Count == 3);
+        Check("launches: built-in functions and shortcuts are not listed", LaunchSummary.Commands(defaults).Count == 0);
     }
 }
 finally

@@ -37,6 +37,7 @@ A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor wheneve
 
 - **Global trigger** — a low-level `WH_MOUSE_LL` hook watches for the trigger system-wide. The click is *swallowed*, so the app underneath doesn't also get it (no stray browser tabs or autoscroll).
 - **Configurable trigger** — the middle mouse button by default, but Settings can bind it to a two-button chord instead (hold right, press left, or the reverse — each with its own timeout and movement tolerance) or to side buttons 4/5. Ctrl+Alt+Space always remains available as an emergency trigger.
+  - With a chord, the button you hold **first** still reaches the app underneath, since the press happened before the chord could be recognised. Its release has to reach the app too, or the app would think that button was still held down. So with **hold right, press left**, letting go of the right button can open the right-click menu of the app under the cursor. If that gets in the way, use **hold left, press right**, or the middle or side buttons.
 - **Opens at the cursor** — the menu centres itself on the pointer and is clamped to the current monitor's work area.
 - **Pick by gesture** — keep the trigger held, flick towards a button and let go. Faster than aiming, and it is what a radial menu is for. Release without moving and the menu simply stays open to be clicked.
 - **Hold for a second action** — press and hold a button for about half a second instead of clicking it, and it runs a separate, optional action. Configured per button, right below its main one.
@@ -61,8 +62,9 @@ A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor wheneve
 
 - **One instance only** — starting the app again asks the copy already running to open its settings instead of installing a second global hook.
 - **Runs in the notification area** — closing the main window hides it; the app keeps listening in the background.
+- **Can start hidden** — turn on **Start hidden in the notification area** (main window, or **Start hidden** in the tray menu) and launches show only the tray icon. Double-click it, or pick **Open Action Wheel**, to bring the window up. If the tray icon cannot be created, the window is shown anyway, so the app is never running with no way to reach it.
 - **Says when it isn't working** — the main window reports whether the hooks installed and whether `actions.json` was usable.
-- **Private by design** — no usage events, clicks, gestures, launched actions, profile changes or errors are written to a log file.
+- **Private by design** — no usage events, clicks, gestures, launched actions, profile changes or errors are written to a log file. The one exception is a crash: the error's technical text is kept in `%LOCALAPPDATA%\ActionWheel\last-crash.txt`, overwritten by the next crash, so **Copy diagnostics** can say why the app last closed. Nothing about what you were doing goes in it, and it leaves the machine only if you paste it somewhere.
 - **Starts with Windows** — optional, from the main window's toggle or the tray menu. Uses the per-user Run key, so it needs no elevation and shows up in Windows' own Startup Apps settings.
 - **Stays out of the way** — `WS_EX_TOOLWINDOW` + `WS_EX_NOACTIVATE` keep the overlay out of Alt+Tab and the taskbar, and it never steals focus, so shortcuts land in the app you were actually using.
 
@@ -70,7 +72,7 @@ A WinUI 3 (.NET 10) desktop app that pops up a radial menu at the cursor wheneve
 
 - Windows 10 version 1809 (build 17763) or later
 - .NET 10.0
-- Windows App SDK 2.3.1
+- Windows App SDK 2.4.0
 - Visual Studio 2022 with the "Windows application development" workload (for building)
 
 ## Build & run
@@ -100,7 +102,7 @@ Self-contained publishes are large (roughly 250–300 MB). That is normal for a 
 1. Run the app. The main window reports whether the global hooks are actually installed, and whether `actions.json` was usable — the menu itself works whether or not the window is open.
 2. Press the **middle mouse button** anywhere.
 3. Click a button to run its action, or dismiss with <kbd>Esc</kbd> / a click elsewhere.
-4. Right-click the tray icon to open the main window, open the settings window, open `actions.json` in an editor, reload the config, turn **Start with Windows** on or off, or quit.
+4. Right-click the tray icon to open the main window, open the settings window, open `actions.json` in an editor, reload the config, turn **Start with Windows** or **Start hidden** on or off, or quit.
 
 ## Configuring the buttons
 
@@ -204,7 +206,7 @@ Recognised key names: `Ctrl`, `Alt`, `Shift`, `Win`, `A`–`Z`, `0`–`9`, `F1`�
 
 A **profile** is a named, saved copy of all nine buttons, stored as its own file at `%LOCALAPPDATA%\ActionWheel\Profiles\<name>.xml` — `actions.json` remains the one file the running ring actually reads; **Load** copies a profile's contents into it. Manage profiles from the **Profiles & backup** section: save the current buttons under a name, load, rename or delete a saved one, or **Import XML** / **Export XML** a profile file directly from the bottom command bar (independent of the active configuration, so a profile can be shared or checked into version control on its own).
 
-A button's **Windows function** type can switch or open a profile by name (`action-wheel.profile:<name>`), and the tray icon's right-click menu lists recently-used profiles for switching without opening Settings at all.
+A button's **Windows function** type can switch or open a profile by name (`action-wheel.profile:<name>`), and the tray icon's right-click menu lists recently-used profiles for switching without opening Settings at all. Renaming a profile updates every button that switches to it: in `actions.json`, in the other saved profiles, and in the rows being edited.
 
 ### Backup and restore
 
@@ -237,6 +239,7 @@ The code is in two assemblies. **`ActionWheel.Core`** is the business logic and 
 | `UndoHistory.cs` | The settings window's undo/redo stack |
 | `AppDataPaths.cs` | The shared `%LOCALAPPDATA%\ActionWheel` configuration location; it stores settings, not activity history |
 | `DiagnosticsReport.cs` | The text behind "Copy diagnostics" |
+| `CrashReport.cs` | The one most recent unhandled exception, in `last-crash.txt`, for "Copy diagnostics" |
 
 **`Action Wheel`** — the WinUI 3 app:
 
@@ -252,6 +255,7 @@ The code is in two assemblies. **`ActionWheel.Core`** is the business logic and 
 | `Services/IconFactory.cs` | Builds the actual icon element (glyph or SVG/raster image) for an action, shared by the ring and the settings preview |
 | `Services/IconFont.cs` | The bundled icon font: the family string for a `FontIcon`, and which glyphs it has |
 | `Services/StartupManager.cs` | The per-user Run key entry behind "Start with Windows" |
+| `Services/StartHiddenSettings.cs` | Whether a launch shows only the tray icon, in `start-hidden.txt` |
 | `Services/ShellCommands.cs` | Opening a folder in Explorer and putting text on the clipboard |
 | `Services/ProfileLibrary.cs` | Save/load/rename/delete a named profile; lists profiles by recency for the tray menu |
 | `Services/ActiveProfileSettings.cs` | Which profile's name is currently shown as active |
@@ -283,7 +287,7 @@ A few implementation details are easy to break and worth knowing about:
 
 ## Troubleshooting
 
-The main window carries **Copy diagnostics**. It copies environment, configuration and hook status only when the user explicitly asks; it contains no activity history.
+The main window carries **Copy diagnostics**. It copies environment, configuration and hook status only when the user explicitly asks; it contains no activity history. If the app has crashed before, the last crash's error text is included at the end.
 
 **Menu doesn't appear** — the main window says so directly, in red. It is often security software blocking `SetWindowsHookEx`.
 
@@ -291,7 +295,7 @@ Both hooks are installed together or not at all. If only one goes in, the other 
 
 **An action does nothing** — it now says so in the main window. Unknown key names are reported with the offending key, a program that cannot be started is reported with the error, and a `SendInput` that Windows refused is reported as such (that one usually means the foreground window is running elevated and this app is not).
 
-**The buttons went back to the defaults** — `actions.json` was rejected. The main window shows which file and why, and offers to restore the backup. Your file is never overwritten in that state.
+**The buttons went back to the defaults** — `actions.json` was rejected. The main window shows which file and why, and offers to restore the backup. Loading leaves the rejected file exactly as it is. If you save from Settings anyway, the rejected file is kept as `actions.json.invalid` and the last good `actions.json.bak` is left alone, so the backup is still there to restore. A missing icon file is never a reason to reject the file: that button just shows its glyph instead, and Settings warns about it when you save.
 
 **No tray icon** — the app falls back to exiting when the main window closes, so it can't become unquittable.
 

@@ -33,3 +33,6 @@ CLAUDE.local.md
 
 # Cloudflare wrangler cache (the website deploy, see wrangler.toml)
 .wrangler/
+
+# The cf CLI's per-directory cache (Cloudflare account details). Never commit it.
+.cloudflare/

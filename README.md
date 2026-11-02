@@ -1,8 +1,9 @@
 <div align="center">
 
-<img src="Assets/AppIcon.png" alt="Action Wheel icon" width="120" height="120">
-
-# Action Wheel
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Assets/Brand/action-wheel-horizontal-inverse-color.svg">
+  <img src="Assets/Brand/action-wheel-horizontal-color.svg" alt="Action Wheel" width="420">
+</picture>
 
 **A radial "pie" menu for Windows — one middle click puts any shortcut or app right under your cursor.**
 

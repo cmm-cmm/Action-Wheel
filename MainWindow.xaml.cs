@@ -22,7 +22,9 @@ namespace Action_Wheel
 
             Title = "Action Wheel";
             // Draw the caption over Mica so it follows the window theme instead of leaving a white
-            // native strip. The XAML uses the real icon.ico, not the placeholder logo asset.
+            // native strip. The 16 px caption icon is icon.ico itself; the 72 px header icon is
+            // Assets/AppIcon.png, because icon.ico holds nine frames and WIC hands XAML the 16 px
+            // one first, which would be scaled up to 72.
             ExtendsContentIntoTitleBar = true;
             SetTitleBar(TitleBarArea);
             AppIcon.ApplyTo(this);

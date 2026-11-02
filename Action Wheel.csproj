@@ -65,6 +65,10 @@
     <!-- Also ship the real application icon as content for the transparent custom title bars. -->
     <None Remove="icon.ico" />
     <Content Include="icon.ico" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The same artwork as icon.ico's 256 px frame, for the main window's 72 px header image.
+         icon.ico has frames from 16 to 256 px and WIC decodes the 16 px one first, so a large
+         XAML Image of the .ico would be an upscaled 16 px icon. -->
+    <Content Include="Assets\AppIcon.png" CopyToOutputDirectory="PreserveNewest" />
     <!-- The icon font the ring draws its glyphs from. Shipped rather than assumed: the app cannot
          require every machine to have installed a Nerd Font, and a missing icon font shows as empty
          boxes on every button with no way to tell why. -->
